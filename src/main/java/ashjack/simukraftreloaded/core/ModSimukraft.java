@@ -201,6 +201,9 @@ public class ModSimukraft
     {
     	event.registerServerCommand(new CommandChangeCredits());
     	event.registerServerCommand(new CommandGenerateFolk());
+    	// singleplayer keeps static state between worlds; start each world from scratch
+    	proxy.ranStartup = false;
+    	ashjack.simukraftreloaded.core.registry.SimukraftReloaded.awaitingGameMode = false;
     }
 
 }

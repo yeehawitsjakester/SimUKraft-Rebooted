@@ -17,7 +17,8 @@ public class PacketHandler
   
   public static void initPackets()
   {
-    net = NetworkRegistry.INSTANCE.newSimpleChannel(ModSimukraft.modid);
+    // channel names are limited to 20 characters; the mod id is 24, so every packet on it was rejected
+    net = NetworkRegistry.INSTANCE.newSimpleChannel("SUKReloaded");
     
     // ids 0-3 were the old packets (folk position, load building, demolish, generate folk), which passed their
     // data through static fields; GUI actions now go through ActionPacket

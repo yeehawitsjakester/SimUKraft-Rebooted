@@ -134,22 +134,18 @@ public class CommonTickHandler
     	}
     }
     
-    public static final SimpleNetworkWrapper INSTANCE = NetworkRegistry.INSTANCE.newSimpleChannel("SUKMain");
     
     public void onTickInGame()
     {
-    	if ( FMLCommonHandler.instance().getSide().isClient())
-    	{
-    		if (SimukraftReloaded.states().gameModeNumber == 10)
-    		{
-    			ModSimukraft.proxy.ranStartup = true;
-    			return;
-    		}
-    	}
+        // switched off for this world: do nothing at all
+        if (ModSimukraft.proxy.ranStartup && SimukraftReloaded.serverStates.gameModeNumber == 10)
+        {
+            return;
+        }
 
         Long now = System.currentTimeMillis();
 
-        if (serverWorld != null)
+        if (serverWorld != null && ModSimukraft.proxy.ranStartup)
         {
             //fire onUpdate() for each folkData
             FolkData.triggerAllUpdates();
@@ -172,7 +168,12 @@ public class CommonTickHandler
         // ***** ONCE A SECOND
         if (now - lastSecondTickAt > 1000)
         {
-            if (ModSimukraft.proxy.ranStartup == false)
+            if (ModSimukraft.proxy.ranStartup == false && SimukraftReloaded.awaitingGameMode)
+            {
+                // settings are loaded, waiting for a player to pick a mode in the first-run menu
+                SimukraftReloaded.askForGameMode();
+            }
+            else if (ModSimukraft.proxy.ranStartup == false)
             {
                System.out.println("Haven't run startup - doing that now");
                
@@ -222,7 +223,7 @@ public class CommonTickHandler
 
         
         // ***** ONCE A MINUTE
-        if (serverWorld != null && System.currentTimeMillis() - lastMinuteTickAt > 60000)
+        if (serverWorld != null && ModSimukraft.proxy.ranStartup && System.currentTimeMillis() - lastMinuteTickAt > 60000)
         {
             if (lastMinuteTickAt > 0)
             {

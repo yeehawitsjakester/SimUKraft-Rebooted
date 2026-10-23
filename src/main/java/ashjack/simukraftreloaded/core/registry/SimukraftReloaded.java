@@ -155,19 +155,35 @@ public class SimukraftReloaded
 
         if (states().gameModeNumber == -1)
         {
-            // ask the players to choose (this runs every second until someone answers with the "setGameMode" action);
-            // it used to open the menu from the server thread, which can't work on a dedicated or LAN server
-            PacketHandler.net.sendToAll(new AskGameModePacket());
-
+            // ask the players to choose; the tick handler keeps asking (without reloading) until someone answers
+            // with the "setGameMode" action, which calls finishStartup()
+            awaitingGameMode = true;
+            askForGameMode();
             return;
         }
+        awaitingGameMode = false;
 
-        if (states().gameModeNumber >= 0)
+        if (states().gameModeNumber == 10)
         {
-        	System.out.println("Startup already been run");
+            // switched off for this world: load nothing, spawn nothing
             ModSimukraft.proxy.ranStartup = true;
+            return;
         }
+        finishStartup();
+    }
 
+    /** true while the first-run menu is waiting for an answer */
+    public static boolean awaitingGameMode = false;
+
+    /** the menu used to open from the server thread, which can't work on a dedicated or LAN server */
+    public static void askForGameMode()
+    {
+        PacketHandler.net.sendToAll(new AskGameModePacket());
+    }
+
+    /** load this world's buildings, boxes and folks once a game mode has been chosen */
+    public static void finishStartup()
+    {
         sendChat("Welcome to Sim-U-Kraft Reloaded " + ModSimukraft.version);
         folks().clear();
         Building.initialiseAllBuildings(); //load ALL buildings off disk and init them

@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.network;
 
+import ashjack.simukraftreloaded.core.ModSimukraft;
+import ashjack.simukraftreloaded.core.game.GameMode;
+
 import java.util.ArrayList;
 
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -75,6 +78,15 @@ public final class ActionHandlers
                 }
                 SimukraftReloaded.serverStates.gameModeNumber = mode;
                 SimukraftReloaded.serverStates.saveStates();
+                SimukraftReloaded.awaitingGameMode = false;
+                if (mode == 10)
+                {
+                    ModSimukraft.proxy.ranStartup = true;
+                    tell(player, "Sim-U-Kraft is switched off for this world");
+                    return;
+                }
+                GameMode.setGameModeFromNumber(mode);
+                SimukraftReloaded.finishStartup();
                 if (mode == 0)
                 {
                     FolkData.generateNewFolk(player.worldObj);
