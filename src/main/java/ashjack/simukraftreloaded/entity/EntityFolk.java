@@ -20,6 +20,7 @@ import ashjack.simukraftreloaded.core.registry.SimukraftReloadedBlocks;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloadedConfig;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloadedItems;
 import ashjack.simukraftreloaded.folk.FolkData;
+import ashjack.simukraftreloaded.common.FolkPathfinder;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
@@ -30,10 +31,7 @@ import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.INpc;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.EntityAILookIdle;
-import net.minecraft.entity.ai.EntityAIMoveIndoors;
-import net.minecraft.entity.ai.EntityAIMoveTowardsRestriction;
 import net.minecraft.entity.ai.EntityAIOpenDoor;
-import net.minecraft.entity.ai.EntityAIRestrictOpenDoor;
 import net.minecraft.entity.ai.EntityAISwimming;
 import net.minecraft.entity.ai.EntityAIWatchClosest;
 import net.minecraft.entity.ai.EntityAIWatchClosest2;
@@ -138,14 +136,13 @@ public class EntityFolk extends EntityCreature implements INpc {
 		this.getNavigator().setCanSwim(true);
 		//this.tasks.addTask(0, new EntityAIWanderSUK(this, 0.3f));
 		this.tasks.addTask(1, new EntityAILookIdle(this));
-		this.tasks.addTask(2, new EntityAIMoveIndoors(this));
-		this.tasks.addTask(3, new EntityAIRestrictOpenDoor(this));
+		// no villager "go indoors"/"stay by the village door" AI: it swapped in its own paths and fought the mod's
+		// own walking, which looked like folk pacing back and forth
 		this.tasks.addTask(10, new EntityAIWatchClosest2(this,
 				EntityPlayer.class, 3.0F, 1.0F));
 		this.tasks.addTask(9, new EntityAIWatchClosest(this,
 				EntityLiving.class, 8.0F));
 		this.tasks.addTask(9, new EntityAIOpenDoor(this, true));
-		this.tasks.addTask(5, new EntityAIMoveTowardsRestriction(this, 0.3D));
 		this.tasks.addTask(4, new EntityAISwimming(this));
 
 		if (!ModSimukraft.proxy.ranStartup) {
@@ -546,9 +543,9 @@ public class EntityFolk extends EntityCreature implements INpc {
 						pathRetryTicks--;
 					} else if (!gotPath) {
 						
-						 PathEntity path=this.worldObj.getEntityPathToXYZ(this, theData.destination.x.intValue(), 
-								 theData.destination.y.intValue(),theData.destination.z.intValue()
-								 , 40F, true, true, true, true);
+						// our own pathfinder: vanilla's walks folk into modded fences and walls
+						PathEntity path = FolkPathfinder.findPath(this, theData.destination.x.intValue(),
+								theData.destination.y.intValue(), theData.destination.z.intValue());
 						if (path !=null) {
 							getNavigator().setPath(path, 0.3f);
 							gotPath=true;

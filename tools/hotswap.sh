@@ -34,11 +34,15 @@ if (( ${#changed[@]} == 0 && ${#added[@]} == 0 && other == 0 )); then
     echo "Nothing changed since the installed jar."
     exit 0
 fi
-(( ${#added[@]} )) && echo "New classes (need a restart to exist in the game): ${added[*]}"
+(( ${#added[@]} )) && echo "New classes: ${added[*]}"
 (( other )) && echo "Textures/sounds/lang changed: those need a restart."
 
 status=0
-if (( ${#changed[@]} )); then
+if (( ${#added[@]} )); then
+    # swapped code calling a class the game doesn't have would crash it (NoClassDefFoundError)
+    echo "Not swapping: the changes need classes the running game doesn't have. Restart to use them."
+    status=4
+elif (( ${#changed[@]} )); then
     names=()
     for c in "${changed[@]}"; do n="${c%.class}"; names+=("${n//\//.}"); done
     "$JAVA" "$REPO/tools/hotswap/HotSwap.java" "$PORT" "$WORK/new" "${names[@]}" || status=$?
