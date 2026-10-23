@@ -52,6 +52,14 @@ import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
 import ashjack.simukraftreloaded.proxies.CommonProxy;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockCarpet;
+import net.minecraft.block.BlockDeadBush;
+import net.minecraft.block.BlockDoublePlant;
+import net.minecraft.block.BlockFlower;
+import net.minecraft.block.BlockFlowerPot;
+import net.minecraft.block.BlockLeaves;
+import net.minecraft.block.BlockSapling;
+import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -60,6 +68,7 @@ import net.minecraft.inventory.ContainerPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.DamageSource;
+import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
@@ -98,10 +107,17 @@ public class FolkData implements Serializable
     public int levelFood = 10;
     /** their level of fun  10=having a blast   0=stressed */
     public int levelFun = 10;
-    /** their level of fun  10=having a blast   0=stressed */
+    /** their level of social  10=great banter   0=going insane */
     public int levelSocial = 10;
-    /** their level of fun  10=having a blast   0=stressed */
+    /** how nice their home's surroundings are  10=beautiful   1=horrific, see updateEnvironment() */
     public int levelEnvironment = 10;
+    /** overall happiness 0-100: the four needs plus trait likes and dislikes, see updateHappiness() */
+    public int happiness = 70;
+    public String happinessStatus = "";
+    /** what's pushing their happiness up or down, for the Needs page, e.g. "+10 Has friends (Friendly)" */
+    public ArrayList<String> happinessReasons = new ArrayList<String>();
+    /** rough share of their time spent under open sky, 0-1, for the outdoors traits */
+    public float outdoorShare = 0.5f;
     /** this folks building level, increases with experience which makes them build faster */
     public float levelBuilder = 1.0f;
     /** this folks mining level, increases with experience which makes the mine faster */
@@ -784,6 +800,9 @@ public class FolkData implements Serializable
                 tryForBaby();
             }
 
+            updateEnvironment();
+            updateHappiness();
+
             timeSinceLastMinute = now - rand.nextInt(20000);
         }
 
@@ -1020,7 +1039,7 @@ public class FolkData implements Serializable
                 	levelSocial += 1;
                 }
                 
-                if(this.statusText.contains("Visiting") || this.statusText.contains("Hanging") || this.statusText.contains("Staying")|| this.statusText.contains("Relaxing") || this.statusText.contains("Shopping") &&this.levelFun < 10)
+                if((this.statusText.contains("Visiting") || this.statusText.contains("Hanging") || this.statusText.contains("Staying")|| this.statusText.contains("Relaxing") || this.statusText.contains("Shopping")) &&this.levelFun < 10)
                 {
                 	levelFun += 1;
                 }
@@ -1911,6 +1930,18 @@ public class FolkData implements Serializable
 	        	    			else if (name.contentEquals("levelfood")) {
 	        	    				folkd.levelFood=Integer.parseInt(value);
 	        	    			}
+	        	    			else if (name.contentEquals("levelfun")) {
+	        	    				folkd.levelFun=Integer.parseInt(value);
+	        	    			}
+	        	    			else if (name.contentEquals("levelsocial")) {
+	        	    				folkd.levelSocial=Integer.parseInt(value);
+	        	    			}
+	        	    			else if (name.contentEquals("levelenvironment")) {
+	        	    				folkd.levelEnvironment=Integer.parseInt(value);
+	        	    			}
+	        	    			else if (name.contentEquals("outdoorshare")) {
+	        	    				folkd.outdoorShare=Float.parseFloat(value);
+	        	    			}
 	        	    			else if (name.contentEquals("trait1")) {
 	        	    				folkd.trait1=value;
 	        	    			}
@@ -2030,6 +2061,10 @@ public class FolkData implements Serializable
     		strings.add("trait3|"+this.trait3);
     		strings.add("trait4|"+this.trait4);
     		strings.add("levelfood|"+this.levelFood);
+    		strings.add("levelfun|"+this.levelFun);
+    		strings.add("levelsocial|"+this.levelSocial);
+    		strings.add("levelenvironment|"+this.levelEnvironment);
+    		strings.add("outdoorshare|"+this.outdoorShare);
     		strings.add("levelbuilder|"+this.levelBuilder);
     		strings.add("levelminer|"+this.levelMiner);
     		strings.add("levelsoldier|"+this.levelSoldier);
@@ -2591,6 +2626,125 @@ public class FolkData implements Serializable
         trait2 = names[1];
         trait3 = names[2];
         trait4 = names[3];
+    }
+
+    /** once a minute: rate the blocks around their home (flowers, trees, water vs lava, webs, gravel), never loads chunks */
+    private void updateEnvironment()
+    {
+        Building home = getHome();
+        V3 at = home == null ? location : (home.livingXYZ != null ? home.livingXYZ : home.primaryXYZ);
+        if (at == null || MinecraftServer.getServer() == null)
+        {
+            return;
+        }
+        World world = MinecraftServer.getServer().worldServerForDimension(at.theDimension);
+        int cx = at.x.intValue(), cy = at.y.intValue(), cz = at.z.intValue();
+        int r = 5;
+        if (world == null || !world.checkChunksExist(cx - r, cy - 1, cz - r, cx + r, cy + 3, cz + r))
+        {
+            return;
+        }
+
+        int nice = 0, ugly = 0;
+        for (int x = cx - r; x <= cx + r; x++)
+        {
+            for (int z = cz - r; z <= cz + r; z++)
+            {
+                for (int y = cy - 1; y <= cy + 3; y++)
+                {
+                    Block b = world.getBlock(x, y, z);
+                    Material m = b.getMaterial();
+                    if (b instanceof BlockFlower || b instanceof BlockDoublePlant || b instanceof BlockSapling
+                            || b instanceof BlockLeaves || b instanceof BlockFlowerPot || b instanceof BlockCarpet
+                            || b == Blocks.bookshelf || m == Material.water)
+                    {
+                        nice++;
+                    }
+                    else if (m == Material.lava || m == Material.fire || b == Blocks.web || b == Blocks.mob_spawner
+                            || b == Blocks.gravel || b instanceof BlockDeadBush)
+                    {
+                        ugly++;
+                    }
+                }
+            }
+        }
+
+        int score = 5 + Math.min(5, nice / 6) - Math.min(4, ugly / 3);
+        if (home != null && world.getSavedLightValue(EnumSkyBlock.Block, cx, cy, cz) < 5 && !world.canBlockSeeTheSky(cx, cy, cz))
+        {
+            score--; // dark, torchless home
+        }
+        levelEnvironment = Math.max(1, Math.min(10, score));
+    }
+
+    /** once a minute: the four needs make up the base score, then traits and circumstances push it up or down */
+    private void updateHappiness()
+    {
+        if (isSpawned() && theEntity.worldObj.canBlockSeeTheSky((int) Math.floor(theEntity.posX),
+                (int) Math.floor(theEntity.posY + 1), (int) Math.floor(theEntity.posZ)))
+        {
+            outdoorShare = outdoorShare * 0.9f + 0.1f;
+        }
+        else if (isSpawned())
+        {
+            outdoorShare = outdoorShare * 0.9f;
+        }
+
+        ArrayList<String> reasons = new ArrayList<String>();
+        int score = (int) Math.round((levelFood + levelFun + levelSocial + levelEnvironment) * 2.5);
+        boolean adult = age >= 18;
+
+        if (getHome() == null && !isVisitor)
+        {
+            score += addReason(reasons, -15, "Homeless");
+        }
+        if (Relationship.isFolkLivingWithSomeone(this))
+        {
+            score += addReason(reasons, 5, "Living with someone");
+        }
+
+        boolean hasFriend = false, hasEnemy = false;
+        for (Relationship rel : Relationship.getRelationshipsFor(this))
+        {
+            int lvl = rel.theLevel.ordinal();
+            hasFriend |= lvl >= Relationship.Level.FRIEND.ordinal() && lvl <= Relationship.Level.MARRIED.ordinal();
+            hasEnemy |= lvl <= Relationship.Level.HATE.ordinal();
+        }
+        if (hasEnemy)
+        {
+            score += addReason(reasons, -5, "Has an enemy");
+        }
+        if (hasTrait(Traits.traitFriendly))
+        {
+            score += hasFriend ? addReason(reasons, 10, "Has friends (Friendly)")
+                               : addReason(reasons, -10, "No friends (Friendly)");
+        }
+        if (adult && hasTrait(Traits.traitWorkaholic))
+        {
+            score += employedAt != null ? addReason(reasons, 10, "Has a job (Workaholic)")
+                                        : addReason(reasons, -15, "No job (Workaholic)");
+        }
+        if (hasTrait(Traits.traitLovesOutdoors))
+        {
+            score += outdoorShare >= 0.5f ? addReason(reasons, 8, "Gets outside (Loves Outdoors)")
+                                          : addReason(reasons, -8, "Stuck indoors (Loves Outdoors)");
+        }
+        if (hasTrait(Traits.traitHatesOutdoors))
+        {
+            score += outdoorShare < 0.5f ? addReason(reasons, 8, "Stays indoors (Hates Outdoors)")
+                                         : addReason(reasons, -8, "Out in the open (Hates Outdoors)");
+        }
+
+        happiness = Math.max(0, Math.min(100, score));
+        happinessReasons = reasons;
+        happinessStatus = happiness >= 85 ? "Ecstatic" : happiness >= 70 ? "Happy" : happiness >= 50 ? "Content"
+                        : happiness >= 30 ? "Unhappy" : "Miserable";
+    }
+
+    private static int addReason(ArrayList<String> reasons, int amount, String why)
+    {
+        reasons.add((amount > 0 ? "+" : "") + amount + " " + why);
+        return amount;
     }
 
       public boolean hasTrait(Trait trait)

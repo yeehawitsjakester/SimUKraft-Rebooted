@@ -273,23 +273,35 @@ public class GuiEntityFolk extends GuiScreen
             int disoffset = 30;
             drawCenteredString(fontRendererObj, theFolk.name + "'s Needs", width / 2, 10, 0xFFFFFF);
 
-            fontRendererObj.drawString("Hunger:", left, 30, 0x000000);
-            fontRendererObj.drawString(theFolk.status4, this.width / 2, 30, 0x000080);
-            
-            /*fontRendererObj.drawString("Social:", left, 50, 0x000000);
-            fontRendererObj.drawString(theFolk.socialStatus, this.width / 2, 50, 0x000080);
-            
-            fontRendererObj.drawString("Fun:", left, 70, 0x000000);
-            fontRendererObj.drawString(theFolk.funStatus, this.width / 2, 70, 0x000080);
-            
-            fontRendererObj.drawString("Environment:", left, 90, 0x000000);
-            fontRendererObj.drawString(theFolk.environmentStatus, this.width / 2, 90, 0x000080);*/
+            int moodColour = theFolk.happiness >= 70 ? 0x007000 : theFolk.happiness >= 50 ? 0x000080 : 0xA00000;
+            fontRendererObj.drawString("Happiness:", left, 30, 0x000000);
+            fontRendererObj.drawString(theFolk.happiness + "% - " + theFolk.happinessStatus, this.width / 2, 30, moodColour);
+
+            fontRendererObj.drawString("Hunger:", left, 50, 0x000000);
+            fontRendererObj.drawString(theFolk.status4, this.width / 2, 50, 0x000080);
+
+            fontRendererObj.drawString("Social:", left, 62, 0x000000);
+            fontRendererObj.drawString(theFolk.socialStatus, this.width / 2, 62, 0x000080);
+
+            fontRendererObj.drawString("Fun:", left, 74, 0x000000);
+            fontRendererObj.drawString(theFolk.funStatus, this.width / 2, 74, 0x000080);
+
+            fontRendererObj.drawString("Environment:", left, 86, 0x000000);
+            fontRendererObj.drawString(theFolk.environmentStatus, this.width / 2, 86, 0x000080);
+
+            int y = 106;
+            for (String reason : theFolk.happinessReasons)
+            {
+                fontRendererObj.drawString(reason, left, y, reason.startsWith("+") ? 0x007000 : 0xA00000);
+                y += 11;
+            }
             
         }
         
         else if(currentPage == 3)
         {
         	int left = this.width / 2-120;
+        	drawCenteredString(fontRendererObj, theFolk.name + "'s Traits", width / 2, 10, 0xFFFFFF);
         	        	
             fontRendererObj.drawString(theFolk.trait1, left, 30, 0x000000);
             
@@ -318,8 +330,8 @@ public class GuiEntityFolk extends GuiScreen
             buttonList.add(new GuiButton(2, width / 2 - 50, 180, 100, 20,
                     "Needs"));
             
-            /*buttonList.add(new GuiButton(3, width / 2 - 50, 220, 100, 20,
-            		"Traits"));*/
+            buttonList.add(new GuiButton(3, width / 2 - 50, 205, 100, 20,
+            		"Traits"));
             
             /*buttonList.add(new GuiButton(4, width / 2 - 50, 220, 100, 20,
             		"Inventory"));*/
