@@ -27,9 +27,9 @@ public class CourierTask implements Serializable
     {
         V3 v = new V3();
 
-        for (int x = 0; x < SimukraftReloaded.theCourierPoints.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.courierPoints().size(); x++)
         {
-            v = SimukraftReloaded.theCourierPoints.get(x);
+            v = SimukraftReloaded.courierPoints().get(x);
 
             if (v.name.contentEquals(name))
             {
@@ -44,9 +44,9 @@ public class CourierTask implements Serializable
     {
         boolean got = false;
 
-        for (int i = 0; i < SimukraftReloaded.theCourierTasks.size(); i++)
+        for (int i = 0; i < SimukraftReloaded.courierTasks().size(); i++)
         {
-            CourierTask checkTask = SimukraftReloaded.theCourierTasks.get(i);
+            CourierTask checkTask = SimukraftReloaded.courierTasks().get(i);
 
             try
             {
@@ -69,9 +69,9 @@ public class CourierTask implements Serializable
     {
         boolean got = false;
 
-        for (int i = 0; i < SimukraftReloaded.theCourierPoints.size(); i++)
+        for (int i = 0; i < SimukraftReloaded.courierPoints().size(); i++)
         {
-            V3 checkPoint = SimukraftReloaded.theCourierPoints.get(i);
+            V3 checkPoint = SimukraftReloaded.courierPoints().get(i);
 
             if (checkPoint.isSameCoordsAs(thePoint, true, true))
             {
@@ -85,8 +85,8 @@ public class CourierTask implements Serializable
 
     public static void loadCourierTasksAndPoints()
     {
-    	SimukraftReloaded.theCourierPoints.clear();
-    	SimukraftReloaded.theCourierTasks.clear();
+    	SimukraftReloaded.courierPoints().clear();
+    	SimukraftReloaded.courierTasks().clear();
         File courierPoints = new File(SimukraftReloaded.getSavesDataFolder() + "CourierPoints" + File.separator);
         courierPoints.mkdirs();
         File courierTasks = new File(SimukraftReloaded.getSavesDataFolder() + "CourierTasks" + File.separator);
@@ -124,7 +124,7 @@ public class CourierTask implements Serializable
 	            	}
 	            	if (v !=null && !alreadyGotPoint(v))
 	                {
-	            		SimukraftReloaded.theCourierPoints.add(v);
+	            		SimukraftReloaded.courierPoints().add(v);
 	                }
 	                else
 	                {
@@ -162,7 +162,7 @@ public class CourierTask implements Serializable
 	            	}
 	            	if (!alreadyGotTask(ct) && ct !=null && ct.dropoff !=null && ct.pickup !=null)
 	                {
-	            		SimukraftReloaded.theCourierTasks.add(ct);
+	            		SimukraftReloaded.courierTasks().add(ct);
 	                }
 	                else
 	                {
@@ -181,7 +181,7 @@ public class CourierTask implements Serializable
 	
 	                if (!alreadyGotPoint(point))
 	                {
-	                	SimukraftReloaded.theCourierPoints.add(point);
+	                	SimukraftReloaded.courierPoints().add(point);
 	                }
 	                else
 	                {
@@ -198,7 +198,7 @@ public class CourierTask implements Serializable
 	
 	                if (!alreadyGotTask(task))
 	                {
-	                	SimukraftReloaded.theCourierTasks.add(task);
+	                	SimukraftReloaded.courierTasks().add(task);
 	                }
 	                else
 	                {
@@ -218,10 +218,10 @@ public class CourierTask implements Serializable
     	if (side==Side.SERVER) { 
     		
     		
-	        for (int mofo = 0; mofo < SimukraftReloaded.theCourierPoints.size(); mofo++)
+	        for (int mofo = 0; mofo < SimukraftReloaded.courierPoints().size(); mofo++)
 	        {
 	        	ArrayList<String> strings=new ArrayList<String>();
-	            V3 point = (V3) SimukraftReloaded.theCourierPoints.get(mofo);
+	            V3 point = (V3) SimukraftReloaded.courierPoints().get(mofo);
 	
 	            if (point != null)
 	            {
@@ -257,10 +257,10 @@ public class CourierTask implements Serializable
 	            }
 	        }
 	
-	        for (int mofo = 0; mofo < SimukraftReloaded.theCourierTasks.size(); mofo++)
+	        for (int mofo = 0; mofo < SimukraftReloaded.courierTasks().size(); mofo++)
 	        {
 	        	ArrayList<String> strings=new ArrayList<String>();
-	        	CourierTask task = (CourierTask) SimukraftReloaded.theCourierTasks.get(mofo);
+	        	CourierTask task = (CourierTask) SimukraftReloaded.courierTasks().get(mofo);
 	            String fn = "ct" + mofo + task.folkname.replace(" ", "");
 	            boolean okToSave=true;
 	            strings.add("folk|"+task.folkname);

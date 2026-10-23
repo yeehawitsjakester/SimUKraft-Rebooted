@@ -149,7 +149,7 @@ public class JobSoldier extends Job implements Serializable
 
         List list = jobWorld
                     .getEntitiesWithinAABBExcludingEntity(
-                        mc.thePlayer,
+                        theFolk.theEntity,
                         AxisAlignedBB.getBoundingBox(theFolk.employedAt.x,
                                 theFolk.employedAt.y, theFolk.employedAt.z,
                                 theFolk.employedAt.x + 1.0D,

@@ -1,6 +1,9 @@
 package ashjack.simukraftreloaded.blocks;
 
+import net.minecraft.client.gui.GuiScreen;
+import ashjack.simukraftreloaded.client.ClientGuiOpener;
 import java.util.ArrayList;
+import ashjack.simukraftreloaded.common.ClientMirror;
 
 import ashjack.simukraftreloaded.blocks.functionality.Marker;
 import ashjack.simukraftreloaded.client.Gui.blocks.GuiMarker;
@@ -32,7 +35,13 @@ public class BlockMarker extends Block implements IExtendedEntityProperties
 {
 	
     public static boolean hasPlaced = false;
-    public static ArrayList<Marker> markers = new ArrayList<Marker>();
+    /** markers placed so far (server); clients see a synced copy through markers() */
+    public static ArrayList<Marker> serverMarkers = new ArrayList<Marker>();
+
+    public static ArrayList<Marker> markers()
+    {
+        return SimukraftReloaded.isClientThread() ? ClientMirror.markers : serverMarkers;
+    }
     public V3 location;
 
     private IIcon icons[];
@@ -85,17 +94,22 @@ public class BlockMarker extends Block implements IExtendedEntityProperties
     @Override
     public void onBlockDestroyedByPlayer(World world, int i, int j, int k, int meta)
     {
+        if (world.isRemote)
+        {
+            super.onBlockDestroyedByPlayer(world, i, j, k, meta);
+            return;
+        }
         try
         {
-            for (int m = 0; m < markers.size(); m++)
+            for (int m = 0; m < markers().size(); m++)
             {
-                Marker marker = markers.get(m);
+                Marker marker = markers().get(m);
 
                 for (int mm = 0; mm < 4; mm++)
                 {
                     try
                     {
-                        marker.beams.get(mm).setDead();
+                        if (marker.beams != null) marker.beams.get(mm).setDead();
                     }
                     catch (Exception e) {}
                 }
@@ -103,7 +117,7 @@ public class BlockMarker extends Block implements IExtendedEntityProperties
         }
         catch (Exception e) {}  //index out of bounds when destroying too many
 
-        markers.clear();
+        markers().clear();
         super.onBlockDestroyedByPlayer(world, i, j, k, meta);
     }
 
@@ -113,46 +127,46 @@ public class BlockMarker extends Block implements IExtendedEntityProperties
     	
     	hasPlaced = true;
         Marker ma;
-        if(world.isRemote){
-        markers.add(ma = new Marker(i, j, k, world.provider.dimensionId));
+        if(!world.isRemote){
+        markers().add(ma = new Marker(i, j, k, world.provider.dimensionId));
         
         String markerCaption = "";
         String helpText = "";
         
        
 
-        if (markers.size() == 1)
+        if (markers().size() == 1)
         {
         	
             	markerCaption = "Front-Left";
                 helpText = "You can place two more markers to mark out an area for a farm or mine etc. If you wish to do this, place another marker at the front-right position now";
-                System.out.println(markers.size());
+                System.out.println(markers().size());
             
         }
-        else if (markers.size() == 2)
+        else if (markers().size() == 2)
         {
         	
         	markerCaption = "Front-Right";
             helpText = "Finally, place a marker at the Rear-Left position";
-            System.out.println(markers.size());
+            System.out.println(markers().size());
             
         }
-        else if (markers.size() == 3)
+        else if (markers().size() == 3)
         {
         	
         	markerCaption = "Rear-Left";
     		helpText = "You're done, now you can place down a mining box, farming box or right-click the front-left marker to copy a structure!";
-    		System.out.println(markers.size());
+    		System.out.println(markers().size());
         }
         
         else
         {
-        	System.out.println(markers.size());
+        	System.out.println(markers().size());
             markerCaption = "Too many Markers!";
         }
         
 
-        if (markers.size() < 4)
+        if (markers().size() < 4)
         {
             V3 pos = new V3((double)i, (double)j, (double)k, world.provider.dimensionId);
             pos.y += 0.01d;
@@ -221,44 +235,44 @@ public class BlockMarker extends Block implements IExtendedEntityProperties
     	{
         hasPlaced = true;
         Marker ma;
-        markers.add(ma = new Marker(i, j, k, world.provider.dimensionId));
+        markers().add(ma = new Marker(i, j, k, world.provider.dimensionId));
         String markerCaption = "";
         String helpText = "";
         
        
 
-        if (markers.size() == 1)
+        if (markers().size() == 1)
         {
         	
             	markerCaption = "Front-Left";
                 helpText = "You can place two more markers to mark out an area for a farm or mine etc. If you wish to do this, place another marker at the front-right position now";
-                System.out.println(markers.size());
+                System.out.println(markers().size());
             
         }
-        else if (markers.size() == 2)
+        else if (markers().size() == 2)
         {
         	
         	markerCaption = "Front-Right";
             helpText = "Finally, place a marker at the Rear-Left position";
-            System.out.println(markers.size());
+            System.out.println(markers().size());
             
         }
-        else if (markers.size() == 3)
+        else if (markers().size() == 3)
         {
         	
         	markerCaption = "Rear-Left";
     		helpText = "You're done, now you can place down a mining box, farming box or right-click the front-left marker to copy a structure!";
-    		System.out.println(markers.size());
+    		System.out.println(markers().size());
         }
         
         else
         {
-        	System.out.println(markers.size());
+        	System.out.println(markers().size());
             markerCaption = "Too many Markers!";
         }
         
 
-        if (markers.size() < 4)
+        if (markers().size() < 4)
         {
             V3 pos = new V3((double)i, (double)j, (double)k, world.provider.dimensionId);
             pos.y += 0.01d;
@@ -323,9 +337,9 @@ public class BlockMarker extends Block implements IExtendedEntityProperties
     {
         Marker ret = null;
 
-        for (int i = 0; i < markers.size(); i++)
+        for (int i = 0; i < markers().size(); i++)
         {
-            Marker m = markers.get(i);
+            Marker m = markers().get(i);
 
             if (m.x == position.x && m.y == position.y && m.z == position.z)
             {
@@ -342,11 +356,20 @@ public class BlockMarker extends Block implements IExtendedEntityProperties
     public boolean onBlockActivated(World world, int i, int j, int k,
                                     EntityPlayer entityplayer, int par6, float par7, float par8, float par9)
     {
-        this.location = new V3((double)i, (double)j, (double)k, entityplayer.dimension);
-        world.playSoundEffect(i, j, k, "ashjacksimukraftreloaded:computer", 1f, 1f);
-        GuiMarker ui = new GuiMarker(this.location, entityplayer);
-        Minecraft mc = Minecraft.getMinecraft();
-        mc.displayGuiScreen(ui);
+        if (!world.isRemote)
+        {
+            world.playSoundEffect(i, j, k, "ashjacksimukraftreloaded:computer", 1f, 1f);
+            return true;
+        }
+        final V3 loc = new V3((double)i, (double)j, (double)k, entityplayer.dimension);
+        final EntityPlayer player = entityplayer;
+        ClientGuiOpener.open(new ClientGuiOpener.Factory()
+        {
+            public GuiScreen create()
+            {
+                return new GuiMarker(loc, player);
+            }
+        });
         return true;
     }
 

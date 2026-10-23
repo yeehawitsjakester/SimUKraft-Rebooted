@@ -1,5 +1,9 @@
 package ashjack.simukraftreloaded.client.Gui.blocks;
 
+import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
+import net.minecraft.nbt.NBTTagCompound;
+import ashjack.simukraftreloaded.network.ServerActions;
+import ashjack.simukraftreloaded.network.ActionHandlers;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
@@ -69,104 +73,47 @@ public class GuiTerraform extends GuiScreen
         tfRadius.updateCursorCounter();
     }
 
+    private static final TerraformerType[] TYPES = {null, TerraformerType.WATERTODIRT, TerraformerType.NATURE,
+        TerraformerType.LAWNMOWER, TerraformerType.FLATTENIZER, TerraformerType.VALUEPACK, TerraformerType.GLACIAL,
+        TerraformerType.MOISTURIZER, TerraformerType.THERMALIZER, TerraformerType.DEICER};
+
     public void actionPerformed(GuiButton guibutton)
     {
-        JobTerraformer theJob;
-
-        try
-        {
-            theJob = (JobTerraformer) theFolk.theirJob;
-        }
-        catch (Exception e)
-        {
-            SimukraftReloaded.sendChat("Error: You must hire a terraformer, not a builder");
-            return;
-        }
-
         if (guibutton.id == 0) ///cancel button
         {
-            mc.currentScreen = null;
-            mc.setIngameFocus();
+            mc.displayGuiScreen(null);
             return;
         }
-
-        if (Integer.parseInt(tfRadius.getText().trim()) > 60)
+        if (theFolk.vocation != Vocation.TERRAFORMER)
         {
-            errorText = "ERROR: the radius must be 60 or less";
+            errorText = "You must hire a terraformer, not a builder";
             return;
         }
-        else if (guibutton.id == 1)   ///water > dirt option
+        int radius;
+        try
         {
-            theFolk.terraformerType = TerraformerType.WATERTODIRT;
-            theFolk.terraformerRadius = Integer.parseInt(tfRadius.getText().trim());
-            mc.currentScreen = null;
-            mc.setIngameFocus();
-            return;
+            radius = Integer.parseInt(tfRadius.getText().trim());
         }
-        else if (guibutton.id == 2)    // nature - plant trees and flowers
+        catch (NumberFormatException e)
         {
-            theFolk.terraformerType = TerraformerType.NATURE;
-            theFolk.terraformerRadius = Integer.parseInt(tfRadius.getText().trim());
-            mc.currentScreen = null;
-            mc.setIngameFocus();
+            errorText = "ERROR: the radius must be a number";
             return;
         }
-        else if (guibutton.id == 3)  // lawnmower
+        if (radius < 1 || radius > 60)
         {
-            theFolk.terraformerType = TerraformerType.LAWNMOWER;
-            theFolk.terraformerRadius = Integer.parseInt(tfRadius.getText().trim());
-            mc.currentScreen = null;
-            mc.setIngameFocus();
+            errorText = "ERROR: the radius must be 1 to 60";
             return;
         }
-        else if (guibutton.id == 4)  // landscaper (flatten)
+        if (guibutton.id < 1 || guibutton.id >= TYPES.length)
         {
-            theFolk.terraformerType = TerraformerType.FLATTENIZER;
-            theFolk.terraformerRadius = Integer.parseInt(tfRadius.getText().trim());
-            mc.currentScreen = null;
-            mc.setIngameFocus();
             return;
         }
-        else if (guibutton.id == 5)  // value pack - single layer of dirt
-        {
-            theFolk.terraformerType = TerraformerType.VALUEPACK;
-            theFolk.terraformerRadius = Integer.parseInt(tfRadius.getText().trim());
-            mc.currentScreen = null;
-            mc.setIngameFocus();
-            return;
-        }
-        else if (guibutton.id == 6)  // glacial - snow and ice
-        {
-            theFolk.terraformerType = TerraformerType.GLACIAL;
-            theFolk.terraformerRadius = Integer.parseInt(tfRadius.getText().trim());
-            mc.currentScreen = null;
-            mc.setIngameFocus();
-            return;
-        }
-        else if (guibutton.id == 7)  // moisterizer - lava to cobble
-        {
-            theFolk.terraformerType = TerraformerType.MOISTURIZER;
-            theFolk.terraformerRadius = Integer.parseInt(tfRadius.getText().trim());
-            mc.currentScreen = null;
-            mc.setIngameFocus();
-            return;
-        }
-        else if (guibutton.id == 8)  // thermalizer - collect lava, put in buckets
-        {
-            theFolk.terraformerType = TerraformerType.THERMALIZER;
-            theFolk.terraformerRadius = Integer.parseInt(tfRadius.getText().trim());
-            mc.currentScreen = null;
-            mc.setIngameFocus();
-            return;
-        }
-        else if (guibutton.id == 9)  // deicer, removes snow blocks
-        {
-            theFolk.terraformerType = TerraformerType.DEICER;
-            theFolk.terraformerRadius = Integer.parseInt(tfRadius.getText().trim());
-            mc.currentScreen = null;
-            mc.setIngameFocus();
-            return;
-        }
+        NBTTagCompound data = new NBTTagCompound();
+        data.setString("name", theFolk.name);
+        data.setString("type", TYPES[guibutton.id].name());
+        data.setInteger("radius", radius);
+        ServerActions.send("terraform", data);
+        mc.displayGuiScreen(null);
     }
 
     protected void mouseClicked(int i, int j, int k)

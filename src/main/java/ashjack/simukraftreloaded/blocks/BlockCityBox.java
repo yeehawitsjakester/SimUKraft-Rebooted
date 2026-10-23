@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.blocks;
 
+import net.minecraft.client.gui.GuiScreen;
+import ashjack.simukraftreloaded.client.ClientGuiOpener;
 import java.util.Random;
 
 import ashjack.simukraftreloaded.client.Gui.blocks.GuiBankATM;
@@ -55,14 +57,20 @@ public class BlockCityBox extends Block
 	    public boolean onBlockActivated(World world, int i, int j, int k, EntityPlayer entityplayer,
 	                                    int par6, float par7, float par8, float par9)
 	    {
-	        world.playSoundEffect(i, j, k, "ashjacksimukraftreloaded:computer", 1f, 1f);
-	        GuiCityBox ui = null;
-	        Minecraft mc = Minecraft.getMinecraft();
-	        mc.setIngameNotInFocus();
-	        
-	        ui = new GuiCityBox(new V3((double)i, (double)j, (double)k, entityplayer.dimension), entityplayer);
-	        mc.displayGuiScreen(ui);
-
+	        if (!world.isRemote)
+	        {
+	            world.playSoundEffect(i, j, k, "ashjacksimukraftreloaded:computer", 1f, 1f);
+	            return true;
+	        }
+	        final V3 loc = new V3((double)i, (double)j, (double)k, entityplayer.dimension);
+	        final EntityPlayer player = entityplayer;
+	        ClientGuiOpener.open(new ClientGuiOpener.Factory()
+	        {
+	            public GuiScreen create()
+	            {
+	                return new GuiCityBox(loc, player);
+	            }
+	        });
 	        return true;
 	    }
 

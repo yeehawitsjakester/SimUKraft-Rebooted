@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.common.Effects;
 import net.minecraft.block.material.Material;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -90,7 +91,7 @@ public class JobBuilder extends Job implements Serializable
         super.onUpdate();
 
         //theFolk.levelBuilder=10;
-        //SimukraftReloaded.states.credits=100000;
+        //SimukraftReloaded.states().credits=100000;
 
         if (!SimukraftReloaded.isDayTime())
         {
@@ -207,15 +208,11 @@ public class JobBuilder extends Job implements Serializable
             {
                 if (theFolk.gender == 0)
                 {
-                    jobWorld.playSound(
-                        theFolk.location.x, theFolk.location.y,
-                        theFolk.location.z, "ashjacksimukraftreloaded:readym", 1f, 1f, false);
+                    Effects.sound(jobWorld, theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:readym", 1f, 1f);
                 }
                 else
                 {
-                    jobWorld.playSound(
-                        theFolk.location.x, theFolk.location.y,
-                        theFolk.location.z, "ashjacksimukraftreloaded:readyf", 1f, 1f, false);
+                    Effects.sound(jobWorld, theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:readyf", 1f, 1f);
                 }
             }
 
@@ -705,27 +702,16 @@ public class JobBuilder extends Job implements Serializable
                                 /*if (System.currentTimeMillis()
                                         - soundLastPlayed >= 2000)
                                 {
-                                    mc.theWorld.playSound(bx + xo, by + l,
-                                                          bz + zo,
-                                                          "ashjacksimukraftreloaded:construction", 1f, 1f, false);
+                                    Effects.sound(jobWorld, bx + xo, by + l, bz + zo, "ashjacksimukraftreloaded:construction", 1f, 1f);
                                     soundLastPlayed = System
                                                       .currentTimeMillis();
                                 }*/
 
-                                // spawn particles on client side
-                                if (mc.theWorld.isRemote)
-                                {
-                                    mc.theWorld.spawnParticle("explode", bx
-                                                              + xo, by + l, bz + zo, 0, 0.3f, 0);
-                                    mc.theWorld.spawnParticle("explode", bx
-                                                              + xo, by + l, bz + zo, 0, 0.2f, 0);
-                                    mc.theWorld.spawnParticle("explode", bx
-                                                              + xo, by + l, bz + zo, 0, 0.1f, 0);
-                                }
+                                Effects.particles(jobWorld, "explode", bx + xo + 0.5, by + l + 0.5, bz + zo + 0.5, 3, 0.3, 0.05);
 
                                 if (blockId != null && GameMode.gameMode != GameMode.GAMEMODES.CREATIVE && blockId != SimukraftReloadedBlocks.livingBlock)
                                 {
-                                	SimukraftReloaded.states.credits -= (0.02f);
+                                	SimukraftReloaded.states().credits -= (0.02f);
                                 }
                             }
                             catch (Exception e)
@@ -838,9 +824,7 @@ public class JobBuilder extends Job implements Serializable
                 SimukraftReloaded.sendChat(theFolk.name
                                       + " has completed building a "
                                       + theBuilding.displayNameWithoutPK);
-                ModSimukraft.proxy.getClientWorld().playSound(
-                    mc.thePlayer.posX, mc.thePlayer.posY,
-                    mc.thePlayer.posZ, "ashjacksimukraftreloaded:cash", 1f, 1f, false);
+                Effects.soundToAllPlayers("ashjacksimukraftreloaded:cash");
                 theBuilding.saveThisBuilding();
                 theFolk.theBuilding=null;
             }
@@ -865,9 +849,9 @@ public class JobBuilder extends Job implements Serializable
         //bodgy fix to make sure buildings are complete - probably no longer needed, original bug caused by V3 class bug
         boolean activeBuilders = false;
 
-        for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+        for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
         {
-            FolkData fd = SimukraftReloaded.theFolks.get(f);
+            FolkData fd = SimukraftReloaded.folks().get(f);
 
             if (fd.vocation == Vocation.BUILDER)
             {
@@ -877,9 +861,9 @@ public class JobBuilder extends Job implements Serializable
 
         if (!activeBuilders)
         {
-            for (int b = 0; b < SimukraftReloaded.theBuildings.size(); b++)
+            for (int b = 0; b < SimukraftReloaded.buildings().size(); b++)
             {
-                Building building = SimukraftReloaded.theBuildings.get(b);
+                Building building = SimukraftReloaded.buildings().get(b);
                 building.buildingComplete = true;
             }
         }

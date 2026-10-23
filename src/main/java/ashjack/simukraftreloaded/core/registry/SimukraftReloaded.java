@@ -1,5 +1,10 @@
 package ashjack.simukraftreloaded.core.registry;
 
+import ashjack.simukraftreloaded.common.Effects;
+import ashjack.simukraftreloaded.packetsNEW.toClient.AskGameModePacket;
+import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
+import cpw.mods.fml.common.FMLCommonHandler;
+import ashjack.simukraftreloaded.common.ClientMirror;
 import net.minecraftforge.common.DimensionManager;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -27,7 +32,6 @@ import net.minecraft.util.DamageSource;
 import net.minecraft.world.World;
 import ashjack.simukraftreloaded.blocks.functionality.FarmingBox;
 import ashjack.simukraftreloaded.blocks.functionality.MiningBox;
-import ashjack.simukraftreloaded.client.Gui.other.GuiRunMod;
 import ashjack.simukraftreloaded.common.CourierTask;
 import ashjack.simukraftreloaded.common.GameStates;
 import ashjack.simukraftreloaded.common.PricesForBlocks;
@@ -38,43 +42,62 @@ import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.game.GameMode;
 import ashjack.simukraftreloaded.folk.FolkData;
-import ashjack.simukraftreloaded.proxies.ClientProxy;
 import ashjack.simukraftreloaded.proxies.CommonProxy.Commodity;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 
 public class SimukraftReloaded 
 {
-	public static Logger log = ClientProxy.log;
+	public static Logger log = Logger.getLogger("Sim-U-Kraft Reloaded");
 	
 	/** used to detect when we are in-world (not main menu) and when player changes worlds/maps */
     public static String currentSavePath = "";
     
     /** all the folk's data (used to construct and maintain an EntityFolk) */
-	public static ArrayList<FolkData> theFolks = new ArrayList<FolkData>();
+	public static ArrayList<FolkData> serverFolks = new ArrayList<FolkData>();
 	 
     /** all the building objects */
-    public static ArrayList<Building> theBuildings = new ArrayList<Building>();
+    public static ArrayList<Building> serverBuildings = new ArrayList<Building>();
 
     /** all courier tasks */
-    public static ArrayList<CourierTask> theCourierTasks = new ArrayList<CourierTask>();
+    public static ArrayList<CourierTask> serverCourierTasks = new ArrayList<CourierTask>();
 
     /** all courier points */
-    public static ArrayList<V3> theCourierPoints = new ArrayList<V3>();
+    public static ArrayList<V3> serverCourierPoints = new ArrayList<V3>();
 
     /** all the mining Boxes */
-    public static ArrayList<MiningBox> theMiningBoxes = new ArrayList<MiningBox>();
+    public static ArrayList<MiningBox> serverMiningBoxes = new ArrayList<MiningBox>();
 
     /** all the farming Boxes */
-    public static ArrayList<FarmingBox> theFarmingBoxes = new ArrayList<FarmingBox>();
+    public static ArrayList<FarmingBox> serverFarmingBoxes = new ArrayList<FarmingBox>();
 
     /** all the relationships */
-    public static ArrayList<Relationship> theRelationships = new ArrayList<Relationship>();
+    public static ArrayList<Relationship> serverRelationships = new ArrayList<Relationship>();
 
     /** all the path constructor boxes  */
     //  public static ArrayList<PathBox> thePathBoxes=new ArrayList<PathBox>();
 
     /** contains all the game states and settings for this level they are playing */
-    public static GameStates states = new GameStates();
+    public static GameStates serverStates = new GameStates();
+
+    /**
+     * true on the client's thread of a client install. There, the accessors below return the synced ClientMirror
+     * copy; everywhere else (server thread, dedicated server) they return the real data. In singleplayer both sides
+     * live in one JVM, and the GUIs used to read and write the server's lists directly.
+     */
+    public static boolean isClientThread()
+    {
+        return FMLCommonHandler.instance().getSide().isClient() && FMLCommonHandler.instance().getEffectiveSide().isClient();
+    }
+
+    public static ArrayList<FolkData> folks() { return isClientThread() ? ClientMirror.folks : serverFolks; }
+    public static ArrayList<Building> buildings() { return isClientThread() ? ClientMirror.buildings : serverBuildings; }
+    public static ArrayList<CourierTask> courierTasks() { return isClientThread() ? ClientMirror.courierTasks : serverCourierTasks; }
+    public static ArrayList<V3> courierPoints() { return isClientThread() ? ClientMirror.courierPoints : serverCourierPoints; }
+    public static ArrayList<MiningBox> miningBoxes() { return isClientThread() ? ClientMirror.miningBoxes : serverMiningBoxes; }
+    public static ArrayList<FarmingBox> farmingBoxes() { return isClientThread() ? ClientMirror.farmingBoxes : serverFarmingBoxes; }
+    public static ArrayList<Relationship> relationships() { return isClientThread() ? ClientMirror.relationships : serverRelationships; }
+    public static GameStates states() { return isClientThread() ? ClientMirror.states : serverStates; }
+    public static ArrayList<Commodity> commodities() { return isClientThread() ? ClientMirror.commodities : theCommodities; }
 
     /** arraylist of commodities that banks are current selling, updates each morning with new items */
     public static ArrayList<Commodity> theCommodities = new ArrayList<Commodity>();
@@ -91,13 +114,13 @@ public class SimukraftReloaded
     public static void resetAndLoadNewWorld() {
     	Side side = cpw.mods.fml.common.FMLCommonHandler.instance().getEffectiveSide();
     	log.info("RESETTING and loading world on "+side.toString()+" SIDE"); 
-    	theBuildings.clear();
-        theCourierPoints.clear();
-        theCourierTasks.clear();
-        theMiningBoxes.clear();
-        theFarmingBoxes.clear();
-        theFolks.clear();
-        theRelationships.clear();
+    	buildings().clear();
+        courierPoints().clear();
+        courierTasks().clear();
+        miningBoxes().clear();
+        farmingBoxes().clear();
+        folks().clear();
+        relationships().clear();
         
         File f=new File(getSavesDataFolder() + "settings.sk2");
         if (!f.exists()) {
@@ -105,11 +128,11 @@ public class SimukraftReloaded
         }
         if (f.exists())
         {
-            states.loadStates();
+            states().loadStates();
 
             try
             {
-                GameMode.setGameModeFromNumber(states.gameModeNumber);
+                GameMode.setGameModeFromNumber(states().gameModeNumber);
             }
             catch (Exception e)
             {
@@ -118,46 +141,35 @@ public class SimukraftReloaded
         }
         else
         {
-            states = new GameStates();
-            states.saveStates();
+            serverStates = new GameStates();
+            states().saveStates();
         }
 
-        if (states == null)
+        if (states() == null)
         {
             new File(getSavesDataFolder() + "settings.sk2").delete();
-            states = new GameStates();
-            states.saveStates();
+            serverStates = new GameStates();
+            states().saveStates();
             sendChat("Your Sim-U-Kraft settings file was corrupted, I had to make a new one");
         }
 
-        if (states.gameModeNumber == -1)
+        if (states().gameModeNumber == -1)
         {
-            if (runModui == null)
-            {
-                // assign the field (a local used to shadow it, so the menu was re-opened every second), and open
-                // it on the client thread - this runs on the server thread
-                runModui = new GuiRunMod();
-                final GuiRunMod gui = runModui;
-                Minecraft.getMinecraft().func_152344_a(new Runnable()
-                {
-                    public void run()
-                    {
-                        Minecraft.getMinecraft().displayGuiScreen(gui);
-                    }
-                });
-            }
+            // ask the players to choose (this runs every second until someone answers with the "setGameMode" action);
+            // it used to open the menu from the server thread, which can't work on a dedicated or LAN server
+            PacketHandler.net.sendToAll(new AskGameModePacket());
 
             return;
         }
 
-        if (states.gameModeNumber >= 0)
+        if (states().gameModeNumber >= 0)
         {
         	System.out.println("Startup already been run");
             ModSimukraft.proxy.ranStartup = true;
         }
 
         sendChat("Welcome to Sim-U-Kraft Reloaded " + ModSimukraft.version);
-        theFolks.clear();
+        folks().clear();
         Building.initialiseAllBuildings(); //load ALL buildings off disk and init them
         Building.loadAllBuildings();	   //load buildings in this world
         CourierTask.loadCourierTasksAndPoints();
@@ -173,7 +185,6 @@ public class SimukraftReloaded
         ModSimukraft.proxy.ranStartup = true;
     }
     
-    private static GuiRunMod runModui = null;
     
     
     
@@ -265,14 +276,13 @@ public class SimukraftReloaded
     /** returns true when it is daytime in the OVERWORLD, ignores other world times */
     public static boolean isDayTime()
     {
-        if (MinecraftServer.getServer().worldServers[0].getWorldInfo().getWorldTime() % 24000 <= 11999)
+        // GUIs ask this on the client, where there may be no MinecraftServer (playing on a server or LAN)
+        World w = isClientThread() ? ModSimukraft.proxy.getClientWorld() : MinecraftServer.getServer().worldServers[0];
+        if (w == null)
         {
             return true;
         }
-        else
-        {
-            return false;
-        }
+        return w.getWorldInfo().getWorldTime() % 24000 <= 11999;
 
         //return MinecraftServer.getServer().worldServers[0].isDaytime();  <- doesn't work during storm
     }
@@ -328,8 +338,8 @@ public class SimukraftReloaded
                         }
 
                         Long now = System.currentTimeMillis();
-                        states.lastUpdateCheck = now;
-                        states.saveStates();
+                        states().lastUpdateCheck = now;
+                        states().saveStates();
                     }
                 }
 
@@ -450,25 +460,15 @@ public class SimukraftReloaded
         {
             isDay = true;
             log.info("Night to day transition");
-            World world = ModSimukraft.proxy.getClientWorld();
+            Effects.soundToAllPlayers("ashjacksimukraftreloaded:rooster");
 
-            if (world != null)
+            states().dayOfWeek++;
+
+            if (states().dayOfWeek > 6)
             {
-                EntityPlayer p = Minecraft.getMinecraft().thePlayer;
-
-                if (p != null)
-                {
-                    ModSimukraft.proxy.getClientWorld().playSound(p.posX, p.posY, p.posZ, "ashjacksimukraftreloaded:rooster", 1.0f, 1.0f, false);
-                }
-            }
-
-            states.dayOfWeek++;
-
-            if (states.dayOfWeek > 6)
-            {
-                states.dayOfWeek = 0;
+                states().dayOfWeek = 0;
                 int homeless=0;
-                for(FolkData f:theFolks) {
+                for(FolkData f:folks()) {
                 	if (f.getHome()==null) {
                 		homeless++;
                 	}
@@ -481,19 +481,19 @@ public class SimukraftReloaded
 
             evolveFolks();
 
-            if (theFolks.size() > 1)
+            if (folks().size() > 1)
             {
                 Random rand = new Random();
-                int f1 = rand.nextInt(theFolks.size());
+                int f1 = rand.nextInt(folks().size());
                 int f2 = f1;
 
                 while (f2 == f1)
                 {
-                    f2 = rand.nextInt(theFolks.size());
+                    f2 = rand.nextInt(folks().size());
                 }
 
-                FolkData folk1 = theFolks.get(f1);
-                FolkData folk2 = theFolks.get(f2);
+                FolkData folk1 = folks().get(f1);
+                FolkData folk2 = folks().get(f2);
                 Relationship.meddleWithRelationship(folk1, folk2);
             }
         }
@@ -503,23 +503,23 @@ public class SimukraftReloaded
             isDay = false;
             log.info("Day to Night transition");
 
-            if (theFolks.size() > 1)
+            if (folks().size() > 1)
             {
                 Random rand = new Random();
-                int f1 = rand.nextInt(theFolks.size());
+                int f1 = rand.nextInt(folks().size());
                 int f2 = f1;
 
                 while (f2 == f1)
                 {
-                    f2 = rand.nextInt(theFolks.size());
+                    f2 = rand.nextInt(folks().size());
                 }
 
-                FolkData folk1 = theFolks.get(f1);
-                FolkData folk2 = theFolks.get(f2);
+                FolkData folk1 = folks().get(f1);
+                FolkData folk2 = folks().get(f2);
                 Relationship.meddleWithRelationship(folk1, folk2);
             }
             
-            for(FolkData folk:theFolks) {
+            for(FolkData folk:folks()) {
             	folk.destination=null;
             	if (folk.theEntity !=null) {
             		folk.theEntity.getNavigator().clearPathEntity();
@@ -532,7 +532,7 @@ public class SimukraftReloaded
     //age them etc
     private static void evolveFolks()
     {
-        if (theFolks.size() <= 0)
+        if (folks().size() <= 0)
         {
             return;
         }
@@ -549,9 +549,9 @@ public class SimukraftReloaded
 
                 if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                 {
-                    for (int b = 0; b < theBuildings.size(); b++)
+                    for (int b = 0; b < buildings().size(); b++)
                     {
-                        Building building = (Building) theBuildings.get(b);
+                        Building building = (Building) buildings().get(b);
 
                         if (building.type.contentEquals("residential") && building.tennants.size() > 0)
                         {
@@ -594,8 +594,8 @@ public class SimukraftReloaded
                         sendChat("Hotel guests paid " + displayMoney(totalHotel) + " Sim-u-credits last night.");
                     }
                     sendChat("Collected " + displayMoney(totalCorpTax) + " Sim-u-credits in corporation tax today.");
-                    states.credits += totalRent + totalHotel;
-                    states.credits += totalCorpTax;
+                    states().credits += totalRent + totalHotel;
+                    states().credits += totalCorpTax;
                     for (Object o : MinecraftServer.getServer().getConfigurationManager().playerEntityList)
                     {
                         EntityPlayer p = (EntityPlayer) o;
@@ -612,9 +612,9 @@ public class SimukraftReloaded
         Building.dailyRoomUpdate(MinecraftServer.getServer().worldServerForDimension(0));
         
 
-        for (int f = 0; f < theFolks.size(); f++)
+        for (int f = 0; f < folks().size(); f++)
         {
-            folk = (FolkData) theFolks.get(f);
+            folk = (FolkData) folks().get(f);
             //reset their greet status
             folk.greetedToday = false;
             folk.matingStage = -1.0f; //not had today
@@ -628,14 +628,14 @@ public class SimukraftReloaded
             int currentAge = folk.age;
             if (currentAge >= 18)
             {
-                if (states.dayOfWeek == 6)  //on saturday morning
+                if (states().dayOfWeek == 6)  //on saturday morning
                 {
                     folk.age++;
                 }
             }
             else
             {
-                if (states.dayOfWeek == 3 || states.dayOfWeek == 6) //age kids twice a week
+                if (states().dayOfWeek == 3 || states().dayOfWeek == 6) //age kids twice a week
                 {
                     folk.age++;
 
@@ -658,11 +658,11 @@ public class SimukraftReloaded
         if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
         {
             ////age them one year per game week
-            int fl = rand.nextInt(theFolks.size());
+            int fl = rand.nextInt(folks().size());
 
-            for (int f = 0; f < theFolks.size(); f++)
+            for (int f = 0; f < folks().size(); f++)
             {
-                folk = (FolkData) theFolks.get(f);
+                folk = (FolkData) folks().get(f);
 
                 if (f == fl)
                 {
@@ -676,9 +676,9 @@ public class SimukraftReloaded
             }
 
             /// pay the soldiers
-            for (int f = 0; f < theFolks.size(); f++)
+            for (int f = 0; f < folks().size(); f++)
             {
-                folk = (FolkData) theFolks.get(f);
+                folk = (FolkData) folks().get(f);
 
                 if (folk.theirJob != null)
                 {
@@ -691,7 +691,7 @@ public class SimukraftReloaded
                         {
                             sendChat("Paid " + folk.name + " " + displayMoney(pay) +
                                                   " Sim-u-credits for killing " + job.kills + " hostile mobs yesterday.");
-                            states.credits -= pay;
+                            states().credits -= pay;
                             job.kills = 0;
                         }
                     }
@@ -717,7 +717,7 @@ public class SimukraftReloaded
             PricesForBlocks.adjustPrice(Blocks.fence, updown);
         } //end of non-creative mode stuff
 
-        states.saveStates();
+        states().saveStates();
         Commodity.refreshAvailableCommoditities();
     }
 
@@ -737,15 +737,16 @@ public class SimukraftReloaded
 
         for (int i = 0; i < count; i++)
         {
-            V3 blockLoc = demolishBlocks.get(0);
-            Block block;
+            // always take the entry off the queue: it used to look the block up by a name that was never set,
+            // fail, and retry the same entry forever
+            V3 blockLoc = demolishBlocks.remove(0);
 
             try
             {
-            	block = Block.getBlockFromName(blockLoc.name);
-            	block.dropBlockAsItem(demolishWorld, blockLoc.x.intValue(), blockLoc.y.intValue() + 10 + new Random().nextInt(20), blockLoc.z.intValue()
-                                      , 0, 0);
-                demolishBlocks.remove(0);
+            	Block block = Block.getBlockById(blockLoc.blockID);
+            	World world = MinecraftServer.getServer().worldServerForDimension(blockLoc.theDimension);
+            	block.dropBlockAsItem(world, blockLoc.x.intValue(), blockLoc.y.intValue() + 10 + new Random().nextInt(20), blockLoc.z.intValue()
+                                      , blockLoc.meta, 0);
             }
             catch (Exception e) {}
 
@@ -837,7 +838,7 @@ public class SimukraftReloaded
     protected final static String[] dow = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
     public static String getDayOfWeek()
     {
-        return dow[states.dayOfWeek];
+        return dow[states().dayOfWeek];
     }
     
     public static ArrayList<String> loadSK2(String fullFilename) {

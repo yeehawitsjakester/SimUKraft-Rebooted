@@ -41,7 +41,7 @@ public class GameStates implements Serializable
     	
     		File f=new File(SimukraftReloaded.getSavesDataFolder()+"settings.sk2");
     		if (!f.exists()) {
-    			SimukraftReloaded.states = (GameStates) ModSimukraft.proxy.
+    			SimukraftReloaded.serverStates = (GameStates) ModSimukraft.proxy.
     					loadObject(SimukraftReloaded.getSavesDataFolder() + "settings.suk");
     		} else {
     			loadStates2();

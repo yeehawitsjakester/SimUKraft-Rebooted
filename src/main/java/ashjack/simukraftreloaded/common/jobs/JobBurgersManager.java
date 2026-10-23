@@ -389,7 +389,7 @@ public class JobBurgersManager extends Job {
     		
     		theStage=Stage.HANGINGOUT;
     		step=0;
-    		SimukraftReloaded.states.credits -=2.45;
+    		SimukraftReloaded.states().credits -=2.45;
     	}
     }
     

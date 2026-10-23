@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.client.Gui.blocks;
 
+import net.minecraft.nbt.NBTTagCompound;
+import ashjack.simukraftreloaded.network.ServerActions;
+import ashjack.simukraftreloaded.network.ActionHandlers;
 import java.util.ArrayList;
 
 import net.minecraft.client.gui.GuiButton;
@@ -256,11 +259,9 @@ public class GuiMining extends GuiScreen
         }
         else if (guibutton.displayString.startsWith("Fire "))
         {
-            for (int i = 0; i < theWorkers.size(); i++)
-            {
-                FolkData folk = theWorkers.get(i);
-                folk.selfFire();
-            }
+            NBTTagCompound data = new NBTTagCompound();
+            ActionHandlers.putV3(data, "box", theMiningBox.location);
+            ServerActions.send("fireAllAt", data);
 
             guibutton.enabled = false;
             mc.currentScreen = null;
@@ -299,6 +300,7 @@ public class GuiMining extends GuiScreen
             }
 
             guibutton.displayString = i;
+            sendSettings();
         }
         else if (guibutton.id == 3)     //add glass cover toggle
         {
@@ -315,7 +317,19 @@ public class GuiMining extends GuiScreen
             }
 
             guibutton.displayString = j;
+            sendSettings();
         }
+    }
+
+    /** the GUI edits its copy of the box for display; the server applies the same settings to the real one */
+    private void sendSettings()
+    {
+        NBTTagCompound data = new NBTTagCompound();
+        ActionHandlers.putV3(data, "box", theMiningBox.location);
+        data.setInteger("discards", theMiningBox.discards);
+        data.setBoolean("glass", theMiningBox.addGlassCover);
+        data.setInteger("size", theMiningBox.size);
+        ServerActions.send("mineSettings", data);
     }
 
     @Override
@@ -340,7 +354,11 @@ public class GuiMining extends GuiScreen
                 }
                 catch (Exception e) {}
 
-                theMiningBox.size = s;
+                if (s != theMiningBox.size)
+                {
+                    theMiningBox.size = s;
+                    sendSettings();
+                }
             }
         }
     }

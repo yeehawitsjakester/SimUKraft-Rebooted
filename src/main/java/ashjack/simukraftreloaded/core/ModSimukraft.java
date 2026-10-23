@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.core;
 
+import ashjack.simukraftreloaded.network.ActionHandlers;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -31,7 +32,6 @@ import ashjack.simukraftreloaded.blocks.functionality.FluidMilk;
 import ashjack.simukraftreloaded.blocks.functionality.MiningBox;
 import ashjack.simukraftreloaded.client.ClientTickHandler;
 import ashjack.simukraftreloaded.client.Gui.GuiHandler;
-import ashjack.simukraftreloaded.client.Gui.other.GuiRunMod;
 import ashjack.simukraftreloaded.commands.CommandChangeCredits;
 import ashjack.simukraftreloaded.commands.CommandGenerateFolk;
 import ashjack.simukraftreloaded.common.CommonTickHandler;
@@ -70,9 +70,6 @@ import ashjack.simukraftreloaded.folk.traits.Traits;
 import ashjack.simukraftreloaded.items.ItemSUKDrink;
 import ashjack.simukraftreloaded.items.ItemSUKFood;
 import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
-import ashjack.simukraftreloaded.packetsNEW.toClient.UpdateFolkPositionPacket;
-import ashjack.simukraftreloaded.packetsNEW.toServer.LoadBuildingPacket;
-import ashjack.simukraftreloaded.proxies.ClientProxy;
 import ashjack.simukraftreloaded.proxies.CommonProxy;
 import ashjack.simukraftreloaded.proxies.CommonProxy.Commodity;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
@@ -129,13 +126,13 @@ public class ModSimukraft
     
     //Proxies
     public static CommonProxy proxy;
-    public static ClientProxy clientProxy; 
     
     @EventHandler
     public void preinit(FMLPreInitializationEvent event)
     {
     	
     	PacketHandler.initPackets();
+    	ActionHandlers.registerAll();
     	
     	NetworkRegistry.INSTANCE.registerGuiHandler(this, new GuiHandler());
     	

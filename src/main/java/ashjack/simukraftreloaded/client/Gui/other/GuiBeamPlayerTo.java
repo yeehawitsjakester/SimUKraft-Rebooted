@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.client.Gui.other;
 
+import net.minecraft.nbt.NBTTagCompound;
+import ashjack.simukraftreloaded.network.ServerActions;
+import ashjack.simukraftreloaded.network.ActionHandlers;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.EntityPlayer;
@@ -44,9 +47,9 @@ public class GuiBeamPlayerTo extends GuiScreen
         buttonList.add(new GuiButton(0, 5, 5, 50, 20, "Cancel"));
         int x = 10, y = 40, idx = 2;
 
-        for (int f = 0; f < SimukraftReloaded.theCourierPoints.size(); f++)
+        for (int f = 0; f < SimukraftReloaded.courierPoints().size(); f++)
         {
-            V3 cpoint = SimukraftReloaded.theCourierPoints.get(f);
+            V3 cpoint = SimukraftReloaded.courierPoints().get(f);
             buttonList.add(new GuiButton(idx, x, y, 110, 20, cpoint.name));
             idx++;
             x += 110;
@@ -70,7 +73,7 @@ public class GuiBeamPlayerTo extends GuiScreen
         drawDefaultBackground();
         drawCenteredString(fontRendererObj, "Choose a point to beam to...", width / 2, 17, 0xffffff);
 
-        if (SimukraftReloaded.theCourierPoints.size() == 0)
+        if (SimukraftReloaded.courierPoints().size() == 0)
         {
             drawCenteredString(fontRendererObj, "You don't have any courier/beaming points!", width / 2, 37, 0xffa0a0);
             drawCenteredString(fontRendererObj, "Place a single Sim-U-Marker down and right click it", width / 2, 57, 0xffa0a0);
@@ -94,24 +97,10 @@ public class GuiBeamPlayerTo extends GuiScreen
             return;
         }
 
-        String name = guibutton.displayString.trim();
-        V3 v = CourierTask.getCourierPoint(name);
-        V3 safePoint = v.clone();
-        safePoint.y++;
-
-        try
-        {
-            mc.theWorld.playSound(this.thePlayer.posX, this.thePlayer.posY, this.thePlayer.posZ, "ashjacksimukraftreloaded:beamdown", 1.0f, 1.0f, false);
-            mc.theWorld.playSound(safePoint.x, safePoint.y, safePoint.z, "ashjacksimukraftreloaded:beamdown" , 1f, 1f, false);
-        }
-        catch (Exception e) {}  //don't care - sometimes NPEs
-
-        SimukraftReloaded.sendChat("Beaming you to " + name);
+        NBTTagCompound data = new NBTTagCompound();
+        data.setString("point", guibutton.displayString.trim());
+        ServerActions.send("beamPlayer", data);
         mc.displayGuiScreen(null);
-        ClientTickHandler.beamingPlayer = thePlayer;
-        ClientTickHandler.beamingStage = 1;
-        ClientTickHandler.beamingStartedAt = System.currentTimeMillis();
-        ClientTickHandler.beamingTo = safePoint.clone();
     }
 
     public GuiButton getButtonWithId(int id)

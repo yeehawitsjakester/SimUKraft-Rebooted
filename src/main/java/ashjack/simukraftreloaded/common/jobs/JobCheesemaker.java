@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.common.Effects;
 import java.util.ArrayList;
 
 import ashjack.simukraftreloaded.core.ModSimukraft;
@@ -169,9 +170,7 @@ public class JobCheesemaker extends Job {
 			for(V3 v3:shutters) {
 				jobWorld.setBlock(v3.x.intValue(),v3.y.intValue(),v3.z.intValue(),Blocks.air,0,0x03);
 			}
-			mc.theWorld.playSound(theFolk.location.x,
-	                theFolk.location.y, theFolk.location.z,
-	                "ashjacksimukraftreloaded:cheesemachine", 1f, 1f, false);
+			Effects.sound(jobWorld, theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:cheesemachine", 1f, 1f);
     	}
     }*/
     
@@ -455,7 +454,7 @@ public class JobCheesemaker extends Job {
 					theFolk.inventory.add(new ItemStack(SimukraftReloadedBlocks.blockCheese));
 					jobWorld.setBlock(block.x.intValue(),block.y.intValue(),block.z.intValue(),id,0,0x03);
 					theFolk.isWorking=true;
-					SimukraftReloaded.states.credits -=0.45;
+					SimukraftReloaded.states().credits -=0.45;
 					break;
 				}
 			}

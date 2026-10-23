@@ -41,11 +41,11 @@ public class Building implements Serializable
     private static final long serialVersionUID = -1132989807904279141L;
     public String displayName;
     public String type; // / residential commercial (folder name)
-    public Block[] structure; // / holds a 3D array of block IDs for this
-    public int[] structureSub;
+    public transient Block[] structure; // / holds a 3D array of block IDs for this
+    public transient int[] structureSub;
     public String description = "None";
-    public Infrastructure infrastructureRequirement = null;
-    public Infrastructure infrastructureProducer = null;
+    public transient Infrastructure infrastructureRequirement = null;
+    public transient Infrastructure infrastructureProducer = null;
     // building
     public int layerCount = 0;
     public int ftbCount = 0;
@@ -69,7 +69,8 @@ public class Building implements Serializable
     public String displayNameWithoutPK = "";
     public Float rent = 0f;
     public ArrayList<String> tennants = new ArrayList<String>();
-    public ArrayList<V3> blockLocations = new ArrayList<V3>();
+    // transient: saved explicitly in toSaveLines(), and too big to send to clients
+    public transient ArrayList<V3> blockLocations = new ArrayList<V3>();
 
     public transient HashMap<ItemStack, Integer> requirements = new HashMap<ItemStack, Integer>();
     public transient V3 conBoxLocation = null;
@@ -97,6 +98,14 @@ public class Building implements Serializable
     public Building()
     {
       //sk2 uses this constructor
+    }
+
+    /** transient fields arrive as null when a building is sent to a client; give them empty values */
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException
+    {
+        in.defaultReadObject();
+        blockLocations = new ArrayList<V3>();
+        requirements = new HashMap<ItemStack, Integer>();
     }
 
     /** constructor for making new building */
@@ -761,15 +770,15 @@ public class Building implements Serializable
     {
         Building b = null;
 
-        if (SimukraftReloaded.theBuildings.size() == 0)
+        if (SimukraftReloaded.buildings().size() == 0)
         {
             Building.loadAllBuildings();
         }
 
-        for (int x = 0; x < SimukraftReloaded.theBuildings.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.buildings().size(); x++)
         {
         	try {
-	        	b = (Building) SimukraftReloaded.theBuildings.get(x);
+	        	b = (Building) SimukraftReloaded.buildings().get(x);
 	
 	            if (b.primaryXYZ.isSameCoordsAs(primaryXYZ, false, true))
 	            {
@@ -790,16 +799,16 @@ public class Building implements Serializable
         Building b = null;
         Building nearestBuilding = null;
 
-        if (SimukraftReloaded.theBuildings.size() == 0)
+        if (SimukraftReloaded.buildings().size() == 0)
         {
             Building.loadAllBuildings();
         }
 
-        for (int x = 0; x < SimukraftReloaded.theBuildings.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.buildings().size(); x++)
         {
         	try 
         	{
-	        	b = (Building) SimukraftReloaded.theBuildings.get(x);
+	        	b = (Building) SimukraftReloaded.buildings().get(x);
 	
 	        	if(nearestBuilding == null && b != null)
 	        	{
@@ -825,9 +834,9 @@ public class Building implements Serializable
     {
         Building b = null;
 
-        for (int x = 0; x < SimukraftReloaded.theBuildings.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.buildings().size(); x++)
         {
-            b = (Building) SimukraftReloaded.theBuildings.get(x);
+            b = (Building) SimukraftReloaded.buildings().get(x);
 
             if (b.displayName.contains(searchWord))
             {
@@ -842,9 +851,9 @@ public class Building implements Serializable
     public static ArrayList<Building> getBuildingBySearch(String searchWord,boolean findAll) {
         ArrayList<Building> ret=new ArrayList<Building>();
 
-        for (int x = 0; x < SimukraftReloaded.theBuildings.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.buildings().size(); x++)
         {
-            Building b = (Building) SimukraftReloaded.theBuildings.get(x);
+            Building b = (Building) SimukraftReloaded.buildings().get(x);
 
             if (b.displayName.toLowerCase().contains(searchWord.toLowerCase()))
             {
@@ -863,9 +872,9 @@ public class Building implements Serializable
     {
         Building b = null;
 
-        for (int x = 0; x < SimukraftReloaded.theBuildings.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.buildings().size(); x++)
         {
-            b = (Building) SimukraftReloaded.theBuildings.get(x);
+            b = (Building) SimukraftReloaded.buildings().get(x);
 
             try
             {
@@ -1011,7 +1020,7 @@ public class Building implements Serializable
         room.displayNameWithoutPK = room.displayName;
         room.author = "";
         room.updateRoomRent();
-        SimukraftReloaded.theBuildings.add(room);
+        SimukraftReloaded.buildings().add(room);
         room.saveThisBuilding();
         return room;
     }
@@ -1034,14 +1043,15 @@ public class Building implements Serializable
     }
 
     /**
-     * Once a day (morning): hotel guests use up a night and check out when their stay is over, and empty hotel
-     * rooms may get visitors from out of town. Hotel income is collected with the rent in evolveFolks().
+     * Once a day (morning): hotel bookings count down a night, and empty hotel rooms may get visitors from out of
+     * town. Guests check themselves out when their nights run out (FolkData.checkOutOfHotel). Hotel income is
+     * collected with the rent in evolveFolks().
      */
     public static void dailyRoomUpdate(World world)
     {
         Random rand = new Random();
 
-        for (Building room : new ArrayList<Building>(SimukraftReloaded.theBuildings))
+        for (Building room : new ArrayList<Building>(SimukraftReloaded.buildings()))
         {
             if (!room.isHotel())
             {
@@ -1050,10 +1060,9 @@ public class Building implements Serializable
 
             if (!room.tennants.isEmpty())
             {
-                room.stayNightsLeft--;
-                if (room.stayNightsLeft <= 0)
+                if (room.stayNightsLeft > 0)
                 {
-                    room.checkOut();
+                    room.stayNightsLeft--;
                 }
             }
             else if (rand.nextInt(100) < SimukraftReloadedConfig.configHotelVisitorChance)
@@ -1063,29 +1072,19 @@ public class Building implements Serializable
         }
     }
 
-    /** ends a hotel stay: visitors leave town, locals go looking for a permanent home */
+    /** manual check-out (GUI button / stuck guests): everyone in the room checks out now */
     public void checkOut()
     {
         for (String name : new ArrayList<String>(tennants))
         {
             FolkData folk = FolkData.getFolkByName(name);
-            removeTennant(name);
-            if (folk == null)
+            if (folk != null)
             {
-                continue;
-            }
-            if (folk.isVisitor)
-            {
-                SimukraftReloaded.sendChat(folk.name + " checked out of " + displayNameWithoutPK + " and left town");
-                folk.removeFromWorld();
+                folk.checkOutOfHotel(this);
             }
             else
             {
-                SimukraftReloaded.sendChat(folk.name + " checked out of " + displayNameWithoutPK);
-                folk.action = FolkAction.WANDER;
-                folk.actionArrival = null;
-                folk.stayPut = false;
-                folk.statusText = "Looking for a home";
+                removeTennant(name);
             }
         }
         stayNightsLeft = 0;
@@ -1100,13 +1099,13 @@ public class Building implements Serializable
      */
     public static void removeBuilding(Building building, String reason)
     {
-        if (building == null || !SimukraftReloaded.theBuildings.remove(building))
+        if (building == null || !SimukraftReloaded.buildings().remove(building))
         {
             return;
         }
         SimukraftReloaded.log.info("Building: removed " + building.displayNameWithoutPK + " at " + building.primaryXYZ + " (" + reason + ")");
 
-        for (FolkData folk : new ArrayList<FolkData>(SimukraftReloaded.theFolks))
+        for (FolkData folk : new ArrayList<FolkData>(SimukraftReloaded.folks()))
         {
             boolean worksHere = building.primaryXYZ != null && building.primaryXYZ.isSameCoordsAs(folk.employedAt, true, true);
             boolean buildingIt = folk.theBuilding == building;
@@ -1149,7 +1148,7 @@ public class Building implements Serializable
     {
         ArrayList<Building> gone = new ArrayList<Building>();
 
-        for (Building building : new ArrayList<Building>(SimukraftReloaded.theBuildings))
+        for (Building building : new ArrayList<Building>(SimukraftReloaded.buildings()))
         {
             if (building == null || building.primaryXYZ == null)
             {
@@ -1177,7 +1176,7 @@ public class Building implements Serializable
         {
             removeBuilding(building, "control box missing");
         }
-        SimukraftReloaded.log.info("Building.saveAllBuildings "+SimukraftReloaded.theBuildings.size()+" buildings");
+        SimukraftReloaded.log.info("Building.saveAllBuildings "+SimukraftReloaded.buildings().size()+" buildings");
         
         /*
         for (int b = 0; b < ModSimukraft.theBuildings.size(); b++)
@@ -1241,7 +1240,7 @@ public class Building implements Serializable
         }
 
         if (useNewFormat) {
-        	SimukraftReloaded.theBuildings.clear();
+        	SimukraftReloaded.buildings().clear();
         	
         	for (File f : buildingsFolder.listFiles())
 	        {
@@ -1328,7 +1327,7 @@ public class Building implements Serializable
 	            	} else {
 	            		build.displayNameWithoutPK = build.displayName;
 	            	}
-	            	SimukraftReloaded.theBuildings.add(build);
+	            	SimukraftReloaded.buildings().add(build);
 	            }
 	        }
 	            	
@@ -1336,8 +1335,7 @@ public class Building implements Serializable
 	    /// load old format     	
         } else {
     	
-	        Minecraft mc = Minecraft.getMinecraft();
-	        SimukraftReloaded.theBuildings.clear();
+	        SimukraftReloaded.buildings().clear();
 	
 	        for (File f : buildingsFolder.listFiles())
 	        {
@@ -1357,7 +1355,7 @@ public class Building implements Serializable
 	                                                      xyz.y.intValue(), xyz.z.intValue());
 	                    Building dupe = null;
 	
-	                    if (SimukraftReloaded.theBuildings.size() > 0)
+	                    if (SimukraftReloaded.buildings().size() > 0)
 	                    {
 	                        dupe = Building.getBuilding(xyz);
 	                    }
@@ -1365,7 +1363,7 @@ public class Building implements Serializable
 	                    if (id == SimukraftReloadedBlocks.controlBox && dupe == null)
 	                    {
 	                        building.loadStructure();
-	                        SimukraftReloaded.theBuildings.add(building);
+	                        SimukraftReloaded.buildings().add(building);
 	                    }
 	                    else
 	                    {
@@ -1382,9 +1380,9 @@ public class Building implements Serializable
     /** checks that the folks (tennants) actually exist now */
     public static void checkTennants()
     {
-        for (int b = 0; b < SimukraftReloaded.theBuildings.size(); b++)
+        for (int b = 0; b < SimukraftReloaded.buildings().size(); b++)
         {
-            Building building = SimukraftReloaded.theBuildings.get(b);
+            Building building = SimukraftReloaded.buildings().get(b);
 
             for (int t = 0; t < building.tennants.size(); t++)
             {
@@ -1393,9 +1391,9 @@ public class Building implements Serializable
                     String tennant = building.tennants.get(t);
                     boolean exists = false;
 
-                    for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+                    for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
                     {
-                        FolkData folk = SimukraftReloaded.theFolks.get(f);
+                        FolkData folk = SimukraftReloaded.folks().get(f);
 
                         if (folk.name.contentEquals(tennant))
                         {
@@ -1500,6 +1498,12 @@ public class Building implements Serializable
             catch (Exception e) {}
         }
        
+    }
+
+    /** whether the blueprint catalogue has been read (a client playing on a server reads its own copy for the GUIs) */
+    public static boolean isCatalogueLoaded()
+    {
+        return runningInitThread || !buildingsRes.isEmpty() || !buildingsCom.isEmpty() || !buildingsInd.isEmpty() || !buildingsOth.isEmpty();
     }
 
     public static Building getFromAllBuildings(String fullname, String type)

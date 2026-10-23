@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import net.minecraft.server.MinecraftServer;
+import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Random;
@@ -163,7 +165,7 @@ public class JobFisherman extends Job implements Serializable
             theStage = Stage.CAUGHTFISH;
         }
 
-        if (mc.getIntegratedServer().worldServers[0].getWorldTime() % 24000 > 11980)
+        if (MinecraftServer.getServer().worldServers[0].getWorldTime() % 24000 > 11980)
         {
             theStage = Stage.SELLINGFISH;
             step = 1;
@@ -175,7 +177,7 @@ public class JobFisherman extends Job implements Serializable
         timeSinceLastCaughtFish = System.currentTimeMillis();
         theFolk.statusText = "Caught a fish, yay!";
         fishCount++;
-        SimukraftReloaded.states.credits -= (0.02f);
+        SimukraftReloaded.states().credits -= (0.02f);
         dockChests = inventoriesFindClosest(theFolk.employedAt, 4);
 
         if (dockChests.size() == 0)
@@ -210,7 +212,7 @@ public class JobFisherman extends Job implements Serializable
 
     private void stageSellingFish()
     {
-        if (mc.getIntegratedServer().worldServers[0].getWorldTime() % 24000 < 11600)
+        if (MinecraftServer.getServer().worldServers[0].getWorldTime() % 24000 < 11600)
         {
             theStage = Stage.IDLE;
             return;
@@ -223,9 +225,9 @@ public class JobFisherman extends Job implements Serializable
             int sell = 0;
             ItemStack fishStack = null;
 
-            if (SimukraftReloaded.theFolks.size() > 1)
+            if (SimukraftReloaded.folks().size() > 1)
             {
-                sell = SimukraftReloaded.theFolks.size() + 1;
+                sell = SimukraftReloaded.folks().size() + 1;
                 dockChests = inventoriesFindClosest(theFolk.employedAt, 4);
                 fishStack = inventoriesGet(dockChests, new ItemStack(Items.fish, sell), false,false);
             }
@@ -243,9 +245,9 @@ public class JobFisherman extends Job implements Serializable
                 SimukraftReloaded.sendChat(theFolk.name + " caught " + fishCount + " fish today and has sold "
                                       + fishStack.stackSize + " to folks.");
 
-                for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+                for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
                 {
-                    folk = (FolkData) SimukraftReloaded.theFolks.get(f);
+                    folk = (FolkData) SimukraftReloaded.folks().get(f);
 
                     if (fishStack.stackSize > 0)
                     {

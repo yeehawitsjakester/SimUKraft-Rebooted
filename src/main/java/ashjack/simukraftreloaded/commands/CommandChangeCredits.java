@@ -54,8 +54,8 @@ public class CommandChangeCredits implements ICommand{
 		{
 			if(argString.length < 2)
 			{
-				SimukraftReloaded.states.credits = Float.parseFloat(argString[0]);
-				SimukraftReloaded.states.saveStates();
+				SimukraftReloaded.states().credits = Float.parseFloat(argString[0]);
+				SimukraftReloaded.states().saveStates();
 			}
 			else
 			{

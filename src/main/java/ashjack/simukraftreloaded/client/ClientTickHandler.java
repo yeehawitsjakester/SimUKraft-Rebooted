@@ -1,5 +1,9 @@
 package ashjack.simukraftreloaded.client;
 
+import cpw.mods.fml.common.network.FMLNetworkEvent;
+import ashjack.simukraftreloaded.packetsNEW.toServer.SyncRequestPacket;
+import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
+import ashjack.simukraftreloaded.common.ClientMirror;
 import java.util.EnumSet;
 import java.util.Random;
 
@@ -62,6 +66,12 @@ public class ClientTickHandler
     }
     
     @SubscribeEvent
+    public void onDisconnect(FMLNetworkEvent.ClientDisconnectionFromServerEvent event)
+    {
+        ClientMirror.clear();
+    }
+
+    @SubscribeEvent
     public void tick(RenderTickEvent event)
     {
     	// fires at START and END of each frame; draw the HUD once
@@ -71,8 +81,27 @@ public class ClientTickHandler
     	}
     }
 
+    private GuiScreen lastScreen = null;
+    private int screenTicks = 0;
+
     public void onTickInGame()
     {
+        ClientGuiOpener.tick();
+
+        // keep a Sim-U-Kraft screen's data fresh while it's open
+        GuiScreen screen = mc.currentScreen;
+        if (screen != null && screen.getClass().getName().startsWith("ashjack.simukraftreloaded."))
+        {
+            if (screen != lastScreen || ++screenTicks % 40 == 0)
+            {
+                PacketHandler.net.sendToServer(new SyncRequestPacket());
+            }
+        }
+        if (screen != lastScreen)
+        {
+            screenTicks = 0;
+        }
+        lastScreen = screen;
 
         if (beamingTo != null)
         {
@@ -82,7 +111,7 @@ public class ClientTickHandler
         //--------------------------------
         try
         {
-            if (SimukraftReloaded.states.gameModeNumber <= 0)
+            if (SimukraftReloaded.states().gameModeNumber <= 0)
             {
                 return;
             }
@@ -111,24 +140,22 @@ public class ClientTickHandler
 
             try
             {
-                if (SimukraftReloaded.states.gameModeNumber == 10)
+                if (SimukraftReloaded.states().gameModeNumber == 10)
                 {
                     return;
                 }
 
-                worldname = mc.getIntegratedServer().getFolderName();
-                worldname = MinecraftServer.getServer().getFolderName();
+                worldname = ClientMirror.worldName;
             }
             catch (Exception e)
             {
                 //e.printStackTrace();
-                hud.drawString(mc.fontRenderer, "Sim-U-Kraft is not SMP", hud.width / 2, 2, 0xffffff);
                 return;
             }
 
             try
             {
-                if (ModSimukraft.proxy.ranStartup)
+                if (ClientMirror.ranStartup)
                 {
                 	if(Minecraft.getMinecraft().gameSettings.showDebugInfo == false)
                 	{
@@ -145,13 +172,13 @@ public class ClientTickHandler
                     {
                     	
                         hud.drawString(mc.fontRenderer, worldname + " (" + SimukraftReloaded.getDayOfWeek() +
-                                       ") - Population: " + FolkData.getResidentCount() , hud.width / 2, 2 + HUDoffset, 0xffffff);
+                                       ") - Population: " + ClientMirror.population , hud.width / 2, 2 + HUDoffset, 0xffffff);
                     }
                     else
                     {
                         hud.drawString(mc.fontRenderer, worldname + " (" + SimukraftReloaded.getDayOfWeek() +
-                                       ") - Population: " + FolkData.getResidentCount() +
-                                       "   Sim-U-credits: " + SimukraftReloaded.displayMoney(SimukraftReloaded.states.credits), hud.width / 2, 2 + HUDoffset, 0xffffff);
+                                       ") - Population: " + ClientMirror.population +
+                                       "   Sim-U-credits: " + SimukraftReloaded.displayMoney(SimukraftReloaded.states().credits), hud.width / 2, 2 + HUDoffset, 0xffffff);
                     }
                 }
                 }

@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.client.Gui.folk;
 
+import net.minecraft.nbt.NBTTagCompound;
+import ashjack.simukraftreloaded.network.ServerActions;
+import ashjack.simukraftreloaded.network.ActionHandlers;
 import java.io.File;
 import java.util.HashMap;
 
@@ -62,9 +65,9 @@ public class GuiCourierTasks extends GuiScreen
             int idx = 2;
             int y = 30;
 
-            for (int t = 0; t < SimukraftReloaded.theCourierTasks.size(); t++)
+            for (int t = 0; t < SimukraftReloaded.courierTasks().size(); t++)
             {
-                CourierTask ct = SimukraftReloaded.theCourierTasks.get(t);
+                CourierTask ct = SimukraftReloaded.courierTasks().get(t);
 
                 if (ct.folkname.contentEquals(theFolk.name))
                 {
@@ -85,9 +88,9 @@ public class GuiCourierTasks extends GuiScreen
         {
             int x = 10, y = 40, idx = 2;
 
-            for (int f = 0; f < SimukraftReloaded.theCourierPoints.size(); f++)
+            for (int f = 0; f < SimukraftReloaded.courierPoints().size(); f++)
             {
-                V3 cpoint = SimukraftReloaded.theCourierPoints.get(f);
+                V3 cpoint = SimukraftReloaded.courierPoints().get(f);
                 buttonList.add(new GuiButton(idx, x, y, 110, 20, cpoint.name));
                 idx++;
                 x += 110;
@@ -127,9 +130,9 @@ public class GuiCourierTasks extends GuiScreen
             int idx = 2;
             int y;
 
-            for (int t = 0; t < SimukraftReloaded.theCourierTasks.size(); t++)
+            for (int t = 0; t < SimukraftReloaded.courierTasks().size(); t++)
             {
-                CourierTask ct = SimukraftReloaded.theCourierTasks.get(t);
+                CourierTask ct = SimukraftReloaded.courierTasks().get(t);
 
                 if (ct.folkname.contentEquals(theFolk.name))
                 {
@@ -204,11 +207,13 @@ public class GuiCourierTasks extends GuiScreen
             else if (guibutton.id >= 2)    ///one of the delete task buttons
             {
                 int tidx = (Integer) tasks.get(guibutton.id);
-                String fn = "ct" + tidx + theFolk.name.replace(" ", "");
-                File file = new File(SimukraftReloaded.getSavesDataFolder() + "CourierTasks" + File.separator + fn + ".sk2");
-                file.delete();
-                SimukraftReloaded.theCourierTasks.remove(tidx);
-                buttonList.remove(guibutton.id);
+                CourierTask task = SimukraftReloaded.courierTasks().get(tidx);
+                NBTTagCompound data = new NBTTagCompound();
+                data.setString("folk", task.folkname);
+                data.setString("pickup", task.pickup.name);
+                data.setString("dropoff", task.dropoff.name);
+                ServerActions.send("deleteCourierTask", data);
+                SimukraftReloaded.courierTasks().remove(tidx); // so the list redraws now; the next sync confirms it
                 initscreen();
             }
         }
@@ -241,8 +246,13 @@ public class GuiCourierTasks extends GuiScreen
 
                 guibutton.enabled = false;
                 newtask.folkname = theFolk.name;
-                newtask.name = "Task " + (SimukraftReloaded.theCourierTasks.size() + 1) + ""; //name of task not used really
-                SimukraftReloaded.theCourierTasks.add(newtask);
+                NBTTagCompound data = new NBTTagCompound();
+                data.setString("folk", theFolk.name);
+                data.setString("pickup", newtask.pickup.name);
+                data.setString("dropoff", newtask.dropoff.name);
+                ActionHandlers.putV3(data, "box", this.controlBoxLocation);
+                ServerActions.send("addCourierTask", data);
+                SimukraftReloaded.courierTasks().add(newtask); // shown straight away; the next sync replaces it
                 onPage = "main";
                 initscreen();
             }

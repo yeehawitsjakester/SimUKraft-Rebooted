@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.blocks;
 
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.client.gui.GuiScreen;
+import ashjack.simukraftreloaded.client.ClientGuiOpener;
 import ashjack.simukraftreloaded.core.building.Building;
 import java.util.Random;
 
@@ -96,35 +99,27 @@ public class BlockControlBox extends Block
     public boolean onBlockActivated(World world, int i, int j, int k, EntityPlayer entityplayer,
                                     int par6, float par7, float par8, float par9)
     {
-    	if(world.isRemote)
+    	if (!world.isRemote)
     	{
     		world.playSoundEffect(i, j, k, "ashjacksimukraftreloaded:computer", 1f, 1f);
+    		return true;
     	}
-    		GuiControlBox ui = null;
-    		GuiBankATM ui2 = null;
-    		Minecraft mc = Minecraft.getMinecraft();
-    		mc.setIngameNotInFocus();
+    	final V3 loc = new V3((double)i, (double)j, (double)k, entityplayer.dimension);
+    	final EntityPlayer player = entityplayer;
+    	final boolean isBank = !(world.getBlockMetadata(i, j, k) == 0 || world.getBlockMetadata(i, j, k) == 2);
 
-    		if (world.getBlockMetadata(i, j, k) == 0 || world.getBlockMetadata(i, j, k) == 2)
+    	if (isBank && GameMode.gameMode == GameMode.GAMEMODES.CREATIVE)
+    	{
+    		player.addChatComponentMessage(new ChatComponentText("The Bank is not active when in Creative Mode (as there's no money!)"));
+    		return true;
+    	}
+    	ClientGuiOpener.open(new ClientGuiOpener.Factory()
+    	{
+    		public GuiScreen create()
     		{
-    			ui = new GuiControlBox(new V3((double)i, (double)j, (double)k, entityplayer.dimension), entityplayer);
-           		mc.displayGuiScreen(ui);
+    			return isBank ? new GuiBankATM(loc, player) : new GuiControlBox(loc, player);
     		}
-    		else
-    		{
-    			if (GameMode.gameMode == GameMode.GAMEMODES.CREATIVE)
-    			{
-    				mc.displayGuiScreen(null);
-    				SimukraftReloaded.sendChat("The Bank is not active when in Creative Mode (as there's no money!)");
-    			}
-    			else
-    			{
-    				ui2 = new GuiBankATM(new V3((double)i, (double)j, (double)k, entityplayer.dimension), entityplayer);
-    				mc.displayGuiScreen(ui2);
-    			}
-    		}
-        
-
+    	});
         return true;
     }
 

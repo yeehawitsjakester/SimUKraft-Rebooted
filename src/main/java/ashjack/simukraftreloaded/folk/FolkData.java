@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.folk;
 
+import ashjack.simukraftreloaded.common.Effects;
 import net.minecraft.util.ChunkCoordinates;
 import java.util.List;
 import ashjack.simukraftreloaded.common.WorldUtil;
@@ -44,7 +45,6 @@ import ashjack.simukraftreloaded.folk.genetics.Races;
 import ashjack.simukraftreloaded.folk.traits.Trait;
 import ashjack.simukraftreloaded.folk.traits.Traits;
 import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
-import ashjack.simukraftreloaded.packetsNEW.toClient.UpdateFolkPositionPacket;
 import ashjack.simukraftreloaded.proxies.CommonProxy;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 import net.minecraft.block.Block;
@@ -73,7 +73,7 @@ public class FolkData implements Serializable
     public Vocation vocation = null;
     /** the reference to their Job (job class and subclasses) or null if unemployed - created on start up based
      * on their vocation field */
-    protected ItemStack[] validTools = new ItemStack[0];
+    protected transient ItemStack[] validTools = new ItemStack[0];
     public transient Job theirJob = null;
     /** their full name as a string */
     public String name = "";
@@ -136,8 +136,13 @@ public class FolkData implements Serializable
     public Building theBuilding = null;
     public TerraformerType terraformerType = null;
     public int terraformerRadius = 1;
+    /** the job's current stage as text, filled in when folks are sent to clients (theirJob isn't sent) */
+    public String syncedJobStage = "";
     /** a hotel guest from out of town: no job, no relationships, leaves when they check out */
     public boolean isVisitor = false;
+    /** a visitor who has checked out and is walking out of town */
+    public boolean leavingTown = false;
+    private transient long leftHotelAt = 0;
 
     /////// TRANSIENT VARIABLES NOT STORED WHEN SAVING THIS FOLK
     /** the folk's own inventory for carrying stuff around the world and dropping off stuff */
@@ -204,18 +209,28 @@ public class FolkData implements Serializable
 
         try {
         SimukraftReloaded.log.info("FolkData: hasLoaded() " + this.name + " (" + voc + ") at "
-                         + vocat + " location= " + this.location.toString() + "  "  + SimukraftReloaded.theFolks.size() + " folks in total");
+                         + vocat + " location= " + this.location.toString() + "  "  + SimukraftReloaded.folks().size() + " folks in total");
         } catch(Exception e) {}
         this.inventory = new ArrayList<ItemStack>();
         this.setTheirJob(vocation);
         respawnEntity(MinecraftServer.getServer().worldServerForDimension(this.location.theDimension));
-        SimukraftReloaded.theFolks.add(this);
+        SimukraftReloaded.folks().add(this);
     }
 
     /** create a new folk with random name, skin etc and drop into arrayList */
     public FolkData(World theWorld)
     {
         this(theWorld, true);
+    }
+
+    /** transient fields arrive as null when a folk is sent to a client; give them empty values */
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException
+    {
+        in.defaultReadObject();
+        inventory = new ArrayList<ItemStack>();
+        validTools = new ItemStack[0];
+        timeStartedGotoing = 0L;
+        matingStage = -1.0f;
     }
 
     public FolkData(World theWorld, boolean announce)
@@ -251,7 +266,7 @@ public class FolkData implements Serializable
         //generateTraits();
 
         respawnEntity(theWorld);
-        SimukraftReloaded.theFolks.add(this);
+        SimukraftReloaded.folks().add(this);
         if (announce)
         {
             SimukraftReloaded.sendChat(this.name + " has just wandered into the area.");
@@ -281,24 +296,61 @@ public class FolkData implements Serializable
         return visitor;
     }
 
+    /** the guest checks themselves out: visitors head out of town, locals go looking for a permanent home */
+    public void checkOutOfHotel(Building room)
+    {
+        room.removeTennant(this.name);
+        room.saveThisBuilding();
+        this.actionArrival = null;
+        this.stayPut = false;
+
+        if (this.isVisitor)
+        {
+            SimukraftReloaded.sendChat(this.name + " checked out of " + room.displayNameWithoutPK + " and is heading home");
+            this.leavingTown = true;
+            this.leftHotelAt = System.currentTimeMillis();
+            this.statusText = "Heading home";
+            this.action = FolkAction.WANDER;
+            // walk ~40 blocks away from town, then disappear (see onUpdate)
+            double angle = new Random().nextDouble() * Math.PI * 2;
+            V3 away = this.location.clone();
+            away.x += Math.cos(angle) * 40;
+            away.z += Math.sin(angle) * 40;
+            World w = MinecraftServer.getServer().worldServerForDimension(away.theDimension);
+            int y = WorldUtil.findStandableY(w, away.x.intValue(), away.y.intValue(), away.z.intValue(), 16);
+            if (y >= 0)
+            {
+                away.y = (double) y;
+                gotoXYZ(away, GotoMethod.WALK);
+            }
+        }
+        else
+        {
+            SimukraftReloaded.sendChat(this.name + " checked out of " + room.displayNameWithoutPK);
+            this.action = FolkAction.WANDER;
+            this.statusText = "Looking for a home";
+        }
+        saveThisFolk();
+    }
+
     /** takes this folk out of the game completely: home, relationships, save file and entity */
     public void removeFromWorld()
     {
         evictThem();
 
-        for (int q = SimukraftReloaded.theRelationships.size() - 1; q >= 0; q--)
+        for (int q = SimukraftReloaded.relationships().size() - 1; q >= 0; q--)
         {
-            Relationship rel = SimukraftReloaded.theRelationships.get(q);
+            Relationship rel = SimukraftReloaded.relationships().get(q);
             if (rel.folk1.name.contentEquals(this.name) || rel.folk2.name.contentEquals(this.name))
             {
                 String fn = rel.folk1.name.replaceAll(" ", "") + rel.folk2.name.replaceAll(" ", "");
                 new File(SimukraftReloaded.getSavesDataFolder() + "Relationships" + File.separator + fn + ".sk2").delete();
-                SimukraftReloaded.theRelationships.remove(q);
+                SimukraftReloaded.relationships().remove(q);
             }
         }
 
         new File(SimukraftReloaded.getSavesDataFolder() + "folks" + File.separator + this.name + ".sk2").delete();
-        SimukraftReloaded.theFolks.remove(this);
+        SimukraftReloaded.folks().remove(this);
 
         if (this.theEntity != null && !this.theEntity.isDead)
         {
@@ -339,7 +391,7 @@ public class FolkData implements Serializable
         generateTraits();
 
         respawnEntity(theWorld);
-        SimukraftReloaded.theFolks.add(this);
+        SimukraftReloaded.folks().add(this);
         SimukraftReloaded.sendChat(this.name + " has just wandered into the area.");
     }
 
@@ -385,19 +437,9 @@ public class FolkData implements Serializable
         location=Job.findAdjacentSpace(mother.location,mworld);
         
         respawnEntity(theWorld);
-        SimukraftReloaded.theFolks.add(this);
+        SimukraftReloaded.folks().add(this);
         SimukraftReloaded.sendChat(this.name + " has just been born!");
-        World world = ModSimukraft.proxy.getClientWorld();
-
-        if (world != null)
-        {
-            EntityPlayer p = Minecraft.getMinecraft().thePlayer;
-
-            if (p != null)
-            {
-                ModSimukraft.proxy.getClientWorld().playSound(p.posX, p.posY, p.posZ, "ashjacksimukraftreloaded:birth", 1.0f, 1.0f, false);
-            }
-        }
+        Effects.soundToAllPlayers("ashjacksimukraftreloaded:birth");
 
         Relationship.setupBloodRelationships(this, father, mother);
         //inherit skills from father and mother
@@ -474,9 +516,9 @@ public class FolkData implements Serializable
     /** this is called from CommonTickHandler to fire off all the folkData onUpdate()'s */
     public static void triggerAllUpdates()
     {
-        for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+        for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
         {
-            FolkData fd = SimukraftReloaded.theFolks.get(f);
+            FolkData fd = SimukraftReloaded.folks().get(f);
             fd.onUpdate();
         }
     }
@@ -537,7 +579,7 @@ public class FolkData implements Serializable
             long t = MinecraftServer.getServer().worldServers[0].getWorldTime() % 24000;
 
             if (t<2000 && this.pregnancyStage>=1.0f) {
-            	for(Building build:SimukraftReloaded.theBuildings) {
+            	for(Building build:SimukraftReloaded.buildings()) {
             		if (build !=null && build.primaryXYZ !=null && build.displayName.contains("Clinic")) {
             			if (this.destination==null) {
             				if (!build.blockSpecial.isEmpty()) {
@@ -598,18 +640,18 @@ public class FolkData implements Serializable
 
             if (action == FolkAction.WANDER && this.isSpawned() && this.employedAt == null && this.age >= 18 && !this.statusText.contains("baby"))
             {
-                for (int i = 0; i < SimukraftReloaded.theBuildings.size(); i++)
+                for (int i = 0; i < SimukraftReloaded.buildings().size(); i++)
                 {
-                    Building b = SimukraftReloaded.theBuildings.get(rand.nextInt(SimukraftReloaded.theBuildings.size()));
+                    Building b = SimukraftReloaded.buildings().get(rand.nextInt(SimukraftReloaded.buildings().size()));
                     double dist = this.location.getDistanceTo(b.primaryXYZ);
 
                     if (b.type.contentEquals("commercial") && dist < 40)
                     {
                         boolean hasShopKeeper = false;
 
-                        for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+                        for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
                         {
-                            FolkData keeper = SimukraftReloaded.theFolks.get(f);
+                            FolkData keeper = SimukraftReloaded.folks().get(f);
 
                             if (keeper.employedAt != null && keeper.employedAt.isSameCoordsAs(b.primaryXYZ, true, true))
                             {
@@ -744,6 +786,23 @@ public class FolkData implements Serializable
         ///////// ONCE A SECOND TASKS
         if (now - timeSinceLastStatusUpdate > 1000)
         {
+            if (this.leavingTown)
+            {
+                timeSinceLastStatusUpdate = now;
+                if (this.destination == null || leftHotelAt == 0 || now - leftHotelAt > 60000)
+                {
+                    SimukraftReloaded.sendChat(this.name + " has left town");
+                    removeFromWorld();
+                }
+                return;
+            }
+
+            Building home = this.getHome();
+            if (home != null && home.isHotel() && home.stayNightsLeft <= 0 && SimukraftReloaded.isDayTime())
+            {
+                checkOutOfHotel(home);
+            }
+
         	if("".equals(this.trait1) || "".equals(this.trait2) || "".equals(this.trait3) || "".equals(this.trait4))
             {
         		generateTraits();
@@ -976,7 +1035,7 @@ public class FolkData implements Serializable
                     {
                         int ch = rand.nextInt(26) + 97;
                         String letter = "ashjacksimukraftreloaded:blarg" + Character.toString((char) ch);
-                        ModSimukraft.proxy.getClientWorld().playSound(location.x, location.y, location.z, letter, 1.0f, 1.0f, false);
+                        Effects.sound(theEntity.worldObj, location.x, location.y, location.z, letter);
                         //SimukraftReloaded.log(this.name + " Spoke: " + letter);
                     }
 
@@ -1006,21 +1065,11 @@ public class FolkData implements Serializable
 
                         if (isSpawned())
                         {
-                        	World theWorld = null;
-                        	if(!MinecraftServer.getServer().isDedicatedServer())
-                        	{
-                            	theWorld = Minecraft.getMinecraft().theWorld;
-                        	}
-                        	else
-                        	{
-                        		theWorld = MinecraftServer.getServer().getEntityWorld();
-                        	}
+                        	World theWorld = this.theEntity.worldObj;
                             double d0 = rand.nextDouble() * 0.5D;
                             double d1 = rand.nextDouble() * 0.5D;
                             double d2 = rand.nextDouble() * 0.5D;
-                            theWorld.spawnParticle("heart", this.theEntity.posX,
-                                                   this.theEntity.posY + 2.1,
-                                                   this.theEntity.posZ, d0, d1, d2);
+                            Effects.particles(theWorld, "heart", this.theEntity.posX, this.theEntity.posY + 2.1, this.theEntity.posZ, 1, d0, 0.02);
                             male.updateLocationFromEntity();
 
                             if (matingStage < 0.15)
@@ -1028,9 +1077,7 @@ public class FolkData implements Serializable
                                 this.gotoXYZ(male.location, GotoMethod.SHIFT); //sometime they wander off during mating LOL :-)
                             }
 
-                            theWorld.spawnParticle("heart", male.location.x,
-                                                   male.location.y + 2.1,
-                                                   male.location.z, d0, d1, d2);
+                            Effects.particles(theWorld, "heart", male.location.x, male.location.y + 2.1, male.location.z, 1, d0, 0.02);
                             this.statusText = "Trying for a baby";
                             male.statusText = "Trying for a baby";
                             male.stayPut = true;
@@ -1062,17 +1109,7 @@ public class FolkData implements Serializable
                         male.theEntity.setJumping(true);
                     }
 
-                    World world = ModSimukraft.proxy.getClientWorld();
-
-                    if (world != null)
-                    {
-                        EntityPlayer p = Minecraft.getMinecraft().thePlayer;
-
-                        if (p != null)
-                        {
-                            ModSimukraft.proxy.getClientWorld().playSound(p.posX, p.posY, p.posZ, "ashjacksimukraftreloaded:pregnant", 1.0f, 1.0f, false);
-                        }
-                    }
+                    Effects.soundToAllPlayers("ashjacksimukraftreloaded:pregnant");
                 }
             }
 
@@ -1128,7 +1165,7 @@ public class FolkData implements Serializable
         {
             // permanent homes (houses, apartments) first; a hotel room only while none are free
             Building home = null;
-            for (Building building : SimukraftReloaded.theBuildings)
+            for (Building building : SimukraftReloaded.buildings())
             {
                 if (building.isPermanentHome() && building.tennants.size() == 0 && building.hasSpaceFor(1))
                 {
@@ -1138,7 +1175,7 @@ public class FolkData implements Serializable
             }
             if (home == null)
             {
-                for (Building building : SimukraftReloaded.theBuildings)
+                for (Building building : SimukraftReloaded.buildings())
                 {
                     if (building.isHotel() && building.buildingComplete && building.hasSpaceFor(1))
                     {
@@ -1158,7 +1195,7 @@ public class FolkData implements Serializable
             this.actionArrival = FolkAction.STAYINGHOME;
             gotoXYZ(home.livingXYZ != null ? home.livingXYZ : home.primaryXYZ, null);
 
-            SimukraftReloaded.states.saveStates();
+            SimukraftReloaded.states().saveStates();
             if (home.isHotel())
             {
                 SimukraftReloaded.sendChat(this.name + " has checked into " + home.displayNameWithoutPK + " until a home is free");
@@ -1625,11 +1662,7 @@ public class FolkData implements Serializable
                 try {
 	                if (location.theDimension != destination.theDimension)
 	                {
-	                	
-	                    this.theEntity.travelToDimension(destination.theDimension);
-	                    this.theEntity.dimension = destination.theDimension;
-	                    this.location.theDimension = destination.theDimension;
-	                	
+	                    changeDimension(destination.theDimension);
 	                }
                 } catch(Exception e) {} //NPE destination or .theDimension?
             }
@@ -1655,6 +1688,21 @@ public class FolkData implements Serializable
             //It will only get here if they are spawned AND within walking distance
             //so the entity's MoveEntity() method takes over now.
         }
+    }
+
+    /**
+     * Moves the folk to another dimension. Entity.travelToDimension makes a copy of the entity that this FolkData
+     * doesn't know about (and then respawnEntity made another), so drop the entity and let respawnEntity create
+     * one in the new dimension when a player is near.
+     */
+    private void changeDimension(int dim)
+    {
+        if (this.theEntity != null && !this.theEntity.isDead)
+        {
+            this.theEntity.setDead();
+        }
+        this.theEntity = null;
+        this.location.theDimension = dim;
     }
 
     /** beams the folk to the specified location */
@@ -1707,15 +1755,7 @@ public class FolkData implements Serializable
             this.theEntity.getNavigator().clearPathEntity();
         }
 
-        try {
-	        if (ModSimukraft.proxy.getClientWorld() != null)
-	        {
-	            //ModSimukraft.proxy.getClientWorld().playSound(location.x, location.y, location.z, "ashjacksimukraftreloaded:beamdown", 1.0f, 1.0f, false);
-	            //ModSimukraft.proxy.getClientWorld().playSound(whereTo.x, whereTo.y, whereTo.z, "ashjacksimukraftreloaded:beamdown", 1f, 1f, false);
-	        }
-	
-	        this.beamingTo = whereTo.clone(); //setting this will trigger the beaming progress in the tick/game loop
-        } catch(Exception e) {}
+        this.beamingTo = whereTo.clone(); //setting this will trigger the beaming progress in the tick/game loop
     }
 
     /** called repeatedly during the beaming progress */
@@ -1741,9 +1781,7 @@ public class FolkData implements Serializable
                 	
                     if (theEntity.dimension != beamingTo.theDimension)
                     {
-                        this.theEntity.travelToDimension(beamingTo.theDimension);
-                        this.theEntity.dimension = beamingTo.theDimension;
-                        this.location.theDimension = beamingTo.theDimension;
+                        changeDimension(beamingTo.theDimension);
                     }
                 }
 
@@ -1763,38 +1801,14 @@ public class FolkData implements Serializable
             return;
         }
 
-        Random random = new Random();
-        Double d4 = ((double) random.nextFloat() - 2D) * 2D;
         this.stayPut = true;
-        if(!MinecraftServer.getServer().isDedicatedServer())
+        // portal particles at both ends while beaming (was drawn into the client world from the server thread)
+        if (!SimukraftReloadedConfig.configDisableBeamEffect && System.currentTimeMillis() % 500 < 60)
         {
-        	World theWorld = Minecraft.getMinecraft().theWorld; //only need the client world for particles
-        
-
-        for (int p = 0; p < 10; p++)
-        {
-            try
-            {
-                if (!SimukraftReloadedConfig.configDisableBeamEffect)
-                {
-                    theWorld.spawnParticle("portal", location.x + (random.nextDouble()) - 0.5,
-                                           location.y - 1, location.z + (random.nextDouble()) - 0.5, 0, -d4, 0);
-                }
-            }
-            catch (Exception e) {}
-
-            try
-            {
-                if (!SimukraftReloadedConfig.configDisableBeamEffect)
-                {
-                    theWorld.spawnParticle("portal", beamingTo.x + (random.nextDouble()) - 0.5,
-                                           beamingTo.y - 1, beamingTo.z + (random.nextDouble()) - 0.5, 0, -d4, 0);
-                }
-            }
-            catch (Exception e)
-            {
-            }
-        }
+            World here = MinecraftServer.getServer().worldServerForDimension(location.theDimension);
+            World there = MinecraftServer.getServer().worldServerForDimension(beamingTo.theDimension);
+            Effects.particles(here, "portal", location.x, location.y, location.z, 10, 0.5, 0.5);
+            Effects.particles(there, "portal", beamingTo.x, beamingTo.y, beamingTo.z, 10, 0.5, 0.5);
         }
     }
 
@@ -1829,7 +1843,7 @@ public class FolkData implements Serializable
     /** loads in all the pre-existing folks data, FolkData class will decide if it should spawn them into world */
     public static void loadAndSpawnFolks()
     {
-    	SimukraftReloaded.theFolks.clear();
+    	SimukraftReloaded.folks().clear();
     	
     	File folksFolder = new File(SimukraftReloaded.getSavesDataFolder() + "folks" + File.separator);
 
@@ -1939,6 +1953,8 @@ public class FolkData implements Serializable
 	        	    				}
 	        	    			}else if (name.contentEquals("visitor")) {
 	        	    				folkd.isVisitor=Boolean.parseBoolean(value);
+	        	    			}else if (name.contentEquals("leavingtown")) {
+	        	    				folkd.leavingTown=Boolean.parseBoolean(value);
 	        	    			}else if (name.contentEquals("terraformradius")) {
 	        	    				folkd.terraformerRadius=Integer.parseInt(value);
 	        	    			}
@@ -2030,6 +2046,9 @@ public class FolkData implements Serializable
     		if (this.isVisitor) {
     			strings.add("visitor|true");
     		}
+    		if (this.leavingTown) {
+    			strings.add("leavingtown|true");
+    		}
     		
     		if (!this.name.contentEquals("")) {
     			SimukraftReloaded.saveSK2(folder+this.name+".sk2", strings);
@@ -2043,9 +2062,9 @@ public class FolkData implements Serializable
     /** get the building/home that this folk lives in, null if homeless */
     public Building getHome()
     {
-        for (int b = 0; b < SimukraftReloaded.theBuildings.size(); b++)
+        for (int b = 0; b < SimukraftReloaded.buildings().size(); b++)
         {
-            Building home = SimukraftReloaded.theBuildings.get(b);
+            Building home = SimukraftReloaded.buildings().get(b);
 
             for (int t = 0; t < home.tennants.size(); t++)
             {
@@ -2078,7 +2097,7 @@ public class FolkData implements Serializable
     public static int getResidentCount()
     {
         int count = 0;
-        for (FolkData folk : SimukraftReloaded.theFolks)
+        for (FolkData folk : SimukraftReloaded.folks())
         {
             if (!folk.isVisitor)
             {
@@ -2103,9 +2122,9 @@ public class FolkData implements Serializable
     {
         FolkData f = null;
 
-        for (int x = 0; x < SimukraftReloaded.theFolks.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.folks().size(); x++)
         {
-            f = (FolkData) SimukraftReloaded.theFolks.get(x);
+            f = (FolkData) SimukraftReloaded.folks().get(x);
 
             if (f.name.contentEquals(name))
             {
@@ -2121,9 +2140,9 @@ public class FolkData implements Serializable
     {
         FolkData f = null;
 
-        for (int x = 0; x < SimukraftReloaded.theFolks.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.folks().size(); x++)
         {
-            f = (FolkData) SimukraftReloaded.theFolks.get(x);
+            f = (FolkData) SimukraftReloaded.folks().get(x);
 
             if (f.location.isSameCoordsAs(loc, true, false))
             {
@@ -2139,9 +2158,9 @@ public class FolkData implements Serializable
     {
         FolkData f = null;
 
-        for (int x = 0; x < SimukraftReloaded.theFolks.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.folks().size(); x++)
         {
-            f = (FolkData) SimukraftReloaded.theFolks.get(x);
+            f = (FolkData) SimukraftReloaded.folks().get(x);
 
             if (f.employedAt != null)
             {
@@ -2160,9 +2179,9 @@ public class FolkData implements Serializable
     {
         ArrayList<FolkData> ret = new ArrayList<FolkData>();
 
-        for (int x = 0; x < SimukraftReloaded.theFolks.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.folks().size(); x++)
         {
-            FolkData f = (FolkData) SimukraftReloaded.theFolks.get(x);
+            FolkData f = (FolkData) SimukraftReloaded.folks().get(x);
 
             if (f.employedAt != null)
             {
@@ -2181,9 +2200,9 @@ public class FolkData implements Serializable
     {
         ArrayList f = new ArrayList();
 
-        for (int x = 0; x < SimukraftReloaded.theFolks.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.folks().size(); x++)
         {
-            FolkData folk = (FolkData) SimukraftReloaded.theFolks.get(x);
+            FolkData folk = (FolkData) SimukraftReloaded.folks().get(x);
 
             if (showEmployed)
             {
@@ -2209,9 +2228,9 @@ public class FolkData implements Serializable
     {
         ArrayList f = new ArrayList();
 
-        for (int x = 0; x < SimukraftReloaded.theFolks.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.folks().size(); x++)
         {
-            FolkData folk = (FolkData) SimukraftReloaded.theFolks.get(x);
+            FolkData folk = (FolkData) SimukraftReloaded.folks().get(x);
 
             if (folk.getHome() == null && !folk.isVisitor)
             {
@@ -2225,9 +2244,9 @@ public class FolkData implements Serializable
     /** used for spawning so entity can get a reference to the data, returns null if it can't find it */
     public static FolkData getFolkDataByEntityId(int id)
     {
-        for (int i = 0; i < SimukraftReloaded.theFolks.size(); i++)
+        for (int i = 0; i < SimukraftReloaded.folks().size(); i++)
         {
-            FolkData fd = SimukraftReloaded.theFolks.get(i);
+            FolkData fd = SimukraftReloaded.folks().get(i);
 
             if (fd.theEntity != null)
             {
@@ -2404,11 +2423,11 @@ public class FolkData implements Serializable
         //evict them from their home :-)
         if (this.getHome() != null)
         {
-            //SimukraftReloaded.states.population--;
+            //SimukraftReloaded.states().population--;
 
-            for (int b = 0; b < SimukraftReloaded.theBuildings.size(); b++)
+            for (int b = 0; b < SimukraftReloaded.buildings().size(); b++)
             {
-                Building building = (Building) SimukraftReloaded.theBuildings.get(b);
+                Building building = (Building) SimukraftReloaded.buildings().get(b);
 
                 if (building != null && this.getHome() != null)
                 {

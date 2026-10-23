@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.common;
 
+import ashjack.simukraftreloaded.packetsNEW.toClient.HudPacket;
+import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
+import ashjack.simukraftreloaded.network.MirrorSync;
 import io.netty.buffer.ByteBuf;
 
 import java.io.File;
@@ -8,19 +11,16 @@ import java.util.EnumSet;
 
 import ashjack.simukraftreloaded.blocks.functionality.FarmingBox;
 import ashjack.simukraftreloaded.blocks.functionality.MiningBox;
-import ashjack.simukraftreloaded.client.Gui.other.GuiRunMod;
 import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloadedConfig;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
-import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.World;
 import net.minecraftforge.event.world.WorldEvent;
-import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod.EventHandler;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
@@ -47,7 +47,6 @@ public class CommonTickHandler
     Long lastSecondTickAt = 0l;
     Long lastMinuteTickAt = 0l;
 
-    GuiRunMod runModui = null;
     String currentWorld = "";
     long lastReset = 0;
     
@@ -72,19 +71,38 @@ public class CommonTickHandler
     private void saveAll()
     {
         Long start = System.currentTimeMillis();
-        SimukraftReloaded.states.saveStates();
+        SimukraftReloaded.states().saveStates();
         Building.saveAllBuildings();
         CourierTask.saveCourierTasksAndPoints();
         MiningBox.saveMiningBoxes();
         FarmingBox.saveFarmingBoxes();
         Relationship.saveRelationships();
-        for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+        for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
         {
-            FolkData folk = SimukraftReloaded.theFolks.get(f);
+            FolkData folk = SimukraftReloaded.folks().get(f);
             folk.updateLocationFromEntity();
             folk.saveThisFolk();
         }
         SimukraftReloaded.log.info("CTH: Saved game data in " + (System.currentTimeMillis() - start) + " ms");
+    }
+
+    private int syncTicks = 0;
+
+    private void sendHud()
+    {
+    	MinecraftServer server = MinecraftServer.getServer();
+    	if (server == null || server.getCurrentPlayerCount() == 0)
+    	{
+    		return;
+    	}
+    	HudPacket hud = new HudPacket();
+    	hud.ranStartup = ModSimukraft.proxy.ranStartup;
+    	hud.gameModeNumber = SimukraftReloaded.serverStates.gameModeNumber;
+    	hud.credits = SimukraftReloaded.serverStates.credits;
+    	hud.dayOfWeek = SimukraftReloaded.serverStates.dayOfWeek;
+    	hud.population = FolkData.getResidentCount();
+    	hud.worldName = server.getFolderName();
+    	PacketHandler.net.sendToAll(hud);
     }
 
     int ticks = 0;
@@ -97,6 +115,15 @@ public class CommonTickHandler
     		return;
     	}
     	ServerTasks.runPending();
+    	syncTicks++;
+    	if (syncTicks % 20 == 0)
+    	{
+    		sendHud();
+    	}
+    	if (syncTicks % 100 == 0)
+    	{
+    		MirrorSync.sendToAll();
+    	}
     	if(ticks == 200)
     	{
     		onTickInGame();
@@ -113,7 +140,7 @@ public class CommonTickHandler
     {
     	if ( FMLCommonHandler.instance().getSide().isClient())
     	{
-    		if (SimukraftReloaded.states.gameModeNumber == 10)
+    		if (SimukraftReloaded.states().gameModeNumber == 10)
     		{
     			ModSimukraft.proxy.ranStartup = true;
     			return;

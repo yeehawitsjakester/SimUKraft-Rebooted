@@ -158,7 +158,7 @@ public class JobDairyFarmer extends Job {
 				theFolk.statusText = "Can't work, the chests are full";
 				theStage=Stage.CANTWORK;
 			} else {
-				SimukraftReloaded.states.credits -= 0.05f;
+				SimukraftReloaded.states().credits -= 0.05f;
 		        theStage = Stage.WAITINGFORMILKING;
 			}
 		} else {

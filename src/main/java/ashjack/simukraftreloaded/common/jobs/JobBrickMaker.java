@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import net.minecraft.server.MinecraftServer;
+import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
 import java.util.ArrayList;
 
@@ -240,10 +242,10 @@ public class JobBrickMaker extends Job implements Serializable
 
             gotoCount = 0;
             jobWorld.setBlock(blockOfClay.x.intValue(), blockOfClay.y.intValue(), blockOfClay.z.intValue(), Blocks.air, 0, 0x03);
-            mc.theWorld.playSound(blockOfClay.x, blockOfClay.y, blockOfClay.z, "step.sand", 1f, 1f, false);
+            Effects.sound(jobWorld, blockOfClay.x, blockOfClay.y, blockOfClay.z, "step.sand", 1f, 1f);
             theFolk.inventory.add(new ItemStack(Item.getItemFromBlock(Blocks.clay), 1));
             theFolk.statusText = "Diggy diggy clay, got " + theFolk.inventory.size();
-            SimukraftReloaded.states.credits -= 0.012;
+            SimukraftReloaded.states().credits -= 0.012;
 
             if (theFolk.inventory.size() < 64)
             {
@@ -421,7 +423,7 @@ public class JobBrickMaker extends Job implements Serializable
                 theFolk.statusText = "Putting bricks into storage";
                 boolean placedOk = inventoriesPut(factoryChests, currentBricks, true);
 
-                SimukraftReloaded.states.credits -= (0.005 * currentBricks.stackSize);
+                SimukraftReloaded.states().credits -= (0.005 * currentBricks.stackSize);
                 factoryFurnace.setInventorySlotContents(2, null);
             }
             else

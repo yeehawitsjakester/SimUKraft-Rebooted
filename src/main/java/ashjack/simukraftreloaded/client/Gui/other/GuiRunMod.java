@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.client.Gui.other;
 
+import net.minecraft.nbt.NBTTagCompound;
+import ashjack.simukraftreloaded.network.ServerActions;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
@@ -10,7 +12,6 @@ import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
-import ashjack.simukraftreloaded.packetsNEW.toServer.GenerateFolkPacket;
 import cpw.mods.fml.common.FMLCommonHandler;
 
 public class GuiRunMod extends GuiScreen
@@ -71,39 +72,16 @@ public class GuiRunMod extends GuiScreen
     @Override
     protected void actionPerformed(GuiButton guibutton)
     {
-    	if(Minecraft.getMinecraft().theWorld.isRemote)
+    	// 10 = don't run, 0 = normal, 1 = creative, 2 = hardcore
+    	int[] modes = {10, 0, 1, 2};
+    	if (guibutton.id < 0 || guibutton.id >= modes.length)
     	{
-    		if (guibutton.id == 0)   //do not run
-    		{
-    			// SimukraftReloaded.states.runMod = 0;
-    			SimukraftReloaded.states.gameModeNumber = 10;
-    			System.out.println("Turning off Sim-U-Kraft Reloaded");
-    		}
-    		else if (guibutton.id == 1)      // normal
-    		{
-    			// SimukraftReloaded.states.runMod = 1;
-    			SimukraftReloaded.states.gameModeNumber = 0;
-    			//ModSimukraft.proxy.getClientWorld().playSound(mc.thePlayer.posX, mc.thePlayer.posY, mc.thePlayer.posZ, "ashjacksimukraftreloaded:welcome", 1.0f, 1.0f, false);
-    			System.out.println("Playing Sim-U-Kraft Reloaded in normal mode");
-    			PacketHandler.net.sendToServer(new GenerateFolkPacket(FMLCommonHandler.instance().getMinecraftServerInstance().getEntityWorld(), false));
-    		}
-    		else if (guibutton.id == 2)    //creative
-    		{
-    			// SimukraftReloaded.states.runMod = 1;
-    			SimukraftReloaded.states.gameModeNumber = 1;
-    			//ModSimukraft.proxy.getClientWorld().playSound(mc.thePlayer.posX, mc.thePlayer.posY, mc.thePlayer.posZ, "ashjacksimukraftreloaded:welcome", 1.0f, 1.0f, false);
-    		}
-    		else if (guibutton.id == 3)    //hardcore
-    		{
-    			//  SimukraftReloaded.states.runMod = 1;
-    			SimukraftReloaded.states.gameModeNumber = 2;
-    			//ModSimukraft.proxy.getClientWorld().playSound(mc.thePlayer.posX, mc.thePlayer.posY, mc.thePlayer.posZ, "ashjacksimukraftreloaded:welcome", 1.0f, 1.0f, false);
-    		}
-
-    		SimukraftReloaded.states.saveStates();
-    		this.running = false;
-    		mc.currentScreen = null;
-    		mc.setIngameFocus();
+    		return;
     	}
+    	NBTTagCompound data = new NBTTagCompound();
+    	data.setInteger("mode", modes[guibutton.id]);
+    	ServerActions.send("setGameMode", data);
+    	this.running = false;
+    	mc.displayGuiScreen(null);
     }
 }

@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.client.Gui.blocks;
 
+import net.minecraft.nbt.NBTTagCompound;
+import ashjack.simukraftreloaded.network.ServerActions;
+import ashjack.simukraftreloaded.network.ActionHandlers;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 
@@ -210,7 +213,7 @@ public class GuiFarming extends GuiScreen
         }
         else if (guibutton.displayString.startsWith("Fire "))
         {
-            theFolk.selfFire();
+            ActionHandlers.sendFire(theFolk.name);
             guibutton.enabled = false;
             mc.currentScreen = null;
             mc.setIngameFocus();
@@ -251,10 +254,14 @@ public class GuiFarming extends GuiScreen
             }
 
             guibutton.displayString = theFarmingBox.farmType.toString() + " farm";
+            NBTTagCompound data = new NBTTagCompound();
+            ActionHandlers.putV3(data, "box", theFarmingBox.location);
+            data.setString("type", theFarmingBox.farmType.name());
+            ServerActions.send("farmSettings", data);
         }
         else if (guibutton.id == 3)     /// button to upgrade the farm to the next level
         {
-            float cash = SimukraftReloaded.states.credits;
+            float cash = SimukraftReloaded.states().credits;
 
             if (GameMode.gameMode == GameMode.GAMEMODES.CREATIVE)
             {
@@ -273,15 +280,11 @@ public class GuiFarming extends GuiScreen
             }
             else
             {
-                if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
-                {
-                	SimukraftReloaded.states.credits -= getUpgradeCost();
-                }
-
-                SimukraftReloaded.farmToUpgradeCounter = 0;
-                SimukraftReloaded.farmToUpgrade = theFarmingBox;
-                mc.currentScreen = null;
-                mc.setIngameFocus();
+                // the server charges and does the upgrade
+                NBTTagCompound data = new NBTTagCompound();
+                ActionHandlers.putV3(data, "box", theFarmingBox.location);
+                ServerActions.send("upgradeFarm", data);
+                mc.displayGuiScreen(null);
                 return;
             }
         }

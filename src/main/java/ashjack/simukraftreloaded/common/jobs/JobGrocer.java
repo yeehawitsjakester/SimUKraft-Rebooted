@@ -295,7 +295,7 @@ public class JobGrocer extends Job implements Serializable
             pay += (float)(carrots * 0.05);
             pay += (float)(potatoes * 0.05);
             inventoriesTransferFromFolk(theFolk.inventory, grocerChests, null);
-            SimukraftReloaded.states.credits -= pay;
+            SimukraftReloaded.states().credits -= pay;
             step = 2;
         }
         else if (step == 2)
@@ -321,7 +321,7 @@ public class JobGrocer extends Job implements Serializable
             int sell = 0;
             ItemStack piece = null;
 
-            for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+            for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
             {
                 gotFood:
 
@@ -338,7 +338,7 @@ public class JobGrocer extends Job implements Serializable
                             int count = new Random().nextInt(3) + 1;
                             ItemFood food = (ItemFood) chestStack.getItem();
                             piece = inventoriesGet(grocerChests, new ItemStack(chestStack.getItem(), count), false,false); //grab 1 piece
-                            FolkData folk = (FolkData) SimukraftReloaded.theFolks.get(f);
+                            FolkData folk = (FolkData) SimukraftReloaded.folks().get(f);
                             folk.levelFood = 10;
                             sell += count;
                             break gotFood;
@@ -398,7 +398,7 @@ public class JobGrocer extends Job implements Serializable
         {
             try
             {
-                farm = (FarmingBox) SimukraftReloaded.theFarmingBoxes.get(currentFarmNum);
+                farm = (FarmingBox) SimukraftReloaded.farmingBoxes().get(currentFarmNum);
             }
             catch (Exception e)
             {
@@ -420,7 +420,7 @@ public class JobGrocer extends Job implements Serializable
 
             currentFarmNum++;
 
-            if (currentFarmNum > SimukraftReloaded.theFarmingBoxes.size() - 1)
+            if (currentFarmNum > SimukraftReloaded.farmingBoxes().size() - 1)
             {
                 return null;
             }

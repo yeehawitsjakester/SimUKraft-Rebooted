@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -288,7 +289,7 @@ public class JobLivestockFarmer extends Job implements Serializable
         	return;
         }
         
-        SimukraftReloaded.states.credits -= (0.02f * quant);
+        SimukraftReloaded.states().credits -= (0.02f * quant);
         theStage = Stage.WAITINGFORMATUREANIMAL;
     }
 
@@ -313,7 +314,7 @@ public class JobLivestockFarmer extends Job implements Serializable
                 double d = rand.nextGaussian() * 0.02D;
                 double d1 = rand.nextGaussian() * 0.02D;
                 double d2 = rand.nextGaussian() * 0.02D;
-                mc.theWorld.spawnParticle("heart", (pos.x + (double)(rand.nextFloat() * 1 * 2.0F)) - (double)1, pos.y + 0.5D + (double)(rand.nextFloat() * 1), (pos.z + (double)(rand.nextFloat() * 1 * 2.0F)) - (double)1, d, d1, d2);
+                Effects.particles(jobWorld, "heart", pos.x, pos.y + 0.5D, pos.z, 1, 1.0, 0.02);
             }
 
             parentAnimal.worldObj.spawnEntityInWorld(babyAnimal);

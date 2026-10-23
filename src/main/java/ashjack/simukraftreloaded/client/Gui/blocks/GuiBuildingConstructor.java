@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.client.Gui.blocks;
 
+import net.minecraft.nbt.NBTTagCompound;
+import ashjack.simukraftreloaded.network.ServerActions;
+import ashjack.simukraftreloaded.network.ActionHandlers;
 import io.netty.buffer.ByteBuf;
 
 import java.util.ArrayList;
@@ -28,7 +31,6 @@ import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
-import ashjack.simukraftreloaded.packetsNEW.toServer.LoadBuildingPacket;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -58,6 +60,10 @@ public class GuiBuildingConstructor extends GuiScreen
     	
         constructorLoc = location;
         this.buildDirection = buildDirection;
+        if (!Building.isCatalogueLoaded())
+        {
+            Building.initialiseAllBuildings(); // only the server had read the blueprints
+        }
 
         if (theFolks != null)      // it's passed in
         {
@@ -67,24 +73,15 @@ public class GuiBuildingConstructor extends GuiScreen
         {
             theWorkers.clear();
 
-            for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+            for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
             {
-                FolkData folk = (FolkData) SimukraftReloaded.theFolks.get(f);
+                FolkData folk = (FolkData) SimukraftReloaded.folks().get(f);
 
                 if (folk.employedAt != null)
                 {
                     if (folk.employedAt.isSameCoordsAs(constructorLoc, true, true))
                     {
-                        if (folk.vocation == Vocation.BUILDER)
-                        {
-                            JobBuilder theirJob = (JobBuilder) folk.theirJob;
-
-                            if (theirJob.theStage == JobBuilder.Stage.IDLE)
-                            {
-                                theirJob.theStage = JobBuilder.Stage.WORKERASSIGNED;
-                            }
-                        }
-
+                        // (the server sets idle builders working when a building is chosen - see "buildIt")
                         theWorkers.add(folk);
                     }
                 }
@@ -138,8 +135,7 @@ public class GuiBuildingConstructor extends GuiScreen
             {
                 if (theWorkers.size() > 0)
                 {
-                    JobBuilder theirJob = (JobBuilder) theWorkers.get(0).theirJob;
-                    s = theirJob.theStage.toString();
+                    s = theWorkers.get(0).syncedJobStage;
 
                     if (theWorkers.get(0).theBuilding != null)
                     {
@@ -374,9 +370,9 @@ public class GuiBuildingConstructor extends GuiScreen
             {
                 int x = 10, y = 65, idx = 1;
 
-                for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+                for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
                 {
-                    FolkData folk = (FolkData) SimukraftReloaded.theFolks.get(f);
+                    FolkData folk = (FolkData) SimukraftReloaded.folks().get(f);
                     buttonList.add(new GuiButton(idx, x, y, 100, 20, "Fire " + folk.name));
                     idx++;
                     x += 100;
@@ -684,36 +680,13 @@ public class GuiBuildingConstructor extends GuiScreen
         {
             if (guibutton.displayString.contentEquals("Build it!"))
             {
-                if (Building.getBuilding(selectedBuilding.primaryXYZ) == null)
-                {
-                }
-                else
-                {
-                	SimukraftReloaded.theBuildings.remove(selectedBuilding);
-                }
-
-                selectedBuilding.conBoxLocation = this.constructorLoc.clone();
-                SimukraftReloaded.theBuildings.add(selectedBuilding);
-
-                // Building.saveAllBuildings(); // <-server only
-                selectedBuilding.saveThisBuilding();
-                //PacketPipeline.sendPacketToServer(AbstractPacket.makePacket("","loadbuilding","GuiBuildingCon"));
-                
-                PacketHandler.net.sendToAll(new LoadBuildingPacket("GuiBuildingCon"));
-                
-                /*ByteBuf data = buffer(4);
-                data.writeInt(42);
-                C17PacketCustomPayload packet = new C17PacketCustomPayload("NetworkExample", data);
-                EntityClientPlayerMP player = (EntityClientPlayerMP)updateEvent.entityLiving;
-                player.sendQueue.func_147297_a(packet);*/
-
-                for (int i = 0; i < theWorkers.size(); i++)
-                {
-                    FolkData theWorker = theWorkers.get(i);
-                    theWorker.theBuilding = selectedBuilding;
-                    //if (i==0) { theWorker.theBuilding.loadStructure(true); }
-                    theWorker.saveThisFolk();
-                }
+                // the server sets the builders working on it (it looks the blueprint up in its own catalogue)
+                NBTTagCompound data = new NBTTagCompound();
+                ActionHandlers.putV3(data, "box", constructorLoc);
+                data.setString("name", selectedBuilding.displayName);
+                data.setString("type", selectedBuilding.type);
+                data.setString("dir", buildDirection);
+                ServerActions.send("buildIt", data);
 
                 mc.displayGuiScreen(null);
                 mc.setIngameFocus();
@@ -753,20 +726,9 @@ public class GuiBuildingConstructor extends GuiScreen
    
     public void fireAllFolksForThisBuilding()
     {
-        for (int i = 0; i < theWorkers.size(); i++)
-        {
-            FolkData worker = theWorkers.get(i);
-
-            if (worker.vocation == Vocation.BUILDER)
-            {
-                JobBuilder theirJob = (JobBuilder) worker.theirJob;
-                theirJob.theStage = Stage.IDLE;
-                worker.theBuilding = null;
-            }
-
-            worker.selfFire();
-        }
-
+        NBTTagCompound data = new NBTTagCompound();
+        ActionHandlers.putV3(data, "box", constructorLoc);
+        ServerActions.send("fireAllAt", data);
         theWorkers.clear();
     }
 

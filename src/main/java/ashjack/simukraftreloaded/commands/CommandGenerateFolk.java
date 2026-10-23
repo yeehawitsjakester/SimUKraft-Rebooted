@@ -6,7 +6,6 @@ import java.util.List;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
-import ashjack.simukraftreloaded.packetsNEW.toServer.GenerateFolkPacket;
 import net.minecraft.command.ICommand;
 import net.minecraft.command.ICommandSender;
 
@@ -50,8 +49,8 @@ public class CommandGenerateFolk implements ICommand{
 	{
 		if(argString.length == 0)
 		{
-			//FolkData.forceGenerateNewFolk(sender.getEntityWorld());
-			PacketHandler.net.sendToServer(new GenerateFolkPacket(sender.getEntityWorld(), true));
+			// commands already run on the server (this sent a packet "to the server" from the server)
+			FolkData.forceGenerateNewFolk(sender.getEntityWorld());
 		}
 		else if(argString.length == 1)
 		{

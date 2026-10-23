@@ -197,7 +197,7 @@ public class JobBurgersFryCook extends Job {
 				theFolk.isWorking=false;
 				step=1;
 				theFolk.statusText="Checking Ingredients";
-				SimukraftReloaded.states.credits -=0.45;
+				SimukraftReloaded.states().credits -=0.45;
 			}
 			 
 			

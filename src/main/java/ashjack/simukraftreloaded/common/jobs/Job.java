@@ -27,7 +27,6 @@ import net.minecraft.world.World;
 
 public abstract class Job
 {
-    Minecraft mc = Minecraft.getMinecraft();
     public int step = 1;
     ArrayList<V3> closestBlocks = new ArrayList<V3>();
     public Vocation vocation = null;
@@ -1305,9 +1304,9 @@ public abstract class Job
     	ArrayList<Building> ret=new ArrayList<Building>();
     	Building shortestDist = null;
 
-        for (int x = 0; x < SimukraftReloaded.theBuildings.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.buildings().size(); x++)
         {
-            Building b = (Building) SimukraftReloaded.theBuildings.get(x);
+            Building b = (Building) SimukraftReloaded.buildings().get(x);
 
             if (b.displayName.toLowerCase().contains(searchWord.toLowerCase()))
             {

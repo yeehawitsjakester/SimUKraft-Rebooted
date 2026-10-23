@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import net.minecraft.server.MinecraftServer;
+import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
 import java.util.ArrayList;
 
@@ -290,19 +292,18 @@ public class JobButcher extends Job implements Serializable
 
             if (pay > 0)
             {
-            	SimukraftReloaded.states.credits -= pay;
+            	SimukraftReloaded.states().credits -= pay;
                 SimukraftReloaded.sendChat(theFolk.name
                                       + " has collected meat and has been paid "
                                       + SimukraftReloaded.displayMoney(pay) + " Sim-u-credits.");
-                mc.theWorld.playSound(mc.thePlayer.posX,
-                                      mc.thePlayer.posY, mc.thePlayer.posZ, "ashjacksimukraftreloaded:cash", 1f, 1f, false);
+                Effects.soundToAllPlayers("ashjacksimukraftreloaded:cash");
             }
 
             step = 2;
         }
         else if (step == 2)
         {
-            if (mc.getIntegratedServer().worldServers[0].getWorldTime() % 24000 > 11600)
+            if (MinecraftServer.getServer().worldServers[0].getWorldTime() % 24000 > 11600)
             {
                 step = 3;
             }
@@ -326,7 +327,7 @@ public class JobButcher extends Job implements Serializable
             ItemStack piece = null;
             chestsAtShop =  inventoriesFindClosest(theFolk.employedAt, 3);
 
-            for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+            for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
             {
                 piece = inventoriesGet(chestsAtShop, new ItemStack(Items.porkchop, 1), false,false);
 
@@ -342,7 +343,7 @@ public class JobButcher extends Job implements Serializable
 
                 if (piece != null)
                 {
-                    folk = (FolkData) SimukraftReloaded.theFolks.get(f);
+                    folk = (FolkData) SimukraftReloaded.folks().get(f);
                     folk.levelFood = 10;
                     sell++;
                 }
@@ -371,7 +372,7 @@ public class JobButcher extends Job implements Serializable
         {
             try
             {
-                Building farm = (Building) SimukraftReloaded.theBuildings.get(currentFarmNum);
+                Building farm = (Building) SimukraftReloaded.buildings().get(currentFarmNum);
 
                 if (farm.displayNameWithoutPK.contains("Cattle Farm") ||
                         farm.displayNameWithoutPK.contains("Pig Farm") ||
@@ -384,7 +385,7 @@ public class JobButcher extends Job implements Serializable
 
                 currentFarmNum++;
 
-                if (currentFarmNum > SimukraftReloaded.theBuildings.size() - 1)
+                if (currentFarmNum > SimukraftReloaded.buildings().size() - 1)
                 {
                     return null;
                 }

@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.blocks;
 
+import net.minecraft.client.gui.GuiScreen;
+import ashjack.simukraftreloaded.client.ClientGuiOpener;
 import java.util.List;
 
 import ashjack.simukraftreloaded.client.Gui.blocks.GuiBuildingConstructor;
@@ -70,12 +72,13 @@ public class BlockConstructorBox extends Block
             par1World.playSoundEffect(par2, par3, par4, "ashjacksimukraftreloaded:powerdown", 1f, 1f);
         }
 
-        FolkData theFolk = FolkData.getFolkByEmployedAt(new V3((double)par2, (double)par3, (double)par4
-                           , par1World.provider.dimensionId));
-
-        if (theFolk != null)
+        if (!par1World.isRemote) // the client only has a copy of the folks
         {
-            theFolk.selfFire();
+            for (FolkData theFolk : FolkData.getFolksByEmployedAt(new V3((double)par2, (double)par3, (double)par4
+                               , par1World.provider.dimensionId)))
+            {
+                theFolk.selfFire();
+            }
         }
 
         super.onBlockDestroyedByPlayer(par1World, par2, par3, par4, par5);
@@ -98,7 +101,11 @@ public class BlockConstructorBox extends Block
                                     int par4, EntityPlayer thePlayer, int par6, float par7,
                                     float par8, float par9)
     {
-        par1World.playSoundEffect(par2, par3, par4, "ashjacksimukraftreloaded:computer", 1f, 1f);
+        if (!par1World.isRemote)
+        {
+            par1World.playSoundEffect(par2, par3, par4, "ashjacksimukraftreloaded:computer", 1f, 1f);
+            return true;
+        }
         int px = (int) Math.floor(thePlayer.posX);
         int py = (int) Math.floor(thePlayer.posY);
         int pz = (int) Math.floor(thePlayer.posZ);
@@ -129,10 +136,15 @@ public class BlockConstructorBox extends Block
             }
         }
 
-        V3 loc = new V3((double)par2, (double)par3, (double)par4, thePlayer.dimension);
-        Minecraft mc = Minecraft.getMinecraft();
-        GuiBuildingConstructor ui = new GuiBuildingConstructor(loc, buildDirection, null); // xyz of box and xyz of 1st build block
-        mc.displayGuiScreen(ui);
+        final V3 loc = new V3((double)par2, (double)par3, (double)par4, thePlayer.dimension);
+        final String dir = buildDirection;
+        ClientGuiOpener.open(new ClientGuiOpener.Factory()
+        {
+            public GuiScreen create()
+            {
+                return new GuiBuildingConstructor(loc, dir, null); // xyz of box and xyz of 1st build block
+            }
+        });
         return true;
     }
 }

@@ -197,7 +197,7 @@ public class FarmingBox  implements Serializable
 
         if (length == 1)
         {
-        	ModSimukraft.clientProxy.log.warning("FarmingBox: Farm size cannot be determined, using 5x5 default");
+        	SimukraftReloaded.log.warning("FarmingBox: Farm size cannot be determined, using 5x5 default");
         }
 
         for (int o = 0; o <= length; o++)
@@ -365,14 +365,14 @@ public class FarmingBox  implements Serializable
     {
         FarmingBox ret = null;
 
-        if (SimukraftReloaded.theFarmingBoxes.size() == 0)
+        if (SimukraftReloaded.farmingBoxes().size() == 0)
         {
             FarmingBox.loadFarmingBoxes();
         }
 
-        for (int x = 0; x < SimukraftReloaded.theFarmingBoxes.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.farmingBoxes().size(); x++)
         {
-            FarmingBox block = (FarmingBox) SimukraftReloaded.theFarmingBoxes.get(x);
+            FarmingBox block = (FarmingBox) SimukraftReloaded.farmingBoxes().get(x);
 
             if (block.location.isSameCoordsAs(xyz, true, true))
             {
@@ -386,7 +386,6 @@ public class FarmingBox  implements Serializable
 
     public static void loadFarmingBoxes()
     {
-        Minecraft mc = Minecraft.getMinecraft();
         File farmFiles = new File(SimukraftReloaded.getSavesDataFolder() + "Farming" + File.separator);
         farmFiles.mkdirs();
 
@@ -401,7 +400,7 @@ public class FarmingBox  implements Serializable
         }
         
         if (useNewFormat) {
-        	SimukraftReloaded.theFarmingBoxes.clear();
+        	SimukraftReloaded.farmingBoxes().clear();
         	
         	for (File f : farmFiles.listFiles())
 	        {
@@ -441,7 +440,7 @@ public class FarmingBox  implements Serializable
 	                    Block id = theWorld.getBlock(box.location.x.intValue(), box.location.y.intValue(), box.location.z.intValue());                	
 	                    if (id == SimukraftReloadedBlocks.farmingBox)     //farming box is found at primaryXYZ
 	                    {
-	                    	SimukraftReloaded.theFarmingBoxes.add(box);
+	                    	SimukraftReloaded.farmingBoxes().add(box);
 	                    }
 	                    else
 	                    {
@@ -476,7 +475,7 @@ public class FarmingBox  implements Serializable
 	
 	                            if (id == SimukraftReloadedBlocks.farmingBox)     //control block is found at primaryXYZ
 	                            {
-	                            	SimukraftReloaded.theFarmingBoxes.add(farming);
+	                            	SimukraftReloaded.farmingBoxes().add(farming);
 	                            }
 	                            else
 	                            {
@@ -505,9 +504,9 @@ public class FarmingBox  implements Serializable
     	if (side==Side.SERVER) { 
     		ArrayList<String> strings=new ArrayList<String>();
     		
-	    	for (int b = 0; b < SimukraftReloaded.theFarmingBoxes.size(); b++)
+	    	for (int b = 0; b < SimukraftReloaded.farmingBoxes().size(); b++)
 	        {
-	            FarmingBox farming = (FarmingBox) SimukraftReloaded.theFarmingBoxes.get(b);
+	            FarmingBox farming = (FarmingBox) SimukraftReloaded.farmingBoxes().get(b);
 	            strings.clear();
 	            if (farming !=null && farming.location !=null && farming.marker1XYZ !=null) {
 	            	try {

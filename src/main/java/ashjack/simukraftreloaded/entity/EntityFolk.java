@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.entity;
 
+import ashjack.simukraftreloaded.client.ClientGuiOpener;
 import net.minecraft.nbt.NBTTagCompound;
 import java.util.Collections;
 import java.util.Calendar;
@@ -69,6 +70,66 @@ public class EntityFolk extends EntityCreature implements INpc {
 	//public HatsApi hat;
 	//public RenderOnEntityHelper hatHelper;
 
+	// data watcher slots: what clients need to draw a folk (name tag, status lines, skin, work animation)
+	private static final int DW_NAME = 16, DW_STATUS = 17, DW_STATUS_LINES = 18, DW_AGE = 19, DW_LOOK = 20, DW_WORKING = 21, DW_VOCATION = 22;
+
+	/** on the client, theData is this: a small FolkData filled from the data watcher, not the real one */
+	private FolkData clientView = null;
+
+	@Override
+	protected void entityInit() {
+		super.entityInit();
+		this.dataWatcher.addObject(DW_NAME, "");
+		this.dataWatcher.addObject(DW_STATUS, "");
+		this.dataWatcher.addObject(DW_STATUS_LINES, "");
+		this.dataWatcher.addObject(DW_AGE, Integer.valueOf(18));
+		this.dataWatcher.addObject(DW_LOOK, Integer.valueOf(1));
+		this.dataWatcher.addObject(DW_WORKING, Byte.valueOf((byte) 0));
+		this.dataWatcher.addObject(DW_VOCATION, "");
+	}
+
+	/** server: copy the display fields into the data watcher (it only sends what changed) */
+	private void pushDisplayData() {
+		String lines = nz(theData.status1) + "\n" + nz(theData.status2) + "\n" + nz(theData.status3) + "\n" + nz(theData.status4);
+		this.dataWatcher.updateObject(DW_NAME, nz(theData.name));
+		this.dataWatcher.updateObject(DW_STATUS, nz(theData.statusText));
+		this.dataWatcher.updateObject(DW_STATUS_LINES, lines);
+		this.dataWatcher.updateObject(DW_AGE, Integer.valueOf(theData.age));
+		this.dataWatcher.updateObject(DW_LOOK, Integer.valueOf(theData.gender * 1000 + theData.skinnumber));
+		this.dataWatcher.updateObject(DW_WORKING, Byte.valueOf((byte) (theData.isWorking ? 1 : 0)));
+		this.dataWatcher.updateObject(DW_VOCATION, theData.vocation == null ? "" : theData.vocation.name());
+	}
+
+	/** client: rebuild the display copy from the data watcher */
+	private void pullDisplayData() {
+		if (clientView == null) {
+			clientView = new FolkData();
+		}
+		clientView.name = this.dataWatcher.getWatchableObjectString(DW_NAME);
+		clientView.statusText = this.dataWatcher.getWatchableObjectString(DW_STATUS);
+		String[] lines = this.dataWatcher.getWatchableObjectString(DW_STATUS_LINES).split("\n", -1);
+		clientView.status1 = lines.length > 0 ? lines[0] : "";
+		clientView.status2 = lines.length > 1 ? lines[1] : "";
+		clientView.status3 = lines.length > 2 ? lines[2] : "";
+		clientView.status4 = lines.length > 3 ? lines[3] : "";
+		clientView.age = this.dataWatcher.getWatchableObjectInt(DW_AGE);
+		int look = this.dataWatcher.getWatchableObjectInt(DW_LOOK);
+		clientView.gender = look / 1000;
+		clientView.skinnumber = look % 1000;
+		clientView.isWorking = this.dataWatcher.getWatchableObjectByte(DW_WORKING) != 0;
+		String voc = this.dataWatcher.getWatchableObjectString(DW_VOCATION);
+		try {
+			clientView.vocation = voc.isEmpty() ? null : Vocation.valueOf(voc);
+		} catch (IllegalArgumentException e) {
+			clientView.vocation = null;
+		}
+		theData = clientView;
+	}
+
+	private static String nz(String s) {
+		return s == null ? "" : s;
+	}
+
 	public EntityFolk(World par1World) {
 		super(par1World);
 		this.getNavigator().setAvoidsWater(false);
@@ -135,8 +196,12 @@ public class EntityFolk extends EntityCreature implements INpc {
     
 	@Override
 	public void onUpdate() {
-		
-		
+		if (this.worldObj.isRemote) {
+			pullDisplayData();
+		} else if (theData != null && this.ticksExisted % 10 == 0) {
+			pushDisplayData();
+		}
+
 		if (theData == null) {
 			if (!this.isDead) {
 				if (ghostTimer == -1) {
@@ -169,7 +234,7 @@ public class EntityFolk extends EntityCreature implements INpc {
 				Random r = new Random();
 				double dist = this.theData.getDistanceToPlayer();
 
-				if (SimukraftReloaded.states != null) {
+				if (SimukraftReloaded.states() != null) {
 					Long ls=System.currentTimeMillis()- theData.anyFolkLastSpoke;
 					if (SimukraftReloadedConfig.configFolkTalkingEnglish == true
 							&& ls > 5000) {
@@ -539,7 +604,8 @@ public class EntityFolk extends EntityCreature implements INpc {
 			return null;
 		}
 
-		if (this.theData.theirJob == null) {
+		// vocation, not theirJob: clients only have the display copy, which has no job object
+		if (this.theData.vocation == null) {
 			return null;
 		} else if (this.theData.vocation == Vocation.CROPFARMER) {
 			return new ItemStack(Items.stone_hoe, 1);
@@ -585,9 +651,7 @@ public class EntityFolk extends EntityCreature implements INpc {
 			return new ItemStack(SimukraftReloadedItems.itemFood,1, 2);
 			
 		} else if (this.theData.vocation == Vocation.FISHERMAN) {
-			JobFisherman jf = (JobFisherman) this.theData.theirJob;
-
-			if (jf.theStage == Stage.IDLE) {
+			if (this.theData.theirJob instanceof JobFisherman && ((JobFisherman) this.theData.theirJob).theStage == Stage.IDLE) {
 				return new ItemStack(Items.fish, 1);
 			} else {
 				return new ItemStack(Items.fishing_rod, 1);
@@ -600,46 +664,37 @@ public class EntityFolk extends EntityCreature implements INpc {
 	// // Right clicked this folk, bring up their GUI
 	@Override
 	@SideOnly(Side.CLIENT)
-	public boolean interact(EntityPlayer entityplayer) {
-		Minecraft mc = Minecraft.getMinecraft();
-		mc.currentScreen = null;
-		GuiScreen ui = null;
-
+	public boolean interact(final EntityPlayer entityplayer) {
 		if (this.theData == null) {
-			this.setDead();
 			return false;
 		}
-
-		if (this.theData.theirJob != null) {
-			if (this.theData.vocation == Vocation.MERCHANT
-					&& SimukraftReloaded.isDayTime()) {
-				ui = new GuiMerchant();
-			} else {
-				ui = new GuiEntityFolk(this.theData, entityplayer);
+		final String folkName = this.theData.name;
+		final FolkData view = this.theData;
+		ClientGuiOpener.open(new ClientGuiOpener.Factory() {
+			public GuiScreen create() {
+				FolkData folk = FolkData.getFolkByName(folkName); // the synced copy, with jobs and levels
+				if (folk == null) {
+					folk = view;
+				}
+				if (folk.vocation == Vocation.MERCHANT && SimukraftReloaded.isDayTime()) {
+					return new GuiMerchant();
+				}
+				return new GuiEntityFolk(folk, entityplayer);
 			}
-		} else {
-			ui = new GuiEntityFolk(this.theData, entityplayer);
-		}
+		});
 
-		mc.displayGuiScreen(ui);
-
-		if (theData.age < 18) {
-			this.worldObj.playSound(this.posX, this.posY, this.posZ,
-					"ashjacksimukraftreloaded:helloc", 1.0f, 1.0f, false);
-		} else if (theData.gender == 0) {
-			this.worldObj.playSound(this.posX, this.posY, this.posZ,
-					"ashjacksimukraftreloaded:hellom", 1.0f, 1.0f, false);
-		} else {
-			this.worldObj.playSound(this.posX, this.posY, this.posZ,
-					"ashjacksimukraftreloaded:hellof", 1.0f, 1.0f, false);
-		}
-
+		String hello = theData.age < 18 ? "helloc" : theData.gender == 0 ? "hellom" : "hellof";
+		this.worldObj.playSound(this.posX, this.posY, this.posZ, "ashjacksimukraftreloaded:" + hello, 1.0f, 1.0f, false);
 		return true;
 	}
 
 	@Override
 	public void onDeath(DamageSource d) {
-		theData.eventDied(d);
+		// the client's theData is only a display copy
+		if (!this.worldObj.isRemote && theData != null) {
+			theData.eventDied(d);
+		}
+		super.onDeath(d);
 	}
 
 	@Override

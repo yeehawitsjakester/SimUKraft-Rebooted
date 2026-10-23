@@ -78,9 +78,9 @@ public class EntityConBox extends Entity
         V3 con = Job.findClosestBlockType(where, SimukraftReloadedBlocks.buildingConstructor, 6, false);
         FolkData ret = null;
 
-        for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+        for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
         {
-            FolkData fd = SimukraftReloaded.theFolks.get(f);
+            FolkData fd = SimukraftReloaded.folks().get(f);
 
             if (fd.employedAt != null)
             {
@@ -109,7 +109,7 @@ public class EntityConBox extends Entity
 
             try
             {
-                ModSimukraft.proxy.getClientWorld().spawnParticle("explode", ent.posX + (double)(rand.nextFloat() * 1 * 2.0F) - (double)1 - var2 * var8, ent.posY + (double)(rand.nextFloat() * 1) - var4 * var8, ent.posZ + (double)(rand.nextFloat() * 1 * 2.0F) - (double)1 - var6 * var8, var2, var4, var6);
+                if (ent.worldObj.isRemote) ent.worldObj.spawnParticle("explode", ent.posX + (double)(rand.nextFloat() * 1 * 2.0F) - (double)1 - var2 * var8, ent.posY + (double)(rand.nextFloat() * 1) - var4 * var8, ent.posZ + (double)(rand.nextFloat() * 1 * 2.0F) - (double)1 - var6 * var8, var2, var4, var6);
             }
             catch (Exception e) {}
         }

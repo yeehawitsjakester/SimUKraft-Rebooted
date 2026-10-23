@@ -131,9 +131,9 @@ public class JobCourier extends Job implements Serializable
         currentTask = 0;
         courierTasks.clear();
 
-        for (int t = 0; t < SimukraftReloaded.theCourierTasks.size(); t++)
+        for (int t = 0; t < SimukraftReloaded.courierTasks().size(); t++)
         {
-            CourierTask task = SimukraftReloaded.theCourierTasks.get(t);
+            CourierTask task = SimukraftReloaded.courierTasks().get(t);
 
             if (task != null && task.pickup !=null)
             {
@@ -360,7 +360,7 @@ public class JobCourier extends Job implements Serializable
             while (theFolk.inventory.size() > 0)
             {
                 int oldSize = theFolk.inventory.size();
-                SimukraftReloaded.states.credits -= 0.11f;
+                SimukraftReloaded.states().credits -= 0.11f;
                 ItemStack invItem = theFolk.inventory.get(0);
 
                 if (theFolk.inventory.size() > 1)

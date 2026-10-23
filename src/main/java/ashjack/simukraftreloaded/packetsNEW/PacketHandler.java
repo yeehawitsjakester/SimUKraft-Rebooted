@@ -1,11 +1,12 @@
 package ashjack.simukraftreloaded.packetsNEW;
 
+import ashjack.simukraftreloaded.packetsNEW.toClient.AskGameModePacket;
+import ashjack.simukraftreloaded.packetsNEW.toServer.ActionPacket;
+import ashjack.simukraftreloaded.packetsNEW.toServer.SyncRequestPacket;
+import ashjack.simukraftreloaded.packetsNEW.toClient.HudPacket;
+import ashjack.simukraftreloaded.packetsNEW.toClient.MirrorSyncPacket;
 import ashjack.simukraftreloaded.packetsNEW.toServer.RoomBoxPacket;
 import ashjack.simukraftreloaded.core.ModSimukraft;
-import ashjack.simukraftreloaded.packetsNEW.toClient.UpdateFolkPositionPacket;
-import ashjack.simukraftreloaded.packetsNEW.toServer.DemolishBuildingPacket;
-import ashjack.simukraftreloaded.packetsNEW.toServer.GenerateFolkPacket;
-import ashjack.simukraftreloaded.packetsNEW.toServer.LoadBuildingPacket;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import cpw.mods.fml.relauncher.Side;
@@ -18,11 +19,14 @@ public class PacketHandler
   {
     net = NetworkRegistry.INSTANCE.newSimpleChannel(ModSimukraft.modid);
     
-    net.registerMessage(UpdateFolkPositionPacket.Handler.class, UpdateFolkPositionPacket.class, 0, Side.CLIENT);
-	net.registerMessage(LoadBuildingPacket.Handler.class, LoadBuildingPacket.class, 1, Side.SERVER); 
-	net.registerMessage(DemolishBuildingPacket.Handler.class, DemolishBuildingPacket.class, 2, Side.SERVER);
-	net.registerMessage(GenerateFolkPacket.Handler.class, GenerateFolkPacket.class, 3, Side.SERVER);
+    // ids 0-3 were the old packets (folk position, load building, demolish, generate folk), which passed their
+    // data through static fields; GUI actions now go through ActionPacket
 	net.registerMessage(RoomBoxPacket.Handler.class, RoomBoxPacket.class, 4, Side.SERVER);
+	net.registerMessage(MirrorSyncPacket.Handler.class, MirrorSyncPacket.class, 5, Side.CLIENT);
+	net.registerMessage(SyncRequestPacket.Handler.class, SyncRequestPacket.class, 6, Side.SERVER);
+	net.registerMessage(ActionPacket.Handler.class, ActionPacket.class, 7, Side.SERVER);
+	net.registerMessage(HudPacket.Handler.class, HudPacket.class, 8, Side.CLIENT);
+	net.registerMessage(AskGameModePacket.Handler.class, AskGameModePacket.class, 9, Side.CLIENT);
 	
   }
   

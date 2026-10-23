@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import net.minecraft.server.MinecraftServer;
+import ashjack.simukraftreloaded.common.Effects;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -430,7 +432,7 @@ public class JobTerraformer extends Job
 
                 if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                 {
-                    SimukraftReloaded.states.credits -= 0.009;
+                    SimukraftReloaded.states().credits -= 0.009;
                 }
             }
             else if (theType == TerraformerType.NATURE)
@@ -443,7 +445,7 @@ public class JobTerraformer extends Job
 
                     if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                     {
-                        SimukraftReloaded.states.credits -= 0.009;
+                        SimukraftReloaded.states().credits -= 0.009;
                     }
 
                     runDelay = 500;
@@ -483,10 +485,10 @@ public class JobTerraformer extends Job
                     }
                 }
 
-                if (mc.theWorld.isRemote)
+                if (!jobWorld.isRemote)
                 {
                     jobWorld.setBlock(v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.air, 0, 0x03);
-                    SimukraftReloaded.states.credits -= 0.009;
+                    SimukraftReloaded.states().credits -= 0.009;
                 }
             }
             else if (theType == TerraformerType.FLATTENIZER)
@@ -509,13 +511,13 @@ public class JobTerraformer extends Job
 
                 try
                 {
-                    if (mc.theWorld.isRemote)
+                    if (!jobWorld.isRemote)
                     {
                         jobWorld.setBlock(v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.air, 0, 0x03);
 
                         if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                         {
-                            SimukraftReloaded.states.credits -= 0.009;
+                            SimukraftReloaded.states().credits -= 0.009;
                         }
                     }
                 }
@@ -526,14 +528,14 @@ public class JobTerraformer extends Job
             }
             else if (theType == TerraformerType.VALUEPACK)
             {
-                if (mc.theWorld.isRemote)
+                if (!jobWorld.isRemote)
                 {
                     jobWorld.setBlock(v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.dirt, 0, 0x03);
                    // jobWorld.playAuxSFX(2001, v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.dirt);
 
                     if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                     {
-                        SimukraftReloaded.states.credits -= 0.009;
+                        SimukraftReloaded.states().credits -= 0.009;
                     }
                 }
             }
@@ -550,35 +552,35 @@ public class JobTerraformer extends Job
                             idBelow != Blocks.water &&
                             idBelow != Blocks.snow)  //non-air block below (some type of ground
                     {
-                        if (mc.theWorld.isRemote)
+                        if (!jobWorld.isRemote)
                         {
                             jobWorld.setBlock(v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.snow, 0, 0x03);
                             //jobWorld.playAuxSFX(2001, v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.snow);
 
                             if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                             {
-                                SimukraftReloaded.states.credits -= 0.009;
+                                SimukraftReloaded.states().credits -= 0.009;
                             }
                         }
                     }
                 }
                 else if (blockId == Blocks.water || blockId == Blocks.water)
                 {
-                    if (mc.theWorld.isRemote)
+                    if (!jobWorld.isRemote)
                     {
                         jobWorld.setBlock(v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.ice, 0, 0x03);
                         //jobWorld.playAuxSFX(2001, v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.ice);
 
                         if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                         {
-                            SimukraftReloaded.states.credits -= 0.009;
+                            SimukraftReloaded.states().credits -= 0.009;
                         }
                     }
                 }
             }
             else if (theType == TerraformerType.MOISTURIZER)
             {
-                if (mc.theWorld.isRemote)
+                if (!jobWorld.isRemote)
                 {
                     jobWorld.setBlock(v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.obsidian, 0, 0x03);
                     //jobWorld.playAuxSFX(2001, v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.water);
@@ -586,20 +588,20 @@ public class JobTerraformer extends Job
 
                     if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                     {
-                        SimukraftReloaded.states.credits -= 0.009;
+                        SimukraftReloaded.states().credits -= 0.009;
                     }
                 }
             }
             else if (theType == TerraformerType.THERMALIZER)
             {
-                if (mc.theWorld.isRemote)
+                if (!jobWorld.isRemote)
                 {
                     jobWorld.setBlock(v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.air, 0, 0x03);
                     jobWorld.markBlockForUpdate(v.x.intValue(), v.y.intValue(), v.z.intValue());
 
                     if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                     {
-                        SimukraftReloaded.states.credits -= 0.009;
+                        SimukraftReloaded.states().credits -= 0.009;
                     }
 
                     inventoriesPut(constructorChests, new ItemStack(Items.lava_bucket, 1), false);
@@ -607,7 +609,7 @@ public class JobTerraformer extends Job
             }
             else if (theType == TerraformerType.DEICER)
             {
-                if (mc.theWorld.isRemote)
+                if (!jobWorld.isRemote)
                 {
                     jobWorld.setBlock(v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.grass, 0, 0x03);
                     jobWorld.markBlockForUpdate(v.x.intValue(), v.y.intValue(), v.z.intValue());
@@ -615,7 +617,7 @@ public class JobTerraformer extends Job
                     
                     if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                     {
-                        SimukraftReloaded.states.credits -= 0.009;
+                        SimukraftReloaded.states().credits -= 0.009;
                     }
                     
                     if (counter % 4==0) {
@@ -639,8 +641,7 @@ public class JobTerraformer extends Job
         theFolk.isWorking = false;
         SimukraftReloaded.sendChat(theFolk.name
                               + " has completed terraforming");
-        mc.theWorld.playSound(mc.thePlayer.posX, mc.thePlayer.posY,
-                              mc.thePlayer.posZ, "ashjacksimukraftreloaded:cash", 1f, 1f, false);
+        Effects.soundToAllPlayers("ashjacksimukraftreloaded:cash");
         theFolk.stayPut = false;
         theFolk.terraformerRadius = 1;
         theFolk.terraformerType = null;

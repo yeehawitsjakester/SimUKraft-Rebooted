@@ -1,5 +1,9 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import net.minecraft.world.WorldServer;
+import net.minecraftforge.common.util.FakePlayerFactory;
+import net.minecraft.server.MinecraftServer;
+import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -100,7 +104,7 @@ public class JobCropFarmer extends Job implements Serializable
     @Override
     public void onUpdate()
     {
-        if (SimukraftReloaded.theFarmingBoxes.size() == 0)
+        if (SimukraftReloaded.farmingBoxes().size() == 0)
         {
             return;
         } // they haven't loaded yet, so fuck off
@@ -203,15 +207,11 @@ public class JobCropFarmer extends Job implements Serializable
 
             if (theFolk.gender == 0)
             {
-                jobWorld.playSound(theFolk.location.x, theFolk.location.y,
-                                   theFolk.location.z, "ashjacksimukraftreloaded:readym", 1f, 1f,
-                                   false);
+                Effects.sound(jobWorld, theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:readym", 1f, 1f);
             }
             else
             {
-                jobWorld.playSound(theFolk.location.x, theFolk.location.y,
-                                   theFolk.location.z, "ashjacksimukraftreloaded:readyf", 1f, 1f,
-                                   false);
+                Effects.sound(jobWorld, theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:readyf", 1f, 1f);
             }
         }
     }
@@ -496,7 +496,7 @@ public class JobCropFarmer extends Job implements Serializable
                             //jobWorld.playAuxSFX(2001, xxx, yyy, zzz, id + (meta << 12));
                         }
 
-                        SimukraftReloaded.states.credits -= 0.02f;
+                        SimukraftReloaded.states().credits -= 0.02f;
                         doneSomeWork = true;
                         hasHarvest = true;
                     }
@@ -607,7 +607,7 @@ public class JobCropFarmer extends Job implements Serializable
                 }
 
                 id = jobWorld.getBlock(xxx, yyy - 1, zzz);
-                meta = mc.theWorld.getBlockMetadata(xxx, yyy - 1, zzz);
+                meta = jobWorld.getBlockMetadata(xxx, yyy - 1, zzz);
 
                 //// SUGAR CANE
                 if (farmingBlock.farmType == FarmType.SUGAR)
@@ -620,11 +620,9 @@ public class JobCropFarmer extends Job implements Serializable
                         if (id != Blocks.dirt && id != Blocks.grass)
                         {
                             jobWorld.setBlock(xxx, yyy - 1, zzz, Blocks.dirt, 0, 0x03);
-                            jobWorld.playSound(xxx, yyy - 1, zzz,
-                                               Blocks.grass.stepSound.getStepResourcePath(), 1.0f,
-                                               1.0f, false);
+                            Effects.sound(jobWorld, xxx, yyy - 1, zzz, Blocks.grass.stepSound.getStepResourcePath(), 1.0f, 1.0f);
                             hasTilled = true;
-                            SimukraftReloaded.states.credits -= 0.01f;
+                            SimukraftReloaded.states().credits -= 0.01f;
                         }
                     }
                     else if ((rowCounter + 2) % 3 == 0)
@@ -633,7 +631,7 @@ public class JobCropFarmer extends Job implements Serializable
                         {
                             jobWorld.setBlock(xxx, yyy - 1, zzz, Blocks.water, 0, 0x03);
                             hasTilled = true;
-                            SimukraftReloaded.states.credits -= 0.01f;
+                            SimukraftReloaded.states().credits -= 0.01f;
                         }
                     }
 
@@ -654,7 +652,7 @@ public class JobCropFarmer extends Job implements Serializable
                         {
                             jobWorld.setBlock(xxx, yyy - 1, zzz, Blocks.sand, 0, 0x03);
                             hasTilled = true;
-                            SimukraftReloaded.states.credits -= 0.01f;
+                            SimukraftReloaded.states().credits -= 0.01f;
                         }
                     }
 
@@ -672,11 +670,9 @@ public class JobCropFarmer extends Job implements Serializable
                         {
                             jobWorld.setBlock(xxx, yyy - 1, zzz,
                                               Blocks.farmland, 0, 0x03);
-                            jobWorld.playSound(xxx, yyy - 1, zzz,
-                                               Blocks.grass.stepSound.getStepResourcePath(), 1.0f,
-                                               1.0f, false);
+                            Effects.sound(jobWorld, xxx, yyy - 1, zzz, Blocks.grass.stepSound.getStepResourcePath(), 1.0f, 1.0f);
                             hasTilled = true;
-                            SimukraftReloaded.states.credits -= 0.01f;
+                            SimukraftReloaded.states().credits -= 0.01f;
                         }
                     }
                 }
@@ -936,7 +932,7 @@ public class JobCropFarmer extends Job implements Serializable
                                         jobWorld.setBlock(xxx, yyy - 1, zzz,
                                                           Blocks.farmland, 0,
                                                           0x03);
-                                        hasSown = seed.getItem().onItemUse(seed, mc.thePlayer, jobWorld, xxx, yyy - 1, zzz, 1, 0, 0, 0);
+                                        hasSown = seed.getItem().onItemUse(seed, FakePlayerFactory.getMinecraft((WorldServer) jobWorld), jobWorld, xxx, yyy - 1, zzz, 1, 0, 0, 0);
 
                                         if (!hasSown)
                                         {
@@ -953,10 +949,8 @@ public class JobCropFarmer extends Job implements Serializable
 
                     if (hasSown)
                     {
-                        jobWorld.playSound(xxx, yyy, zzz,
-                                           Blocks.grass.stepSound.getStepResourcePath(), 1.0f,
-                                           1.0f, false);
-                        SimukraftReloaded.states.credits -= 0.01f;
+                        Effects.sound(jobWorld, xxx, yyy, zzz, Blocks.grass.stepSound.getStepResourcePath(), 1.0f, 1.0f);
+                        SimukraftReloaded.states().credits -= 0.01f;
                         doneSomeWork = true;
                     }
                 }

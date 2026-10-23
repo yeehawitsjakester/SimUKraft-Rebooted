@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.proxies;
 
+import ashjack.simukraftreloaded.client.Gui.other.GuiRunMod;
 import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
 import java.util.logging.Level;
@@ -35,7 +36,7 @@ import net.minecraftforge.client.MinecraftForgeClient;
 public class ClientProxy extends CommonProxy
 {
 	//Log
-    public static Logger log = Logger.getLogger("Sim-U-Kraft Reloaded");
+    public static Logger log = SimukraftReloaded.log;
 	
     @SideOnly(Side.CLIENT)
     public void setLogLevel()
@@ -60,6 +61,28 @@ public class ClientProxy extends CommonProxy
 
     }
     
+    @Override
+    public void showGameModeChoice()
+    {
+        runOnClientThread(new Runnable()
+        {
+            public void run()
+            {
+                Minecraft mc = Minecraft.getMinecraft();
+                if (!(mc.currentScreen instanceof GuiRunMod))
+                {
+                    mc.displayGuiScreen(new GuiRunMod());
+                }
+            }
+        });
+    }
+
+    @Override
+    public void runOnClientThread(Runnable task)
+    {
+        Minecraft.getMinecraft().func_152344_a(task);
+    }
+
     public void registerProxies()
     {
         FMLCommonHandler.instance().bus().register(new KeyHandler());

@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.blocks;
 
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.client.gui.GuiScreen;
+import ashjack.simukraftreloaded.client.ClientGuiOpener;
 import java.util.ArrayList;
 
 import ashjack.simukraftreloaded.blocks.functionality.MiningBox;
@@ -54,16 +57,20 @@ public class BlockMiningBox extends Block
     @Override
     public void onBlockAdded(World world, int i, int j, int k)
     {
-        if (BlockMarker.markers.isEmpty()) {
+        if (world.isRemote)
+        {
+            return; // mining boxes are created on the server
+        }
+        if (BlockMarker.markers().isEmpty()) {
         	SimukraftReloaded.sendChat("You need to place down 3 markers first to mark out the mining area");
         	return;
         }
     	MiningBox m;
-    	SimukraftReloaded.theMiningBoxes.add(m = new MiningBox(new V3((double)i, (double)j, (double)k, world.provider.dimensionId)));
+    	SimukraftReloaded.miningBoxes().add(m = new MiningBox(new V3((double)i, (double)j, (double)k, world.provider.dimensionId)));
 
-        if (BlockMarker.markers.size() == 1)
+        if (BlockMarker.markers().size() == 1)
         {
-            m.marker1XYZ = BlockMarker.markers.get(0).toV3();
+            m.marker1XYZ = BlockMarker.markers().get(0).toV3();
             m.marker2XYZ = null;
             m.marker3XYZ = null;
         }
@@ -71,10 +78,10 @@ public class BlockMiningBox extends Block
         {
             try
             {
-                int first = BlockMarker.markers.size() - 3;
-                m.marker1XYZ = BlockMarker.markers.get(first).toV3();
-                m.marker2XYZ = BlockMarker.markers.get(first + 1).toV3();
-                m.marker3XYZ = BlockMarker.markers.get(first + 2).toV3();
+                int first = BlockMarker.markers().size() - 3;
+                m.marker1XYZ = BlockMarker.markers().get(first).toV3();
+                m.marker2XYZ = BlockMarker.markers().get(first + 1).toV3();
+                m.marker3XYZ = BlockMarker.markers().get(first + 2).toV3();
             }
             catch (Exception e) {}
         }
@@ -85,17 +92,20 @@ public class BlockMiningBox extends Block
     @Override
     public void onBlockDestroyedByPlayer(World world, int i, int j, int k, int meta)
     {
-        FolkData theFolk = FolkData.getFolkByEmployedAt(new V3((double)i, (double)j, (double)k
-                           , world.provider.dimensionId));
-
-        if (theFolk != null)
+        if (world.isRemote)
         {
-            theFolk.selfFire();
+            super.onBlockDestroyedByPlayer(world, i, j, k, meta);
+            return; // the client only has a copy of the folks and boxes
+        }
+        V3 box = new V3((double)i, (double)j, (double)k, world.provider.dimensionId);
+        for (FolkData theFolk : FolkData.getFolksByEmployedAt(box))
+        {
+            theFolk.selfFire(); // every miner, not just the first
         }
 
         MiningBox m;
-        m = MiningBox.getMiningBlockByBoxXYZ(new V3(i, j, k));
-        SimukraftReloaded.theMiningBoxes.remove(m);
+        m = MiningBox.getMiningBlockByBoxXYZ(box);
+        SimukraftReloaded.miningBoxes().remove(m);
         world.playSoundEffect(i, j, k, "ashjacksimukraftreloaded:powerdown", 1f, 1f);
         super.onBlockDestroyedByPlayer(world, i, j, k, meta);
     }
@@ -105,27 +115,26 @@ public class BlockMiningBox extends Block
     public boolean onBlockActivated(World world, int i, int j, int k,
                                     EntityPlayer entityplayer, int par6, float par7, float par8, float par9)
     {
-        world.playSoundEffect(i, j, k, "ashjacksimukraftreloaded:computer", 1f, 1f);
-        MiningBox miningBlock  = MiningBox.getMiningBlockByBoxXYZ(new V3((double)i, (double)j, (double)k, entityplayer.dimension));
-
-        try
+        if (!world.isRemote)
         {
-            miningBlock.location.theDimension = entityplayer.dimension;
-            ArrayList<FolkData> folks = FolkData.getFolksByEmployedAt(new V3((double)i, (double)j, (double)k, entityplayer.dimension));
-            GuiMining ui = new GuiMining(miningBlock, folks);
-            Minecraft mc = Minecraft.getMinecraft();
-            mc.displayGuiScreen(ui);
+            world.playSoundEffect(i, j, k, "ashjacksimukraftreloaded:computer", 1f, 1f);
+            return true;
         }
-        catch (Exception e)
+        final V3 box = new V3((double)i, (double)j, (double)k, entityplayer.dimension);
+        final EntityPlayer player = entityplayer;
+        ClientGuiOpener.open(new ClientGuiOpener.Factory()
         {
-            e.printStackTrace();
-
-            if (world.isRemote)
+            public GuiScreen create()
             {
-                SimukraftReloaded.sendChat("Sorry, there was a problem with this mining box, try place it again");
+                MiningBox miningBlock = MiningBox.getMiningBlockByBoxXYZ(box);
+                if (miningBlock == null)
+                {
+                    player.addChatComponentMessage(new ChatComponentText("Sorry, there was a problem with this mining box, try placing it again"));
+                    return null;
+                }
+                return new GuiMining(miningBlock, FolkData.getFolksByEmployedAt(box));
             }
-        }
-
+        });
         return true;
     }
 }

@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.blocks;
 
+import net.minecraft.client.gui.GuiScreen;
+import ashjack.simukraftreloaded.client.ClientGuiOpener;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
@@ -98,6 +100,13 @@ public class BlockRoomBox extends Block
     @SideOnly(Side.CLIENT)
     private void openGui(V3 box)
     {
-        Minecraft.getMinecraft().displayGuiScreen(new GuiRoomBox(box));
+        final V3 b = box;
+        ClientGuiOpener.open(new ClientGuiOpener.Factory()
+        {
+            public GuiScreen create()
+            {
+                return new GuiRoomBox(b);
+            }
+        });
     }
 }

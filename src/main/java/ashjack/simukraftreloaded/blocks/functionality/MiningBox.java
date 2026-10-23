@@ -55,9 +55,9 @@ public class MiningBox  implements Serializable
     {
         MiningBox ret = null;
 
-        for (int x = 0; x < SimukraftReloaded.theMiningBoxes.size(); x++)
+        for (int x = 0; x < SimukraftReloaded.miningBoxes().size(); x++)
         {
-            MiningBox block = (MiningBox) SimukraftReloaded.theMiningBoxes.get(x);
+            MiningBox block = (MiningBox) SimukraftReloaded.miningBoxes().get(x);
 
             if (block.location.isSameCoordsAs(location, true, true))
             {
@@ -68,9 +68,9 @@ public class MiningBox  implements Serializable
 
         if (ret == null)
         {
-            for (int x = 0; x < SimukraftReloaded.theMiningBoxes.size(); x++)
+            for (int x = 0; x < SimukraftReloaded.miningBoxes().size(); x++)
             {
-                MiningBox block = (MiningBox) SimukraftReloaded.theMiningBoxes.get(x);
+                MiningBox block = (MiningBox) SimukraftReloaded.miningBoxes().get(x);
 
                 if (block.location.isSameCoordsAs(location, false, true))
                 {
@@ -86,7 +86,6 @@ public class MiningBox  implements Serializable
     public static void loadMiningBoxes()
     {
     	
-    	 Minecraft mc = Minecraft.getMinecraft();
          File mineFiles = new File(SimukraftReloaded.getSavesDataFolder() + "Mining" + File.separator);
          mineFiles.mkdirs();
 
@@ -101,7 +100,7 @@ public class MiningBox  implements Serializable
          }
          
          if (useNewFormat) {
-        	 SimukraftReloaded.theMiningBoxes.clear();
+        	 SimukraftReloaded.miningBoxes().clear();
          	
          	for (File f : mineFiles.listFiles())
  	        {
@@ -143,7 +142,7 @@ public class MiningBox  implements Serializable
  	                    Block id = theWorld.getBlock(box.location.x.intValue(), box.location.y.intValue(), box.location.z.intValue());                	
  	                    if (id == SimukraftReloadedBlocks.miningBox)     //mining box is found at primaryXYZ
  	                    {
- 	                    	SimukraftReloaded.theMiningBoxes.add(box);
+ 	                    	SimukraftReloaded.miningBoxes().add(box);
  	                    }
  	                    else
  	                    {
@@ -178,7 +177,7 @@ public class MiningBox  implements Serializable
 
                             if (id == SimukraftReloadedBlocks.miningBox && mining != null)    //mining box is found at primaryXYZ
                             {
-                            	SimukraftReloaded.theMiningBoxes.add(mining);
+                            	SimukraftReloaded.miningBoxes().add(mining);
                             }
                             else
                             {
@@ -202,10 +201,10 @@ public class MiningBox  implements Serializable
     	if (side==Side.SERVER) { 
     		ArrayList<String> strings=new ArrayList<String>();
     		
-	    	for (int b = 0; b < SimukraftReloaded.theMiningBoxes.size(); b++)
+	    	for (int b = 0; b < SimukraftReloaded.miningBoxes().size(); b++)
 	        {
 	    		try {
-		            MiningBox mining = (MiningBox) SimukraftReloaded.theMiningBoxes.get(b);
+		            MiningBox mining = (MiningBox) SimukraftReloaded.miningBoxes().get(b);
 		            strings.clear();
 		            strings.add("location|"+mining.location.toString());
 		            if (mining.marker1XYZ !=null) {

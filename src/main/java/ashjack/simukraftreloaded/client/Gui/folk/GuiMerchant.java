@@ -1,5 +1,9 @@
 package ashjack.simukraftreloaded.client.Gui.folk;
 
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.nbt.NBTTagCompound;
+import ashjack.simukraftreloaded.network.ServerActions;
+import ashjack.simukraftreloaded.network.ActionHandlers;
 import java.util.ArrayList;
 import java.util.logging.Level;
 
@@ -210,7 +214,8 @@ public class GuiMerchant extends GuiScreen
             }
             else if (guibutton.id == 2)
             {
-                this.sellStuff();
+                ServerActions.send("merchantSell");
+                mc.displayGuiScreen(null);
             }
 
             showPage();
@@ -238,15 +243,23 @@ public class GuiMerchant extends GuiScreen
             }
             else if (guibutton.id == 2)    /// BUY!
             {
-                if (SimukraftReloaded.states.credits < totalCost)
+                if (SimukraftReloaded.states().credits < totalCost)
                 {
-                    SimukraftReloaded.sendChat("Merchant: 'Sorry, your card has been declined, you could try buying less.'");
+                    mc.thePlayer.addChatComponentMessage(new ChatComponentText("Merchant: 'Sorry, your card has been declined, you could try buying less.'"));
                     mc.currentScreen = null;
                     mc.setIngameFocus();
                 }
                 else
                 {
-                    buyStuff();
+                    int[] q = new int[9];
+                    for (int i = 0; i < 9 && i < quantities.size(); i++)
+                    {
+                        q[i] = quantities.get(i);
+                    }
+                    NBTTagCompound data = new NBTTagCompound();
+                    data.setIntArray("qty", q);
+                    ServerActions.send("merchantBuy", data);
+                    mc.displayGuiScreen(null);
                 }
             }
         }
@@ -274,164 +287,10 @@ public class GuiMerchant extends GuiScreen
             }
             else if (guibutton.id == 2)    /// Sell!
             {
-                sellStuff();
+                ServerActions.send("merchantSell");
+                mc.displayGuiScreen(null);
             }
         }
-    }
-
-    /** buys the stuff currently shown on the buy page */
-    private void buyStuff()
-    {
-    	SimukraftReloaded.log.info("Preparing to buy stuff");
-        ItemStack stack = null;
-        int quant = 0;
-        Block block = null;
-        boolean ok = false;
-        Float stackPrice = 0f;
-        ArrayList<IInventory> chests = Job.inventoriesFindClosest(
-                                           new V3(mc.thePlayer.posX, mc.thePlayer.posY, mc.thePlayer.posZ, mc.thePlayer.dimension), 5);
-
-        if (chests == null || chests.size() == 0)
-        {
-            SimukraftReloaded.sendChat("Merchant: Please place a chest down here, and I will place your items in there.");
-            mc.currentScreen = null;
-            mc.setIngameFocus();
-            return;
-        }
-
-        for (int i = 0; i < 9; i++)
-        {
-            quant = quantities.get(i);
-            SimukraftReloaded.log.info(String.valueOf(quant));
-
-            if (quant > 0)
-            {
-                if (i == 0)
-                {
-                    block = Blocks.planks;
-                }
-                else if (i == 1)
-                {
-                    block = Blocks.log;
-                }
-                else if (i == 2)
-                {
-                    block = Blocks.cobblestone;
-                }
-                else if (i == 3)
-                {
-                    block = Blocks.stone;
-                }
-                else if (i == 4)
-                {
-                    block = Blocks.glass;
-                }
-                else if (i == 5)
-                {
-                    block = Blocks.wool;
-                }
-                else if (i == 6)
-                {
-                    block = Blocks.brick_block;
-                }
-                else if (i == 7)
-                {
-                    block = Blocks.stonebrick;
-                }
-                else if (i == 8)
-                {
-                    block = Blocks.fence;
-                }
-
-                for (int c = 1; c <= quant; c++)
-                {
-                    stack = new ItemStack(block, 64);
-                    this.placeIntoChest(chests.get(0), stack, stack.getItemDamage(), 64);
-                    stackPrice = PricesForBlocks.getPrice(block, true);
-
-
-                    SimukraftReloaded.states.credits -= stackPrice; //64 * baseprice + 25% markup
-
-                }
-
-                PricesForBlocks.adjustPrice(block, true);
-            }
-        }
-
-        mc.currentScreen = null;
-        mc.setIngameFocus();
-        mc.theWorld.playSound(mc.thePlayer.posX, mc.thePlayer.posY, mc.thePlayer.posZ, "ashjacksimukraftreloaded:cash", 1f, 1f, false);
-        Thread t = new Thread(new Runnable()
-        {
-            public void run()
-            {
-                try
-                {
-                    Thread.sleep(3000);
-                }
-                catch (Exception e) {}
-
-                mc.theWorld.playSound(mc.thePlayer.posX, mc.thePlayer.posY, mc.thePlayer.posZ, "ashjacksimukraftreloaded:merchm", 1f, 1f, false);
-            }
-        });
-        t.start();
-    }
-
-    /** sell selected player inventory to merchant */
-    private void sellStuff()
-    {
-        ItemStack stack = null;
-        int quant = 0;
-        Block block = null;
-        boolean ok = false;
-        Float stackPrice = 0f;
-        int stackCount = 0;
-        ArrayList<IInventory> chests = Job.inventoriesFindClosest(new V3(
-                                           mc.thePlayer.posX, mc.thePlayer.posY, mc.thePlayer.posZ, mc.thePlayer.dimension), 5);
-
-        if (chests == null | chests.size() == 0)
-        {
-            SimukraftReloaded.sendChat("Merchant: Please place a chest down here, and place stacks of 64 blocks in there.");
-            mc.currentScreen = null;
-            mc.setIngameFocus();
-            return;
-        }
-
-        float total = 0f;
-
-        for (int g = 0; g < chests.get(0). getSizeInventory(); g++)
-        {
-            ItemStack is = chests.get(0).getStackInSlot(g);
-
-            if (is != null)
-            {
-                if (is.stackSize == 64)
-                {
-                    stackPrice = PricesForBlocks.getPrice(Block.getBlockFromItem(is.getItem()), false) ;
-
-                    if (stackPrice > 0)
-                    {
-                    	SimukraftReloaded.states.credits += stackPrice; //64 * baseprice
-                        PricesForBlocks.adjustPrice(block, false);
-                        total += stackPrice;
-                        chests.get(0).setInventorySlotContents(g, null);
-                    }
-                }
-            }
-        }
-
-        if (total == 0f)
-        {
-            SimukraftReloaded.sendChat("Merchant: There were no valid stacks I want to buy from you in the chest?!");
-        }
-        else
-        {
-            mc.theWorld.playSound(mc.thePlayer.posX, mc.thePlayer.posY, mc.thePlayer.posZ, "ashjacksimukraftreloaded:cash", 1f, 1f, false);
-            SimukraftReloaded.sendChat("Sold all valid stacks for a total of " + SimukraftReloaded.displayMoney(total));
-        }
-
-        mc.currentScreen = null;
-        mc.setIngameFocus();
     }
 
     @Override

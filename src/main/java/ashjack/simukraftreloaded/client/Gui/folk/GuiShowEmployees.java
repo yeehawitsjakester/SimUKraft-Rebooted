@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.client.Gui.folk;
 
+import ashjack.simukraftreloaded.network.ActionHandlers;
 import java.util.ArrayList;
 
 import net.minecraft.client.gui.GuiButton;
@@ -164,7 +165,7 @@ public class GuiShowEmployees extends GuiScreen
         else
         {
             FolkData folk = (FolkData) folks.get(guibutton.id);
-            folk.selfFire();
+            ActionHandlers.sendFire(folk.name);
             guibutton.enabled = false;
         }
     }

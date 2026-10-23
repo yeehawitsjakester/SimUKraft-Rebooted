@@ -45,12 +45,12 @@ public class BlockPathConstructor extends Block
     	PathBox m;
     	ModSimukraft.thePathBoxes.add(m=new PathBox(new V3((double)i,(double)j,(double)k,world.provider.dimensionId)));
 
-    	if (BlockMarker.markers.size()==1) {
-    		m.marker1XYZ= BlockMarker.markers.get(0).toV3();
+    	if (BlockMarker.markers().size()==1) {
+    		m.marker1XYZ= BlockMarker.markers().get(0).toV3();
     	} else {
     		try {
-    			int first=BlockMarker.markers.size() - 3;
-    			m.marker1XYZ= BlockMarker.markers.get(first).toV3();
+    			int first=BlockMarker.markers().size() - 3;
+    			m.marker1XYZ= BlockMarker.markers().get(first).toV3();
     		} catch(Exception e) {}  //if there are none
     	}
     	super.onBlockAdded(world, i, j, k);

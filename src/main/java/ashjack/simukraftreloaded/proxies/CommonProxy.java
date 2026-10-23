@@ -263,6 +263,16 @@ public class CommonProxy
         }
     }
 
+    /** client: open the "choose a game mode" menu */
+    public void showGameModeChoice()
+    {
+    }
+
+    /** client proxy runs this on the client's main thread; there is no client on a dedicated server */
+    public void runOnClientThread(Runnable task)
+    {
+    }
+
     public void registerMisc()
     {
         //TickRegistry.registerTickHandler(new CommonTickHandler(), Side.SERVER);

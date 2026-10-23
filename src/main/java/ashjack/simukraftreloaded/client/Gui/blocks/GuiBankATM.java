@@ -1,5 +1,10 @@
 package ashjack.simukraftreloaded.client.Gui.blocks;
 
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagCompound;
+import ashjack.simukraftreloaded.network.ServerActions;
+import ashjack.simukraftreloaded.network.ActionHandlers;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 
@@ -47,40 +52,15 @@ public class GuiBankATM extends GuiScreen
     @Override
     public void initGui()
     {
-        boolean robbed = false;
-        ArrayList<V3> blocks;
-        blocks = Job.findClosestBlocks(bankLocation, Blocks.diamond_block, 10);
-
-        if (blocks.size() == 0)
-        {
-            robbed = true;
-        }
-
-        blocks = Job.findClosestBlocks(bankLocation, Blocks.emerald_block, 10);
-
-        if (blocks.size() == 0)
-        {
-            robbed = true;
-        }
-
-        blocks = Job.findClosestBlocks(bankLocation, Blocks.gold_block, 10);
-
-        if (blocks.size() == 0)
-        {
-            robbed = true;
-        }
+        // checked on the client's own world here (the server checks again before paying out)
+        boolean robbed = !vaultNearby(Blocks.diamond_block) || !vaultNearby(Blocks.emerald_block) || !vaultNearby(Blocks.gold_block);
 
         if (robbed)   // if they've mined the diamond/gold blocks :-)
         {
             mc.currentScreen = null;
             mc.setIngameFocus();
-            SimukraftReloaded.sendChat("Looks like you've robbed the bank! Replace the items and we'll let you off and let you use this ATM. Next time we won't be so nice about it!");
+            thePlayer.addChatComponentMessage(new ChatComponentText("Looks like you've robbed the bank! Replace the items and we'll let you off and let you use this ATM. Next time we won't be so nice about it!"));
             return;
-        }
-
-        if (SimukraftReloaded.theCommodities.size() == 0)
-        {
-            Commodity.refreshAvailableCommoditities();
         }
 
         buttonList.clear();
@@ -147,7 +127,7 @@ public class GuiBankATM extends GuiScreen
         {
             int offset = 30;
 
-            for (int it = 0; it < SimukraftReloaded.theCommodities.size(); it++)
+            for (int it = 0; it < SimukraftReloaded.commodities().size(); it++)
             {
                 buttonList.add(new GuiButton(it + 200, width / 2, offset, 20, 20, "-"));
                 buttonList.add(new GuiButton(it + 300, width / 2 + 20, offset, 20, 20, "+"));
@@ -209,14 +189,14 @@ public class GuiBankATM extends GuiScreen
             drawCenteredString(fontRendererObj, "Commodities available to buy today", width / 2, 20, 0x00ff00);
             int offset = 35;
 
-            if (SimukraftReloaded.theCommodities.size() == 0)
+            if (SimukraftReloaded.commodities().size() == 0)
             {
                 drawString(fontRendererObj, "Currently no items, come back later.", 20, offset, 0x00ff00);
             }
 
-            for (int it = 0; it < SimukraftReloaded.theCommodities.size(); it++)
+            for (int it = 0; it < SimukraftReloaded.commodities().size(); it++)
             {
-                Commodity item = SimukraftReloaded.theCommodities.get(it);
+                Commodity item = SimukraftReloaded.commodities().get(it);
                 drawString(fontRendererObj, item.quantity + " x " + item.theItemStack.getDisplayName()
                            + " @ " + SimukraftReloaded.displayMoney(item.priceEach) + " each", 20, offset, 0x00ff00);
                 int qty = 0;
@@ -264,51 +244,15 @@ public class GuiBankATM extends GuiScreen
         }
         else if (guibutton.id >= 100 && guibutton.id < 200)   //player is selling an item (id-100 is the inventory slot)
         {
-            ItemStack is = thePlayer.inventory.getStackInSlot(guibutton.id - 100);
-            ModSimukraft.proxy.getClientWorld().playSound(thePlayer.posX, thePlayer.posY, thePlayer.posZ, "ashjacksimukraftreloaded:cashshort", 1f, 1f, false);
-            String money = guibutton.displayString.substring(guibutton.displayString.indexOf("for ") + 4);
-            NumberFormat format = NumberFormat.getInstance();
-            Number number = 0;
-
-            try
-            {
-                number = format.parse(money);
-            }
-            catch (Exception e) {}
-
-            //money=money.replaceAll(",",".");
-            float soldFor = number.floatValue();
-            SimukraftReloaded.states.credits += soldFor;
-            is.stackSize--;
-
-            if (is.stackSize == 0)
-            {
-                is = null;
-            }
-
-            thePlayer.inventory.setInventorySlotContents(guibutton.id - 100, is);
-            this.initGui();
+            sendSell(guibutton.id - 100, false);
         }
         else if (guibutton.id >= 500 && guibutton.id < 600)  // sell stack of item (deposit)
         {
-            ModSimukraft.proxy.getClientWorld().playSound(thePlayer.posX, thePlayer.posY, thePlayer.posZ, "ashjacksimukraftreloaded:cashshort", 1f, 1f, false);
-            NumberFormat format = NumberFormat.getInstance();
-            Number number = 0;
-
-            try
-            {
-                number = format.parse(guibutton.displayString.substring(guibutton.displayString.indexOf("for ") + 4));
-            }
-            catch (Exception e) {}
-
-            float soldFor = number.floatValue();
-            SimukraftReloaded.states.credits += soldFor;
-            thePlayer.inventory.setInventorySlotContents(guibutton.id - 500, null);
-            this.initGui();
+            sendSell(guibutton.id - 500, true);
         }
         else if (guibutton.id >= 200 && guibutton.id < 300)    // minus qty on commod screen
         {
-            Commodity comm = SimukraftReloaded.theCommodities.get(guibutton.id - 200);
+            Commodity comm = SimukraftReloaded.commodities().get(guibutton.id - 200);
 
             for (int ci = 0; ci < cart.size(); ci++)
             {
@@ -332,7 +276,7 @@ public class GuiBankATM extends GuiScreen
         }
         else if (guibutton.id >= 300 && guibutton.id < 400)    // plus qty on commod screen
         {
-            Commodity comm = SimukraftReloaded.theCommodities.get(guibutton.id - 300);
+            Commodity comm = SimukraftReloaded.commodities().get(guibutton.id - 300);
             boolean added = false;
 
             for (int ci = 0; ci < cart.size(); ci++)
@@ -377,40 +321,61 @@ public class GuiBankATM extends GuiScreen
                 cost += cartItem.quantity * cartItem.priceEach;
             }
 
-            if (cost > SimukraftReloaded.states.credits)
+            if (cost > SimukraftReloaded.states().credits)
             {
                 errorText = "The cost is " + SimukraftReloaded.displayMoney(cost) + ", but you only have " +
-                		SimukraftReloaded.displayMoney(SimukraftReloaded.states.credits);
+                		SimukraftReloaded.displayMoney(SimukraftReloaded.states().credits);
                 return;
             }
             else
             {
-                for (int ci = 0; ci < cart.size(); ci++)
+                // the server checks the price and stock again, takes the money and hands over the items
+                NBTTagList list = new NBTTagList();
+                for (Commodity cartItem : cart)
                 {
-                    Commodity cartItem = cart.get(ci);
-                    ItemStack is = cartItem.theItemStack;
-                    is.stackSize = cartItem.quantity;
-                    thePlayer.inventory.addItemStackToInventory(is);
-
-                    for (int ai = 0; ai < SimukraftReloaded.theCommodities.size(); ai++)
-                    {
-                        Commodity ac = SimukraftReloaded.theCommodities.get(ai);
-
-                        if (ac.theItemStack.getDisplayName().contentEquals(cartItem.theItemStack.getDisplayName()))
-                        {
-                        	SimukraftReloaded.theCommodities.remove(ai);
-                            break;
-                        }
-                    }
+                    NBTTagCompound c = new NBTTagCompound();
+                    c.setString("item", Item.itemRegistry.getNameForObject(cartItem.theItemStack.getItem()));
+                    c.setInteger("damage", cartItem.theItemStack.getItemDamage());
+                    c.setInteger("qty", cartItem.quantity);
+                    list.appendTag(c);
                 }
-
-                SimukraftReloaded.states.credits -= cost;
-                SimukraftReloaded.sendChat("Bought commodities worth " + SimukraftReloaded.displayMoney(cost));
-                ModSimukraft.proxy.getClientWorld().playSound(thePlayer.posX, thePlayer.posY, thePlayer.posZ, "ashjacksimukraftreloaded:cash", 1f, 1f, false);
-                mc.currentScreen = null;
-                mc.setIngameFocus();
+                NBTTagCompound data = new NBTTagCompound();
+                ActionHandlers.putV3(data, "atm", bankLocation);
+                data.setTag("cart", list);
+                ServerActions.send("bankBuy", data);
+                mc.displayGuiScreen(null);
             }
         }
+    }
+
+    private void sendSell(int slot, boolean all)
+    {
+        NBTTagCompound data = new NBTTagCompound();
+        ActionHandlers.putV3(data, "atm", bankLocation);
+        data.setInteger("slot", slot);
+        data.setBoolean("all", all);
+        ServerActions.send("bankSell", data);
+    }
+
+    @Override
+    public void updateScreen()
+    {
+        // the server changes the inventory; redraw the deposit buttons when it does
+        if (theScreen == ATMscreen.DEPOSIT && mc.thePlayer.ticksExisted % 10 == 0)
+        {
+            initGui();
+        }
+    }
+
+    private boolean vaultNearby(Block block)
+    {
+        int x0 = bankLocation.x.intValue(), y0 = bankLocation.y.intValue(), z0 = bankLocation.z.intValue();
+        for (int x = -10; x <= 10; x++)
+            for (int y = -10; y <= 10; y++)
+                for (int z = -10; z <= 10; z++)
+                    if (mc.theWorld.getBlock(x0 + x, y0 + y, z0 + z) == block)
+                        return true;
+        return false;
     }
 
     @Override

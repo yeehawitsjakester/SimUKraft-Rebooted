@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import net.minecraft.server.MinecraftServer;
+import ashjack.simukraftreloaded.common.Effects;
 import net.minecraft.block.material.Material;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -251,15 +253,11 @@ public class JobMiner extends Job implements Serializable
                     try {
 	                	if (theFolk.gender == 0)
 	                    {
-	                        mc.theWorld.playSound(theFolk.location.x,
-	                                              theFolk.location.y, theFolk.location.z,
-	                                              "ashjacksimukraftreloaded:readym", 1f, 1f, false);
+	                        Effects.sound(jobWorld, theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:readym", 1f, 1f);
 	                    }
 	                    else
 	                    {
-	                        mc.theWorld.playSound(theFolk.location.x,
-	                                              theFolk.location.y, theFolk.location.z,
-	                                              "ashjacksimukraftreloaded:readyf", 1f, 1f, false);
+	                        Effects.sound(jobWorld, theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:readyf", 1f, 1f);
 	                    }
                     } catch(Exception e) {} // playSound can NPE when switching dimensions
                 }
@@ -298,15 +296,11 @@ public class JobMiner extends Job implements Serializable
                 {
                     if (theFolk.gender == 0)
                     {
-                        mc.theWorld.playSound(theFolk.location.x,
-                                              theFolk.location.y, theFolk.location.z,
-                                              "ashjacksimukraftreloaded:beamm", 1f, 1f, false);
+                        Effects.sound(jobWorld, theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:beamm", 1f, 1f);
                     }
                     else
                     {
-                        mc.theWorld.playSound(theFolk.location.x,
-                                              theFolk.location.y, theFolk.location.z,
-                                              "ashjacksimukraftreloaded:beamf", 1f, 1f, false);
+                        Effects.sound(jobWorld, theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:beamf", 1f, 1f);
                     }
                 }
 
@@ -333,8 +327,7 @@ public class JobMiner extends Job implements Serializable
         theFolk.action = FolkAction.WANDER;
         SimukraftReloaded.sendChat(theFolk.name
                               + " has finished their shift down the mine.");
-        mc.theWorld.playSound(mc.thePlayer.posX, mc.thePlayer.posY,
-                              mc.thePlayer.posZ, "ashjacksimukraftreloaded:cash", 1f, 1f, false);
+        Effects.soundToAllPlayers("ashjacksimukraftreloaded:cash");
     }
 
     /**
@@ -733,27 +726,13 @@ public class JobMiner extends Job implements Serializable
 
         if (theFolk.theEntity != null)
         {
-            try
-            {
-                mc.theWorld.spawnParticle("explode",
-                                          vNextMineableBlock.x.intValue(),
-                                          vNextMineableBlock.y.intValue(),
-                                          vNextMineableBlock.z.intValue(), 0.1f, 0.3f, 0);
-                mc.theWorld.spawnParticle("explode",
-                                          vNextMineableBlock.x.intValue(),
-                                          vNextMineableBlock.y.intValue(),
-                                          vNextMineableBlock.z.intValue(), 0, 0.2f, 0);
-                mc.theWorld.spawnParticle("explode",
-                                          vNextMineableBlock.x.intValue(),
-                                          vNextMineableBlock.y.intValue(),
-                                          vNextMineableBlock.z.intValue(), 0, 0.1f, 0.1f);
-            }
-            catch (Exception e) {}
+            Effects.particles(jobWorld, "explode", vNextMineableBlock.x.intValue() + 0.5, vNextMineableBlock.y.intValue() + 0.5,
+                    vNextMineableBlock.z.intValue() + 0.5, 3, 0.3, 0.05);
         }
 
         if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
         {
-            SimukraftReloaded.states.credits -= (0.012f);
+            SimukraftReloaded.states().credits -= (0.012f);
             int b4 = (int)Math.floor(theFolk.levelMiner);
 
             if (theFolk.levelMiner < 10.0f)

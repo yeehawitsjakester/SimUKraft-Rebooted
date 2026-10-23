@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Random;
@@ -310,11 +311,11 @@ public class JobBaker extends Job implements Serializable
             {
                 if (theFolk.gender == 0)
                 {
-                    mc.theWorld.playSound(theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:bakerm", 1f, 1f, false);
+                    Effects.sound(jobWorld, theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:bakerm", 1f, 1f);
                 }
                 else
                 {
-                    mc.theWorld.playSound(theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:bakerf", 1f, 1f, false);
+                    Effects.sound(jobWorld, theFolk.location.x, theFolk.location.y, theFolk.location.z, "ashjacksimukraftreloaded:bakerf", 1f, 1f);
                 }
             }
 
@@ -329,13 +330,11 @@ public class JobBaker extends Job implements Serializable
         {
             if (pay > 0)
             {
-            	SimukraftReloaded.states.credits -= pay;
+            	SimukraftReloaded.states().credits -= pay;
                 SimukraftReloaded.sendChat(theFolk.name
                                       + " has made some bread and has been paid "
                                       + SimukraftReloaded.displayMoney(pay) + " Sim-u-credits.");
-                mc.theWorld.playSound(mc.thePlayer.posX,
-                                      mc.thePlayer.posY, mc.thePlayer.posZ, "ashjacksimukraftreloaded:cash", 1f,
-                                      1f, false);
+                Effects.soundToAllPlayers("ashjacksimukraftreloaded:cash");
             }
 
             step = 2;
@@ -353,9 +352,9 @@ public class JobBaker extends Job implements Serializable
             int sell = 0;
             ItemStack breadStack = null;
 
-            if (SimukraftReloaded.theFolks.size() > 1)
+            if (SimukraftReloaded.folks().size() > 1)
             {
-                sell = SimukraftReloaded.theFolks.size() + 1 + new Random().nextInt(SimukraftReloaded.theFolks.size());
+                sell = SimukraftReloaded.folks().size() + 1 + new Random().nextInt(SimukraftReloaded.folks().size());
                 bakeryChests = inventoriesFindClosest(theFolk.employedAt, 4);
                 breadStack = inventoriesGet(bakeryChests, new ItemStack(Items.bread, sell), false,false);
             }
@@ -371,9 +370,9 @@ public class JobBaker extends Job implements Serializable
                 SimukraftReloaded.sendChat(theFolk.name + " has sold " + breadStack.stackSize
                                       + " loaves of bread to folks today.");
 
-                for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+                for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
                 {
-                    folk = (FolkData) SimukraftReloaded.theFolks.get(f);
+                    folk = (FolkData) SimukraftReloaded.folks().get(f);
 
                     if (breadStack.stackSize > 0)
                     {
@@ -401,7 +400,7 @@ public class JobBaker extends Job implements Serializable
         {
             try
             {
-                farm = (FarmingBox) SimukraftReloaded.theFarmingBoxes.get(currentFarmNum);
+                farm = (FarmingBox) SimukraftReloaded.farmingBoxes().get(currentFarmNum);
 
                 if (farm.farmType == FarmType.WHEAT)
                 {
@@ -412,7 +411,7 @@ public class JobBaker extends Job implements Serializable
 
                 currentFarmNum++;
 
-                if (currentFarmNum > SimukraftReloaded.theFarmingBoxes.size() - 1)
+                if (currentFarmNum > SimukraftReloaded.farmingBoxes().size() - 1)
                 {
                     return null;
                 }

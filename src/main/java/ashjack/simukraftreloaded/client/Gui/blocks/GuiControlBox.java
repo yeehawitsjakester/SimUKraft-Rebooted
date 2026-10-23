@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.client.Gui.blocks;
 
+import net.minecraft.nbt.NBTTagCompound;
+import ashjack.simukraftreloaded.network.ServerActions;
+import ashjack.simukraftreloaded.network.ActionHandlers;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -27,8 +30,6 @@ import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
-import ashjack.simukraftreloaded.packetsNEW.toServer.DemolishBuildingPacket;
-import ashjack.simukraftreloaded.packetsNEW.toServer.LoadBuildingPacket;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 
 public class GuiControlBox extends GuiScreen
@@ -62,11 +63,6 @@ public class GuiControlBox extends GuiScreen
         // No reload from disk: it replaced the live building list, losing unsaved tenants and orphaning Building references
         theBuilding = Building.getBuilding(location);
         theFolk = folk;
-
-        if (SimukraftReloaded.isDayTime())
-        {
-            theFolk.gotoXYZ(location, null);
-        }
     }
 
     public boolean doesGuiPauseGame()
@@ -109,9 +105,9 @@ public class GuiControlBox extends GuiScreen
             employeeCount = 0;
             employees.clear();
 
-            for (int fc = 0; fc < SimukraftReloaded.theFolks.size(); fc++)
+            for (int fc = 0; fc < SimukraftReloaded.folks().size(); fc++)
             {
-                FolkData folk = (FolkData) SimukraftReloaded.theFolks.get(fc);
+                FolkData folk = (FolkData) SimukraftReloaded.folks().get(fc);
 
                 if (theBuilding.primaryXYZ.isSameCoordsAs(folk.employedAt, true, true))
                 {
@@ -222,7 +218,7 @@ public class GuiControlBox extends GuiScreen
                     b.enabled = false;
                 }
 
-                if (BlockMarker.markers.size() == 1)
+                if (BlockMarker.markers().size() == 1)
                 {
                     buttonList.add(new GuiButton(20, width / 2 + 100, height - 30, 100, 20, "Set Lumber area"));
                 }
@@ -394,9 +390,9 @@ public class GuiControlBox extends GuiScreen
             int down = 70;
             int idx = 2;
 
-            for (int fc = 0; fc < SimukraftReloaded.theFolks.size(); fc++)
+            for (int fc = 0; fc < SimukraftReloaded.folks().size(); fc++)
             {
-                FolkData folk = (FolkData) SimukraftReloaded.theFolks.get(fc);
+                FolkData folk = (FolkData) SimukraftReloaded.folks().get(fc);
 
                 if (theBuilding.primaryXYZ.isSameCoordsAs(folk.employedAt, true, true))
                 {
@@ -475,9 +471,9 @@ public class GuiControlBox extends GuiScreen
                     fontRendererObj.drawString("Employees :", 5, 57, 0xffff80);
                     int down = 70;
 
-                    for (int fc = 0; fc < SimukraftReloaded.theFolks.size(); fc++)
+                    for (int fc = 0; fc < SimukraftReloaded.folks().size(); fc++)
                     {
-                        FolkData folk = (FolkData) SimukraftReloaded.theFolks.get(fc);
+                        FolkData folk = (FolkData) SimukraftReloaded.folks().get(fc);
 
                         if (theBuilding.primaryXYZ.isSameCoordsAs(folk.employedAt, true, true))
                         {
@@ -657,26 +653,16 @@ public class GuiControlBox extends GuiScreen
                 }
             }
 
-            FolkData folk = FolkData.getFolkByName(fname);
-
-            if (folk != null)
-            {
-                folk.selfFire();
-            }
+            ActionHandlers.sendFire(fname);
         }
         else if (guibutton.displayString.contentEquals("Fix House"))
         {
-            Building b;
-            SimukraftReloaded.theBuildings.add(b = new Building("Repaired House", "residential", location, location, true));
-            b.buildingComplete = true;
-            b.capacity = -1;
-            b.author = "Satscape";
-            theBuilding = b;
-            Building.saveAllBuildings();
+            sendForBuilding("fixHouse", location);
+            mc.displayGuiScreen(null);
         }
         else if (guibutton.displayString.contentEquals("Set Lumber area"))
         {
-            theBuilding.lumbermillMarker = BlockMarker.markers.get(0).toV3();
+            sendForBuilding("setLumberArea", theBuilding.primaryXYZ);
             guibutton.enabled = false;
         }
         else if (guibutton.id == 21)     // show employees button pressed
@@ -706,53 +692,20 @@ public class GuiControlBox extends GuiScreen
             mc.displayGuiScreen(ui);
         } 
         else if (guibutton.displayString.contentEquals("Rotate Stairs")) {
-        	rotateStairs();
+        	sendForBuilding("rotateStairs", theBuilding.primaryXYZ);
         }
         else if (guibutton.displayString.contentEquals("Demolish!"))
         {
-            World theWorld = playerWhoClickedIt.worldObj;
-            int bindex = 0;
-
-            for (int i = 0; i < SimukraftReloaded.theBuildings.size(); i++)
-            {
-                Building build = SimukraftReloaded.theBuildings.get(i);
-
-                try {
-	                if (build.primaryXYZ.isSameCoordsAs(theBuilding.primaryXYZ, true, true))
-	                {
-	                    bindex = i;
-	                    FolkData theFolk = FolkData.getFolkByEmployedAt(theBuilding.primaryXYZ);
-	
-	                    if (theFolk != null)
-	                    {
-	                        theFolk.selfFire();
-	                    }
-	                }
-                }catch(Exception e) {}
-            }
-
-            SimukraftReloaded.demolishWorld = theWorld;
-
-            //Send the packet
-           // if(theWorld.isRemote)
-           // {
-            	PacketHandler.net.sendToServer(new DemolishBuildingPacket(theBuilding, theBuilding.blockLocations));
-           // }
-            
-            	//BOOKMARK
-            	
-            for (V3 blockLoc : theBuilding.blockLocations)
-            {            
-                mc.theWorld.spawnParticle("explode", blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue(), 0, 0.3f, 0);
-                mc.theWorld.spawnParticle("flame", blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue(), 0, 0.4f, 0);
-                
-            }
-
-            theWorld.playSoundAtEntity(playerWhoClickedIt, "random.explode", 1.0f, 1.0f);
-            // by object, not by index: the index could point at a different building by now
-            Building.removeBuilding(theBuilding, "demolished");
+            sendForBuilding("demolish", theBuilding.primaryXYZ);
             mc.displayGuiScreen(null);
         }
+    }
+
+    private void sendForBuilding(String action, V3 box)
+    {
+        NBTTagCompound data = new NBTTagCompound();
+        ActionHandlers.putV3(data, "box", box);
+        ServerActions.send(action, data);
     }
 
     @Override
@@ -774,123 +727,4 @@ public class GuiControlBox extends GuiScreen
 
         //((GuiButton)buttonList.get(0)).enabled = theGuiTextField1.getText().trim().length() > 0;
     }
-    
-    // Stairs, torches, redstone torches, beds, pistons, signs, ladders, buttons, fence gates
-    private void rotateStairs()
-    {
-        World theWorld = mc.getIntegratedServer().worldServerForDimension(theBuilding.primaryXYZ.theDimension);
-        theWorld.playSoundEffect(theBuilding.primaryXYZ.x,theBuilding.primaryXYZ.y,theBuilding.primaryXYZ.z, "ashjacksimukraftreloaded:computer", 1f, 2f);
-
-        for (V3 blockLoc : theBuilding.blockLocations)
-        {
-            ItemStack is = new ItemStack(theWorld.getBlock(blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue()), 1,
-                                         theWorld.getBlockMetadata(blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue()));
-
-            if (Block.getBlockFromItem(is.getItem()) == Blocks.acacia_stairs
-            		|| Block.getBlockFromItem(is.getItem()) == Blocks.birch_stairs
-            		||Block.getBlockFromItem(is.getItem()) == Blocks.dark_oak_stairs
-            		||Block.getBlockFromItem(is.getItem()) == Blocks.spruce_stairs
-            		||Block.getBlockFromItem(is.getItem()) == Blocks.stone_stairs
-            		||Block.getBlockFromItem(is.getItem()) == Blocks.oak_stairs
-            		||Block.getBlockFromItem(is.getItem()) == Blocks.brick_stairs
-            		||Block.getBlockFromItem(is.getItem()) == Blocks.stone_brick_stairs
-            		||Block.getBlockFromItem(is.getItem()) == Blocks.nether_brick_stairs
-            		||Block.getBlockFromItem(is.getItem()) == Blocks.sandstone_stairs
-            		||Block.getBlockFromItem(is.getItem()) == Blocks.stone_stairs
-            		||Block.getBlockFromItem(is.getItem()) == Blocks.jungle_stairs
-            		||Block.getBlockFromItem(is.getItem()) == Blocks.quartz_stairs)
-                        //static method of BlockStairs
-            {
-                int newmeta = is.getItemDamage(); // 0 > 2 > 1 > 3 > 0
-
-                if (newmeta == 0)
-                {
-                    newmeta = 2;
-                }
-                else if (newmeta == 1)
-                {
-                    newmeta = 3;
-                }
-                else if (newmeta == 2)
-                {
-                    newmeta = 1;
-                }
-                else if (newmeta == 3)
-                {
-                    newmeta = 0;
-                }
-
-                theWorld.setBlockMetadataWithNotify(blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue(),
-                                                    newmeta, 0x03);
-            }//end of stairs
-            //// torches and redstone torches
-            else if (Block.getBlockFromItem(is.getItem())==Blocks.torch || Block.getBlockFromItem(is.getItem())==Blocks.redstone_torch || Block.getBlockFromItem(is.getItem())==Blocks.redstone_torch) {
-            	int newmeta = is.getItemDamage();
-            	if (newmeta==1) {
-            		newmeta=3;
-            	} else if(newmeta==3) {
-            		newmeta=2;
-            	} else if (newmeta==2) {
-            		newmeta=4;
-            	} else if (newmeta==4) {
-            		newmeta=1;
-            	}
-            	theWorld.setBlockMetadataWithNotify(blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue(),newmeta, 0x03);
-            
-            // beds
-            } else if(Block.getBlockFromItem(is.getItem())==Blocks.bed) {
-            	int newmeta = is.getItemDamage();
-            	newmeta++;
-            	if (newmeta==4) { newmeta=0; }
-            	theWorld.setBlockMetadataWithNotify(blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue(),newmeta, 0x02);
-
-            //pistons	
-            } else if(Block.getBlockFromItem(is.getItem())==Blocks.piston || Block.getBlockFromItem(is.getItem())==Blocks.piston_extension
-            	|| Block.getBlockFromItem(is.getItem())==Blocks.piston_head) {
-            	int newmeta = is.getItemDamage();
-            	if (newmeta==2) { newmeta=5; }
-            	else if(newmeta==5) { newmeta=3; }
-            	else if(newmeta==3) { newmeta=4; }
-            	else if(newmeta==4) { newmeta=2; }
-            	theWorld.setBlockMetadataWithNotify(blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue(),newmeta, 0x03);
-
-            //signs in floor or attached
-            } else if(Block.getBlockFromItem(is.getItem())==Blocks.wall_sign) {
-            	int newmeta = is.getItemDamage();
-            	if (newmeta==0) {newmeta=4;}
-            	else if(newmeta==4) {newmeta=8;}
-            	else if(newmeta==8) {newmeta=12;}
-            	else if(newmeta==12) {newmeta=0;}
-            	theWorld.setBlockMetadataWithNotify(blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue(),newmeta, 0x02);
-            
-            //signs on wall, ladders
-            } else if(Block.getBlockFromItem(is.getItem())==Blocks.wall_sign || Block.getBlockFromItem(is.getItem())==Blocks.ladder) {
-            	int newmeta = is.getItemDamage();
-            	if (newmeta==2) {newmeta=5;}
-            	else if(newmeta==5) {newmeta=3;}
-            	else if(newmeta==3) {newmeta=4;}
-            	else if(newmeta==4) {newmeta=2;}
-            	theWorld.setBlockMetadataWithNotify(blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue(),newmeta, 0x03);
-            
-            //buttons
-            } else if(Block.getBlockFromItem(is.getItem())==Blocks.stone_button || Block.getBlockFromItem(is.getItem())==Blocks.wooden_button) {
-            	int newmeta = is.getItemDamage();
-            	if (newmeta==1) {newmeta=3;}
-            	else if(newmeta==3) {newmeta=2;}
-            	else if(newmeta==2) {newmeta=4;}
-            	else if(newmeta==4) {newmeta=1;}
-            	theWorld.setBlockMetadataWithNotify(blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue(),newmeta, 0x03);
-            
-            // fence gates
-            } else if(Block.getBlockFromItem(is.getItem())==Blocks.fence_gate) {
-            	int newmeta = is.getItemDamage();
-            	newmeta++;
-            	if(newmeta>3) {newmeta=0;}
-            	theWorld.setBlockMetadataWithNotify(blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue(),newmeta, 0x03);
-            
-            }
-        }
-    }
-
-    
 }

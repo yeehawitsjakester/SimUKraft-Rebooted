@@ -341,7 +341,7 @@ public class Relationship implements Serializable
     {
         boolean got = false;
 
-        for (Relationship relation : SimukraftReloaded.theRelationships)
+        for (Relationship relation : SimukraftReloaded.relationships())
         {
         	try {
 	            if (relation.folk1.name.contentEquals(rel.folk1.name) && relation.folk2.name.contentEquals(rel.folk2.name))
@@ -358,7 +358,7 @@ public class Relationship implements Serializable
 
         if (!got)
         {
-        	SimukraftReloaded.theRelationships.add(rel);
+        	SimukraftReloaded.relationships().add(rel);
         }
     }
 
@@ -707,9 +707,9 @@ public class Relationship implements Serializable
             maleFolk = folk1;
         }
 
-        for (int b = 0; b < SimukraftReloaded.theBuildings.size(); b++)
+        for (int b = 0; b < SimukraftReloaded.buildings().size(); b++)
         {
-            Building building = (Building) SimukraftReloaded.theBuildings.get(b);
+            Building building = (Building) SimukraftReloaded.buildings().get(b);
 
             if (building != null && femaleFolk.getHome() != null)
             {
@@ -824,7 +824,7 @@ public class Relationship implements Serializable
         }
         
         if (useNewFormat) {
-        	SimukraftReloaded.theRelationships.clear();
+        	SimukraftReloaded.relationships().clear();
         	
         	for (File f : relFiles.listFiles())
 	        {
@@ -891,10 +891,10 @@ public class Relationship implements Serializable
     	if (side==Side.SERVER) { 
     		ArrayList<String> strings=new ArrayList<String>();
     		
-	    	for (int b = 0; b < SimukraftReloaded.theRelationships.size(); b++)
+	    	for (int b = 0; b < SimukraftReloaded.relationships().size(); b++)
 	        {
 	            try {
-		        	Relationship rel = (Relationship) SimukraftReloaded.theRelationships.get(b);
+		        	Relationship rel = (Relationship) SimukraftReloaded.relationships().get(b);
 		            String fn = rel.folk1.name.replaceAll(" ", "") + rel.folk2.name.replaceAll(" ", "");
 		            strings.clear();
 		            
@@ -965,9 +965,9 @@ public class Relationship implements Serializable
     /** returns the Relationship object for a pair of folks, if 2nd folk is null, it means the Player */
     public static Relationship getRelationshipBetween(FolkData folk1, FolkData folk2)
     {
-        for (int b = 0; b < SimukraftReloaded.theRelationships.size(); b++)
+        for (int b = 0; b < SimukraftReloaded.relationships().size(); b++)
         {
-            Relationship rel = (Relationship) SimukraftReloaded.theRelationships.get(b);
+            Relationship rel = (Relationship) SimukraftReloaded.relationships().get(b);
 
             try {
 	            if (folk2 == null && rel.folk2 == null && rel.folk1.name.contentEquals(folk1.name))
@@ -993,10 +993,10 @@ public class Relationship implements Serializable
     {
         ArrayList<Relationship> rels = new ArrayList<Relationship>();
 
-        for (int i = 0; i < SimukraftReloaded.theRelationships.size(); i++)
+        for (int i = 0; i < SimukraftReloaded.relationships().size(); i++)
         {
            try {
-        	Relationship rel = SimukraftReloaded.theRelationships.get(i);
+        	Relationship rel = SimukraftReloaded.relationships().get(i);
 
             if (rel.folk1.name.contentEquals(theFolk.name) || rel.folk2.name.contentEquals(theFolk.name))
             {

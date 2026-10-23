@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import net.minecraft.server.MinecraftServer;
+import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
 import java.util.ArrayList;
 
@@ -240,10 +242,10 @@ public class JobGlassMaker extends Job implements Serializable
 
             gotoCount = 0;
             jobWorld.setBlock(blockOfSand.x.intValue(), blockOfSand.y.intValue(), blockOfSand.z.intValue(), Blocks.air, 0, 0x03);
-            mc.theWorld.playSound(blockOfSand.x, blockOfSand.y, blockOfSand.z, "step.sand", 1f, 1f, false);
+            Effects.sound(jobWorld, blockOfSand.x, blockOfSand.y, blockOfSand.z, "step.sand", 1f, 1f);
             theFolk.inventory.add(new ItemStack(Item.getItemFromBlock(Blocks.sand), 1));
             theFolk.statusText = "Diggy diggy sand, got " + theFolk.inventory.size();
-            SimukraftReloaded.states.credits -= 0.012;
+            SimukraftReloaded.states().credits -= 0.012;
 
             if (theFolk.inventory.size() < 64)
             {
@@ -421,7 +423,7 @@ public class JobGlassMaker extends Job implements Serializable
                 theFolk.statusText = "Putting glass into storage";
                 boolean placedOk = inventoriesPut(factoryChests, currentGlass, true);
 
-                SimukraftReloaded.states.credits -= (0.005 * currentGlass.stackSize);
+                SimukraftReloaded.states().credits -= (0.005 * currentGlass.stackSize);
                 factoryFurnace.setInventorySlotContents(2, null);
             }
             else

@@ -1,5 +1,9 @@
 package ashjack.simukraftreloaded.client.Gui.folk;
 
+import net.minecraft.nbt.NBTTagCompound;
+import ashjack.simukraftreloaded.client.ClientGuiOpener;
+import ashjack.simukraftreloaded.network.ServerActions;
+import ashjack.simukraftreloaded.network.ActionHandlers;
 import java.util.ArrayList;
 
 import net.minecraft.client.gui.GuiButton;
@@ -214,26 +218,10 @@ public class GuiEmployFolk extends GuiScreen
             }
         }
 
-        /** ok, hire the selected folk */
+        /** ok, hire the selected folk - the server does the hiring (and the money/creative checks) */
         if (guibutton.id == 1000)
         {
-            if (SimukraftReloaded.states.credits <= 0 && GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
-            {
-                SimukraftReloaded.sendChat("You need some Sim-u-Credits to employ folks.");
-                mc.currentScreen = null;
-                mc.setIngameFocus();
-                return;
-            }
-
-            if (GameMode.gameMode == GameMode.GAMEMODES.CREATIVE && this.vocation == Vocation.MERCHANT)
-            {
-                SimukraftReloaded.sendChat("Builder's merchant cannot be hired in creative mode");
-                mc.currentScreen = null;
-                mc.setIngameFocus();
-                return;
-            }
-
-            ArrayList<FolkData> efolks = new ArrayList<FolkData>();
+            final ArrayList<String> names = new ArrayList<String>();
 
             for (int w = 0; w < selectedFolks.size(); w++)
             {
@@ -244,63 +232,66 @@ public class GuiEmployFolk extends GuiScreen
                 {
                     folkname = button.displayString.substring(0, button.displayString.indexOf(" (")).trim();
                 }
-
-                FolkData f = (FolkData) FolkData.getFolkByName(folkname);
-                f.statusText = "Going to my new job...";
-                efolks.add(f);
-                this.hireFolks(efolks);
+                names.add(folkname);
             }
+            if (names.isEmpty())
+            {
+                return;
+            }
+
+            NBTTagCompound data = new NBTTagCompound();
+            ActionHandlers.putV3(data, "box", controlBoxLocation);
+            data.setString("vocation", vocation.name());
+            ActionHandlers.putNames(data, "folks", names);
+            ServerActions.send("hire", data);
+
+            // open the next screen once the server has sent the result back
+            ClientGuiOpener.open(new ClientGuiOpener.Factory()
+            {
+                public GuiScreen create()
+                {
+                    return nextScreen(names);
+                }
+            });
         }
     }
 
-    public void hireFolks(ArrayList<FolkData> efolks)
+    /** the screen that follows hiring, built from the freshly synced folks */
+    private GuiScreen nextScreen(ArrayList<String> names)
     {
-
-        for (int i = 0; i < efolks.size(); i++)
+        ArrayList<FolkData> efolks = new ArrayList<FolkData>();
+        for (String name : names)
         {
-            FolkData efolk = efolks.get(i);
-            efolk.employedAt = this.controlBoxLocation;
-            efolk.setTheirJob(this.vocation);
-
-            if (SimukraftReloaded.isDayTime())
+            FolkData f = FolkData.getFolkByName(name);
+            if (f != null && f.employedAt != null)
             {
-                efolk.gotoXYZ(efolk.employedAt, null);
+                efolks.add(f);
             }
-
+        }
+        if (efolks.isEmpty())
+        {
+            return null; // the server refused (it says why in chat)
         }
 
-        mc.currentScreen = null;
-
-        if (this.vocation == Vocation.BUILDER)
+        if (this.vocation == Vocation.BUILDER || this.vocation == Vocation.TERRAFORMER)
         {
-            GuiBuildingConstructor ui = new GuiBuildingConstructor(this.controlBoxLocation, this.buildDirection, efolks);
-            mc.displayGuiScreen(ui);
-        }
-        else if (this.vocation == Vocation.TERRAFORMER)
-        {
-            GuiBuildingConstructor ui = new GuiBuildingConstructor(this.controlBoxLocation, this.buildDirection, efolks);
-            mc.displayGuiScreen(ui);
+            return new GuiBuildingConstructor(this.controlBoxLocation, this.buildDirection, efolks);
         }
         else if (this.vocation == Vocation.MINER)
         {
-            GuiMining ui = new GuiMining(this.miningBox, efolks);
-            mc.displayGuiScreen(ui);
+            MiningBox box = MiningBox.getMiningBlockByBoxXYZ(this.controlBoxLocation);
+            return new GuiMining(box != null ? box : this.miningBox, efolks);
         }
         else if (this.vocation == Vocation.CROPFARMER)
         {
-            GuiFarming ui = new GuiFarming(this.farmingBox, efolks.get(0));
-            mc.displayGuiScreen(ui);
+            FarmingBox box = FarmingBox.getFarmingBlockByBoxXYZ(this.controlBoxLocation);
+            return new GuiFarming(box != null ? box : this.farmingBox, efolks.get(0));
         }
         else if (this.vocation == Vocation.PATHBUILDER)
         {
-            GuiPathBox ui = new GuiPathBox(this.pathBox, efolks);
-            mc.displayGuiScreen(ui);
+            return new GuiPathBox(this.pathBox, efolks);
         }
-        else      //all other jobs that employ via control panel
-        {
-            GuiControlBox ui = new GuiControlBox(this.controlBoxLocation, efolks.get(0));
-            mc.displayGuiScreen(ui);
-        }
+        return new GuiControlBox(this.controlBoxLocation, efolks.get(0));
     }
 
     @Override

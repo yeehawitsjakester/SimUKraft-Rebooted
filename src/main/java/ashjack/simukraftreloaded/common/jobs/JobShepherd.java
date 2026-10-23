@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import net.minecraft.entity.player.EntityPlayer;
+import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -130,7 +132,8 @@ public class JobShepherd extends Job implements Serializable
         List list = jobWorld.getEntitiesWithinAABB(EntitySheep.class, AxisAlignedBB.getBoundingBox(
                         theFolk.employedAt.x, theFolk.employedAt.y, theFolk.employedAt.z, theFolk.employedAt.x + 1.0D, theFolk.employedAt.y + 1.0D,
                         theFolk.employedAt.z + 1.0D).expand(3D, 2D, 3D));//look within the pen
-        Double playerdist = mc.thePlayer.getDistance(theFolk.employedAt.x, theFolk.employedAt.y, theFolk.employedAt.z);
+        EntityPlayer nearest = jobWorld.getClosestPlayer(theFolk.employedAt.x, theFolk.employedAt.y, theFolk.employedAt.z, -1);
+        Double playerdist = nearest == null ? 9999d : nearest.getDistance(theFolk.employedAt.x, theFolk.employedAt.y, theFolk.employedAt.z);
 
         if (playerdist > 60)
         {
@@ -240,7 +243,7 @@ public class JobShepherd extends Job implements Serializable
 
             try
             {
-                ModSimukraft.proxy.getClientWorld().spawnParticle("explode", ent.posX + (double)(rand.nextFloat() * 1 * 2.0F) - (double)1 - var2 * var8, ent.posY + (double)(rand.nextFloat() * 1) - var4 * var8, ent.posZ + (double)(rand.nextFloat() * 1 * 2.0F) - (double)1 - var6 * var8, var2, var4, var6);
+                Effects.particles(ent.worldObj, "explode", ent.posX, ent.posY + 0.5, ent.posZ, 1, 0.5, 0.02);
             }
             catch (Exception e) {}
         }
@@ -254,7 +257,7 @@ public class JobShepherd extends Job implements Serializable
 
     private boolean placeWoolIntoAChest(int metaColor, int amount)
     {
-        SimukraftReloaded.states.credits -= (0.02f * amount);
+        SimukraftReloaded.states().credits -= (0.02f * amount);
         farmChests = inventoriesFindClosest(theFolk.employedAt, 4);
         inventoriesPut(farmChests, new ItemStack(Blocks.wool, amount, metaColor), true);
         return true;

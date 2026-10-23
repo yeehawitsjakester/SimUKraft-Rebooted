@@ -5,15 +5,16 @@ import java.util.ArrayList;
 import ashjack.simukraftreloaded.entity.EntityAlignBeam;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 
-public class Marker
+public class Marker implements java.io.Serializable
 {
+    private static final long serialVersionUID = 1L;
     public int x;
     public int y;
 	public int z;
     int dimension;
     public String caption = "";
 
-    public ArrayList<EntityAlignBeam> beams = new ArrayList<EntityAlignBeam>();
+    public transient ArrayList<EntityAlignBeam> beams = new ArrayList<EntityAlignBeam>();
     public Marker(int i, int j, int k, int dime)
     {
         x = i;

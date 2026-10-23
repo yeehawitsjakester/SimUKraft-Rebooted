@@ -402,7 +402,7 @@ public class JobLumberjack extends Job implements Serializable
             millChests = inventoriesFindClosest(theFolk.employedAt, 6);
             inventoriesTransferFromFolk(theFolk.inventory, millChests, new ItemStack(Item.getItemFromBlock(Blocks.log)));
             pay = (float)count * 0.03f;
-            SimukraftReloaded.states.credits -= pay;
+            SimukraftReloaded.states().credits -= pay;
             SimukraftReloaded.sendChat(theFolk.name + " has delivered " + count + " logs at the lumbermill");
             theStage = Stage.SCANFORTREE;
             step = 1;
