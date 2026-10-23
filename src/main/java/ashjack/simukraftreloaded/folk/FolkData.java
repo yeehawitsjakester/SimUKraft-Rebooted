@@ -1,5 +1,9 @@
 package ashjack.simukraftreloaded.folk;
 
+import java.util.Collections;
+
+import java.util.Arrays;
+
 import ashjack.simukraftreloaded.common.Effects;
 import net.minecraft.util.ChunkCoordinates;
 import java.util.List;
@@ -2556,52 +2560,39 @@ public class FolkData implements Serializable
         this.theirJob.step = 1;
     }
     
+    /** four different traits, never a trait together with its opposite */
     public void generateTraits()
     {
-    	Random rand = new Random();
-    	//Trait 1
-        this.trait1 = Traits.traitList[rand.nextInt(Traits.traitList.length-1)].traitName;
-        
-        
-        //Trait 2
-    	this.trait2 = Traits.traitList[rand.nextInt(Traits.traitList.length-1)].traitName;
-    	
-    	while(this.trait2 == this.trait1 || this.traitHasOpposite(trait2))
-    	{
-    		this.trait2 = Traits.traitList[rand.nextInt(Traits.traitList.length-1)].traitName;
-    	}
-    	
-    	
-    	//Trait 3
-    	this.trait3 = Traits.traitList[rand.nextInt(Traits.traitList.length-1)].traitName;
-    	
-    	while(this.trait3 == this.trait2 || this.trait3 == this.trait1 || this.traitHasOpposite(trait3))
-    	{
-    		this.trait3 = Traits.traitList[rand.nextInt(Traits.traitList.length-1)].traitName;
-    	}
-    	
-    	
-    	//Trait 4
-    	this.trait4 = Traits.traitList[rand.nextInt(Traits.traitList.length-1)].traitName;
-    	
-    	while(this.trait4 == this.trait1 || this.trait4 == this.trait2 || this.trait4 == this.trait3 || this.traitHasOpposite(trait4))
-    	{
-    		this.trait4 = Traits.traitList[rand.nextInt(Traits.traitList.length-1)].traitName;
-    	}
+        ArrayList<Trait> pool = new ArrayList<Trait>(Arrays.asList(Traits.traitList));
+        Collections.shuffle(pool);
+        ArrayList<Trait> picked = new ArrayList<Trait>();
+        for (Trait t : pool)
+        {
+            boolean clash = false;
+            for (Trait p : picked)
+            {
+                clash |= t.isOppositeOf(p);
+            }
+            if (!clash)
+            {
+                picked.add(t);
+            }
+            if (picked.size() == 4)
+            {
+                break;
+            }
+        }
+        String[] names = {"None", "None", "None", "None"};
+        for (int i = 0; i < picked.size(); i++)
+        {
+            names[i] = picked.get(i).traitName;
+        }
+        trait1 = names[0];
+        trait2 = names[1];
+        trait3 = names[2];
+        trait4 = names[3];
     }
-    
-    public boolean traitHasOpposite(String trait)
-    {
-    	if(Trait.getTraitFromName(trait).traitOpposite != null)
-    	{
-    		if(trait.contains(Trait.getTraitFromName(trait).traitOpposite.traitName))
-    		{
-    			return true;
-    		}
-    	}
-    	return false;
-    }
-      
+
       public boolean hasTrait(Trait trait)
       {
     	  if(this.trait1.contentEquals(trait.traitName) || this.trait2.contentEquals(trait.traitName) || this.trait3.contentEquals(trait.traitName) || this.trait4.contentEquals(trait.traitName))

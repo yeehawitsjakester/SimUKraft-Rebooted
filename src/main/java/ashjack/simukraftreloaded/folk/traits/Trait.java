@@ -8,7 +8,7 @@ import ashjack.simukraftreloaded.folk.FolkData.GotoMethod;
 
 public class Trait 
 {
-	public static String traitName;
+	public String traitName; // was static, so every trait had the last name set and trait generation never finished
 	public String traitDesc;
 	public Trait traitOpposite;
 	public FolkData theFolk;
@@ -20,16 +20,14 @@ public class Trait
 	
 	public static Trait getTraitFromName(String searchTerm)
 	{
-		Trait trait;
-		for(int i=0; i<Traits.traitList.length-1; i++)
+		for (Trait trait : Traits.traitList)
 		{
-			if(Traits.traitList[i].traitName.contains(searchTerm))
+			if (trait.traitName.equals(searchTerm))
 			{
-				trait = Traits.traitList[i];
 				return trait;
 			}
 		}
-	return null;	
+		return null;
 	}
 	
 	public static String getTraitName(Trait trait)
@@ -62,6 +60,12 @@ public class Trait
 		this.traitOpposite = opposite;
 	}
 	
+	/** true if a folk can't have both (either side may name the other: the first one built sees a null opposite) */
+	public boolean isOppositeOf(Trait other)
+	{
+		return traitOpposite == other || (other != null && other.traitOpposite == this);
+	}
+
 	/**
 	 * Gets the name of the trait
 	 */
