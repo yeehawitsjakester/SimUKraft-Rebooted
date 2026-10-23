@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.folk;
 
+import net.minecraft.util.ChunkCoordinates;
+import java.util.List;
+import ashjack.simukraftreloaded.common.WorldUtil;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -394,7 +397,7 @@ public class FolkData implements Serializable
             }
         } //already spawned, so no need
 
-        if (getDistanceToPlayer() < 50)
+        if (getDistanceToPlayer() < RESPAWN_RANGE)
         {
             this.theEntity = new EntityFolk(world);
             this.theEntity.setLocationAndAngles(location.x, location.y, location.z, 0f, 0f);
@@ -406,7 +409,7 @@ public class FolkData implements Serializable
 
             //this.theEntity=entity;
             entityId = this.theEntity.getEntityId();
-            SimukraftReloaded.log.info("FolkData:repawnEntity() " + this.name + " at " + this.location.toString() + " in dim " + this.location.theDimension + " ENTITY:" + this.theEntity.getEntityId());
+            SimukraftReloaded.log.fine("FolkData:repawnEntity() " + this.name + " at " + this.location.toString() + " in dim " + this.location.theDimension + " ENTITY:" + this.theEntity.getEntityId());
         }
     }
 
@@ -436,6 +439,11 @@ public class FolkData implements Serializable
     
     
     
+    /** folks get an entity when a player comes within this range... */
+    public static final int RESPAWN_RANGE = 48;
+    /** ...and lose it beyond this one; the gap stops them flickering in and out at the edge */
+    public static final int DESPAWN_RANGE = 64;
+
     /** update loop for this folk, gets called inDirectly and frequently from CommonTickHandler's inGameTick */
     public void onUpdate()
     {
@@ -554,7 +562,7 @@ public class FolkData implements Serializable
 
                         if (hasShopKeeper)
                         {
-                            SimukraftReloaded.log.info("FolkData:onUpdate() "+name + " is wandering to " + b.displayName + " " + dist + " blocks away.");
+                            SimukraftReloaded.log.fine("FolkData:onUpdate() "+name + " is wandering to " + b.displayName + " " + dist + " blocks away.");
                             gotoXYZ(b.primaryXYZ, GotoMethod.WALK);
                             this.destination.doNotTimeout = true;
                             this.statusText = "Shopping at the " + b.displayName;
@@ -575,7 +583,7 @@ public class FolkData implements Serializable
                     {
                         
                         try {
-                        	SimukraftReloaded.log.info("FolkData: onUpdate() "+name + " is wandering to " + b.displayName + " " + dist + " blocks away.");
+                        	SimukraftReloaded.log.fine("FolkData: onUpdate() "+name + " is wandering to " + b.displayName + " " + dist + " blocks away.");
                             gotoXYZ(b.primaryXYZ, GotoMethod.WALK);
                         	this.destination.doNotTimeout = true;
 	                        this.statusText = "Visiting the " + b.displayName;
@@ -601,7 +609,7 @@ public class FolkData implements Serializable
 	                            {
 	                                if (resy.action == FolkAction.WANDER || resy.action == FolkAction.STAYINGHOME)
 	                                {
-	                                    SimukraftReloaded.log.info("FolkData:onUpdate() "+name + " is wandering to " + b.displayName + " " + dist + " blocks away.");
+	                                    SimukraftReloaded.log.fine("FolkData:onUpdate() "+name + " is wandering to " + b.displayName + " " + dist + " blocks away.");
 	                                    gotoXYZ(b.primaryXYZ, GotoMethod.WALK);
 	                                    gotWanderPoint = true;
 	                                    this.statusText = "Hanging out with " + resy.name;
@@ -629,23 +637,23 @@ public class FolkData implements Serializable
                     int zo = rand.nextInt(60) - 30;
                     V3 wanderTo = new V3(location.x + xo, location.y, location.z + zo, location.theDimension);
                     World world = MinecraftServer.getServer().worldServerForDimension(location.theDimension);
+                    // pick a spot on the ground near the target; skip this wander if there isn't one (or it isn't loaded)
+                    int wy = WorldUtil.findStandableY(world, wanderTo.x.intValue(), wanderTo.y.intValue(), wanderTo.z.intValue(), 12);
 
-                    while (world.getBlock(wanderTo.x.intValue(), wanderTo.y.intValue(), wanderTo.z.intValue()) != null
-                            && wanderTo.y < 255)
+                    if (wy >= 0)
                     {
-                        wanderTo.y++;
+                        wanderTo.y = (double) wy;
+                        SimukraftReloaded.log.fine("FolkData:onUpdate() WANDER COMMAND FOR " + this.name + " to " + wanderTo.toString());
+                        this.gotoXYZ(wanderTo, GotoMethod.WALK);
+
+                        if (this.destination != null)
+                        {
+                            this.destination.doNotTimeout = true;
+                        }
+
+                        statusText = "Wandering";
+                        this.stayPut = false;
                     }
-
-                    SimukraftReloaded.log.info("FolkData:onUpdate() WANDER COMMAND FOR " + this.name + " to " + wanderTo.toString());
-                    this.gotoXYZ(wanderTo, GotoMethod.WALK);
-
-                    if (this.destination != null)
-                    {
-                        this.destination.doNotTimeout = true;
-                    }
-
-                    statusText = "Wandering";
-                    this.stayPut = false;
                 }
             }
             else if (action == FolkAction.WANDER && this.isSpawned() && this.age < 18)
@@ -678,7 +686,7 @@ public class FolkData implements Serializable
         ///////// ONCE A SECOND TASKS
         if (now - timeSinceLastStatusUpdate > 1000)
         {
-        	if(this.trait1 == "" || this.trait2 == "" || this.trait3 == "" || this.trait4 == "")
+        	if("".equals(this.trait1) || "".equals(this.trait2) || "".equals(this.trait3) || "".equals(this.trait4))
             {
         		generateTraits();
             }
@@ -695,7 +703,7 @@ public class FolkData implements Serializable
             {
                 int range = this.getDistanceToPlayer();
 
-                if (range < 50)
+                if (range < RESPAWN_RANGE)
                 {
                     respawnEntity(MinecraftServer.getServer()
                                   .worldServerForDimension(this.location.theDimension));
@@ -707,11 +715,11 @@ public class FolkData implements Serializable
                 this.updateLocationFromEntity();
                 int range = this.getDistanceToPlayer();
 
-                if (range >= 50)
+                if (range >= DESPAWN_RANGE)
                 {
                     if (theEntity != null)
                     {
-                        SimukraftReloaded.log.info("FolkData: onSecTasks - Manually Despawned " + this.name + " as they are " + range + " blocks away");
+                        SimukraftReloaded.log.fine("FolkData: onSecTasks - Manually Despawned " + this.name + " as they are " + range + " blocks away");
                         theEntity.setDead();
                     }
                 }
@@ -721,7 +729,7 @@ public class FolkData implements Serializable
             if (SimukraftReloaded.isDayTime() && this.employedAt != null &&
                     (this.action != FolkAction.ONWAYTOWORK && this.action != FolkAction.ATWORK && pregnancyStage == 0.0f))
             {
-                SimukraftReloaded.log.info("FolkData: "+this.name + " is going to work");
+                SimukraftReloaded.log.fine("FolkData: "+this.name + " is going to work");
                 this.statusText = "Going to work";
                 action = FolkAction.ONWAYTOWORK;
                 gotoXYZ(employedAt, null);
@@ -738,12 +746,14 @@ public class FolkData implements Serializable
             {
                 this.statusText = "Going to work";
                 action = FolkAction.ONWAYTOWORK;
-                SimukraftReloaded.log.warning("FolkData:onUpdate() "+this.name + " is still going to work");
                 this.updateLocationFromEntity();
-                V3 temp=employedAt.clone();
-                temp.x+=5;
-                gotoXYZ(temp,GotoMethod.SHIFT);
-                gotoXYZ(employedAt, null);
+
+                // Within a couple of blocks the job's onUpdateGoingToWork() snaps them in and marks them at work.
+                // This used to shift them 5 blocks away and walk them back, which looped as visible teleporting.
+                if (this.location.getDistanceTo(employedAt) >= 3)
+                {
+                    gotoXYZ(employedAt, null);
+                }
                 return;
             }
 
@@ -841,7 +851,7 @@ public class FolkData implements Serializable
                     }
                     catch (Exception e)
                     {
-                        SimukraftReloaded.log.warning(this.name+" has no liveAt");
+                        SimukraftReloaded.log.fine(this.name+" has no liveAt");
                     }
 
                     if (liveAt !=null) {
@@ -881,19 +891,8 @@ public class FolkData implements Serializable
 
             if (System.currentTimeMillis() - timeSinceLastSave > about10)
             {
-            	Side side = cpw.mods.fml.common.FMLCommonHandler.instance().getEffectiveSide();
-            	if (side==Side.SERVER) {
-            		//PacketDispatcher.sendPacketToAllPlayers(PacketHandler.makePacket(this.name, "updateFolkPosition", this.location.toString()));
-            		//SimukraftPacket.cmd = "updateFolkPosition";
-            		//SimukraftPacket.folkName = this.name;
-            		//SimukraftPacket.par1 = this.location.toString();
-            		//INSTANCE.registerMessage(PacketHandler.class, SimukraftPacket.class, 0, Side.CLIENT);
-            		//INSTANCE.sendToAll(new SimukraftPacket());
-
-            		PacketHandler.net.sendToServer(new UpdateFolkPositionPacket(this.location.toString() + ";" + name));//(new UpdateFolkPositionMessage(this.location.toString() + ";" + name),location.theDimension);
-            		//BOOKMARK
-            		this.saveThisFolk();
-            	}
+            	// Folks are saved with the world now (CommonTickHandler.onWorldSave); this wrote one file per folk
+            	// every 10-20s and sent an empty "position" packet to the server from the server.
 
                 if(this.statusText.contains("Hanging")&&this.levelSocial < 10)
                 {
@@ -1069,8 +1068,6 @@ public class FolkData implements Serializable
     {
         if (this.action == FolkAction.WANDER)
         {
-        	Building.loadAllBuildings();
-        	
             for (int b = 0; b < SimukraftReloaded.theBuildings.size(); b++)
             {
                 Building building = (Building) SimukraftReloaded.theBuildings.get(b);
@@ -1254,65 +1251,40 @@ public class FolkData implements Serializable
     /** finds a nice spot close to the player (about 30 blocks away) that is safe to place a folk down*/
     public V3 getLocationCloseToPlayer()
     {
-        EntityPlayer p = Minecraft.getMinecraft().thePlayer;
-        V3 ret;
-
-        try
+        // server-side player (this used to read the client player, which doesn't exist on a dedicated server)
+        EntityPlayer p = null;
+        List players = MinecraftServer.getServer().getConfigurationManager().playerEntityList;
+        if (players != null && !players.isEmpty())
         {
-            ret = new V3(p.posX, 5d, p.posZ, p.dimension);
-        }
-        catch (Exception e)
-        {
-            SimukraftReloaded.log.warning("getLocationCloseToPlayer: player was null, returned null V3");
-            return new V3(0d, 5d, 0d, 0);
+            p = (EntityPlayer) players.get(0);
         }
 
-        boolean found = false;
-        Block bid = null;
-
-        try
+        if (p == null)
         {
-            for (int go = 30; go > 1; go--)
+            SimukraftReloaded.log.warning("getLocationCloseToPlayer: no player online, using world spawn");
+            World w = MinecraftServer.getServer().worldServerForDimension(0);
+            ChunkCoordinates spawn = w.getSpawnPoint();
+            return new V3((double) spawn.posX, (double) spawn.posY, (double) spawn.posZ, 0);
+        }
+
+        World world = p.worldObj;
+        int px = (int) Math.floor(p.posX);
+        int pz = (int) Math.floor(p.posZ);
+
+        // try spots from 30 blocks away inwards, on the ground and out of the way of trees
+        for (int go = 30; go > 1; go--)
+        {
+            int z = pz + go;
+            int startY = world.provider.hasNoSky ? (int) p.posY : world.getHeightValue(px, z);
+            int y = WorldUtil.findStandableY(world, px, startY, z, 16);
+
+            if (y >= 0)
             {
-                ret = new V3(p.posX, 5d, p.posZ + go, p.dimension);
-
-                while (!found)
-                {
-                    bid = p.worldObj.getBlock(ret.x.intValue(), ret.y.intValue(), ret.z.intValue()); // this can NPE
-
-                    if ((p.worldObj.canBlockSeeTheSky(ret.x.intValue(), ret.y.intValue(), ret.z.intValue()) ||
-                            p.dimension != 0) &&
-                            bid != Blocks.leaves &&
-                            bid == null)
-                    {
-                        found = true;
-                    }
-
-                    ret.y++;
-
-                    if (ret.y > 200)
-                    {
-                        break;
-                    }
-                }
-
-                if (found)
-                {
-                    break;
-                }
+                return new V3(px + 0.5d, (double) y, z + 0.5d, p.dimension);
             }
         }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
 
-        if (!found)
-        {
-            return new V3(0d, 5d, 0d, 0);
-        }
-
-        return ret;
+        return new V3(p.posX, p.posY, p.posZ, p.dimension);
     }
 
     /** returns the closest player to a location - make sure you set theDimension too */
@@ -1527,15 +1499,8 @@ public class FolkData implements Serializable
                     this.gotoMethod = GotoMethod.SHIFT;
                 }
 
-                try
-                {
-                    if (location.theDimension != Minecraft.getMinecraft().thePlayer.dimension &&
-                            this.destination.theDimension != Minecraft.getMinecraft().thePlayer.dimension)
-                    {
-                        this.gotoMethod = GotoMethod.SHIFT;
-                    }
-                }
-                catch (Exception e)
+                if (location.theDimension != playpos.theDimension &&
+                        this.destination.theDimension != playpos.theDimension)
                 {
                     this.gotoMethod = GotoMethod.SHIFT;
                 }
@@ -1554,12 +1519,12 @@ public class FolkData implements Serializable
 
         try
         {
-            SimukraftReloaded.log.info("FolkData: GOTOXYZ() for " + this.name + " to " + whereTo.toString() + " - Method:" + gotoMethod.toString()
+            SimukraftReloaded.log.fine("FolkData: GOTOXYZ() for " + this.name + " to " + whereTo.toString() + " - Method:" + gotoMethod.toString()
                              + " DIM:" + whereTo.theDimension);
         }
         catch (Exception e)
         {
-            SimukraftReloaded.log.info("FolkData: GOTOXYZ() for " + this.name + " - NULL whereTo");
+            SimukraftReloaded.log.fine("FolkData: GOTOXYZ() for " + this.name + " - NULL whereTo");
             return;
         }
 
@@ -1581,9 +1546,7 @@ public class FolkData implements Serializable
                 //this.theEntity.setPosition(destination.x, destination.y, destination.z);
                 //this.theEntity.setPositionAndUpdate(destination.x, destination.y+1, destination.z);
                
-                this.theEntity.posX = destination.x;
-            	this.theEntity.posY = destination.y;
-            	this.theEntity.posZ = destination.z;
+                this.theEntity.setPositionAndUpdate(destination.x, destination.y, destination.z);
 
                 try {
 	                if (location.theDimension != destination.theDimension)
@@ -1628,7 +1591,7 @@ public class FolkData implements Serializable
 
         if (this.beamingTo != null)
         {
-            SimukraftReloaded.log.warning("FolkData:beamMeTo() already beaming " + this.name);
+            SimukraftReloaded.log.fine("FolkData:beamMeTo() already beaming " + this.name);
             return;
         }
 
@@ -1642,17 +1605,11 @@ public class FolkData implements Serializable
         V3 whereTo = whereToIn.clone();
         World destWorld = MinecraftServer.getServer().worldServerForDimension(whereTo.theDimension);
 
-        for (int y = 0; y < 200; y++)
+        // land on the nearest safe spot to the target; if the target column isn't loaded, keep the requested height
+        int safeY = WorldUtil.findStandableY(destWorld, whereTo.x.intValue(), whereTo.y.intValue(), whereTo.z.intValue(), 24);
+        if (safeY >= 0)
         {
-            Block id1 = destWorld.getBlock(whereTo.x.intValue(), whereTo.y.intValue(), whereTo.z.intValue());
-            Block id2 = destWorld.getBlock(whereTo.x.intValue(), whereTo.y.intValue() + 1, whereTo.z.intValue());
-
-            if (id1 == null && id2 == null)
-            {
-                break;
-            }
-
-            whereTo.y++;
+            whereTo.y = (double) safeY;
         }
 
         try
@@ -1661,7 +1618,6 @@ public class FolkData implements Serializable
             whereTo.x = xxx + 0.5d;
             xxx = whereTo.z.intValue();
             whereTo.z = xxx + 0.5d;
-            whereTo.y -= 199d;
         }
         catch (Exception e)
         {
@@ -1669,7 +1625,7 @@ public class FolkData implements Serializable
         }
 
         this.destination = whereTo.clone();
-        SimukraftReloaded.log.info("FolkData: BeamMeTo() for " + this.name + " to " + whereTo.toString() + " Dim:" + whereTo.theDimension);
+        SimukraftReloaded.log.fine("FolkData: BeamMeTo() for " + this.name + " to " + whereTo.toString() + " Dim:" + whereTo.theDimension);
         this.stayPut = true;
 
         if (isSpawned())
@@ -1699,7 +1655,7 @@ public class FolkData implements Serializable
                 if (this.theEntity != null)
                 {
                     //this.theEntity.setPosition(beamingTo.x, beamingTo.y, beamingTo.z);
-                	this.theEntity.setPositionAndUpdate(beamingTo.x, beamingTo.y+1, beamingTo.z);
+                	this.theEntity.setPositionAndUpdate(beamingTo.x, beamingTo.y, beamingTo.z);
                 	
                 	//this.theEntity.serverPosX = Integer.parseInt(beamingTo.x.toString());
                 	//this.theEntity.serverPosY = Integer.parseInt(beamingTo.y.toString());
@@ -1717,7 +1673,7 @@ public class FolkData implements Serializable
                     }
                 }
 
-                SimukraftReloaded.log.info("FolkData: doBeaming() complete for " + this.name + " to " + beamingTo.toString() + " (dim " + beamingTo.theDimension + ")");
+                SimukraftReloaded.log.fine("FolkData: doBeaming() complete for " + this.name + " to " + beamingTo.toString() + " (dim " + beamingTo.theDimension + ")");
                 this.location = beamingTo.clone();
                 this.destination = null;
                 beamingTo = null;
@@ -1916,7 +1872,7 @@ public class FolkData implements Serializable
 	            		}
 	            	}
 	            	if (folkd !=null) {
-	            		SimukraftReloaded.log.info("FolkData: loadAndSpawnFolks() Loaded "+folkd.name+" using new file system");
+	            		SimukraftReloaded.log.fine("FolkData: loadAndSpawnFolks() Loaded "+folkd.name+" using new file system");
 	            		folkd.hasLoaded();
 	            	}
 	            }

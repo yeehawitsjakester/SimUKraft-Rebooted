@@ -19,6 +19,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.World;
+import net.minecraftforge.event.world.WorldEvent;
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod.EventHandler;
@@ -57,10 +58,44 @@ public class CommonTickHandler
     {
     	
     }
+    /** Save everything when the overworld saves (autosave, pause menu in singleplayer, quitting) */
+    @SubscribeEvent
+    public void onWorldSave(WorldEvent.Save event)
+    {
+    	if (event.world.isRemote || event.world.provider.dimensionId != 0 || serverWorld == null || !ModSimukraft.proxy.ranStartup)
+    	{
+    		return;
+    	}
+    	saveAll();
+    }
+
+    private void saveAll()
+    {
+        Long start = System.currentTimeMillis();
+        SimukraftReloaded.states.saveStates();
+        Building.saveAllBuildings();
+        CourierTask.saveCourierTasksAndPoints();
+        MiningBox.saveMiningBoxes();
+        FarmingBox.saveFarmingBoxes();
+        Relationship.saveRelationships();
+        for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
+        {
+            FolkData folk = SimukraftReloaded.theFolks.get(f);
+            folk.updateLocationFromEntity();
+            folk.saveThisFolk();
+        }
+        SimukraftReloaded.log.info("CTH: Saved game data in " + (System.currentTimeMillis() - start) + " ms");
+    }
+
     int ticks = 0;
     @SubscribeEvent
     public void tick(ServerTickEvent event)
     {
+    	// ServerTickEvent fires at both START and END; only run the simulation once per tick
+    	if (event.phase != TickEvent.Phase.END)
+    	{
+    		return;
+    	}
     	if(ticks == 200)
     	{
     		onTickInGame();
@@ -163,17 +198,9 @@ public class CommonTickHandler
         {
             if (lastMinuteTickAt > 0)
             {
-                Long start = System.currentTimeMillis();
                 FolkData.generateNewFolk(serverWorld);
-                SimukraftReloaded.states.saveStates();
                 Building.checkTennants();
-                Building.saveAllBuildings();
-                CourierTask.saveCourierTasksAndPoints();
-                MiningBox.saveMiningBoxes();
-                FarmingBox.saveFarmingBoxes();
-                Relationship.saveRelationships();
-                //PathBox.savePathBoxes();
-                SimukraftReloaded.log.info("CTH: Saved game data in " + (System.currentTimeMillis() - start) + " ms");
+                // saving happens when the world saves (onWorldSave), not on a separate one-minute timer
             }
 
             lastMinuteTickAt = now;

@@ -541,11 +541,11 @@ public class JobTerraformer extends Job
             {
                 Block blockId = jobWorld.getBlock(v.x.intValue(), v.y.intValue(), v.z.intValue());
 
-                if (blockId == null || blockId == Blocks.tallgrass)
+                if (jobWorld.isAirBlock(v.x.intValue(), v.y.intValue(), v.z.intValue()) || blockId == Blocks.tallgrass)
                 {
                     Block idBelow = jobWorld.getBlock(v.x.intValue(), v.y.intValue() - 1, v.z.intValue());
 
-                    if (idBelow != null && idBelow != Blocks.ice &&
+                    if (!jobWorld.isAirBlock(v.x.intValue(), v.y.intValue() - 1, v.z.intValue()) && idBelow != Blocks.ice &&
                             idBelow != Blocks.water &&
                             idBelow != Blocks.water &&
                             idBelow != Blocks.snow)  //non-air block below (some type of ground

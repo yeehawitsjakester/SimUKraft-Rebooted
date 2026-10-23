@@ -151,7 +151,7 @@ public class JobGlassMaker extends Job implements Serializable
 
         try
         {
-            blockOfSand = findClosestBlockType(theFolk.employedAt, Blocks.sand, 80, true);
+            blockOfSand = findClosestBlockType(theFolk.employedAt, Blocks.sand, 48, true); // was 80
 
             if (blockOfSand == null)
             {

@@ -19,7 +19,6 @@ import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.entity.EntityAlignBeam;
 import ashjack.simukraftreloaded.entity.EntityConBox;
 import ashjack.simukraftreloaded.entity.EntityFolk;
-import ashjack.simukraftreloaded.entity.EntityWindmill;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent;
@@ -50,7 +49,6 @@ public class ClientProxy extends CommonProxy
         RenderingRegistry.registerEntityRenderingHandler(EntityAlignBeam.class, new RenderAlignBeam(new ModelAlignBeam()));
         RenderingRegistry.registerEntityRenderingHandler(EntityFolk.class, new RenderFolk(new ModelFolkFemale()));
         RenderingRegistry.registerEntityRenderingHandler(EntityConBox.class, new RenderConBox(new ModelConBox()));
-        //RenderingRegistry.registerEntityRenderingHandler(EntityWindmill.class, new RenderWindmill(new ModelWindmill()));
     }
 
     @Override
@@ -58,6 +56,7 @@ public class ClientProxy extends CommonProxy
     {
         super.registerMisc();
         FMLCommonHandler.instance().bus().register(this);
+        FMLCommonHandler.instance().bus().register(new ClientTickHandler());
 
     }
     

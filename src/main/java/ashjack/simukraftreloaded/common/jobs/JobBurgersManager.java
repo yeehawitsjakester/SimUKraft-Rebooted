@@ -162,7 +162,7 @@ public class JobBurgersManager extends Job {
 	    		int count=getItemCountInChests(chests, new ItemStack(pickUpItem, 1), doCompareMeta);
 	    		int buy=count/4;
 	    		if (buy>0) {
-	    			SimukraftReloaded.log.info("JobBurgersManager: buying "+buy+" out of "+count+" items");
+	    			SimukraftReloaded.log.fine("JobBurgersManager: buying "+buy+" out of "+count+" items");
 	    			inventoriesTransferLimitedToFolk(theFolk.inventory, chests
 	    					, new ItemStack(pickUpItem, 1, pickUpItem.damageDropped(1)),buy,doCompareMeta);
 	    			
@@ -199,15 +199,15 @@ public class JobBurgersManager extends Job {
     	} else if (step==3) {
     		theFolk.statusText="Buying items at the "+pickupBuildings.get(currentPickup).displayName;
     		ArrayList<IInventory> chests=inventoriesFindClosest(pickupBuildings.get(currentPickup).primaryXYZ, 5);
-    		SimukraftReloaded.log.info(chests.toString());
+    		SimukraftReloaded.log.fine(chests.toString());
     		if (!chests.isEmpty()) {
-    			SimukraftReloaded.log.info("Chest not empty");
+    			SimukraftReloaded.log.fine("Chest not empty");
     			
 	    		int count=getItemCountInChests(chests, new ItemStack(pickUpItem, 1), doCompareMeta);
 	    		
-	    		SimukraftReloaded.log.info(Integer.toString(count));
+	    		SimukraftReloaded.log.fine(Integer.toString(count));
 	    		int buy=count/4;
-	    		SimukraftReloaded.log.info(Integer.toString(buy));
+	    		SimukraftReloaded.log.fine(Integer.toString(buy));
 	    		if (buy>0) {
 	    			
 	    			if(pickUpItem == Items.potato)
@@ -227,7 +227,7 @@ public class JobBurgersManager extends Job {
 		    			cheeseCount = count/4;
 		    		}
 	    			
-		    		SimukraftReloaded.log.info("JobBurgersManager: buying "+buy+" out of "+count+" items");
+		    		SimukraftReloaded.log.fine("JobBurgersManager: buying "+buy+" out of "+count+" items");
 	    			
 	    			for(int i=0; i<chests.get(0).getSizeInventory(); i++)
 	    			{
@@ -303,12 +303,12 @@ public class JobBurgersManager extends Job {
     		}
     	
     	} else if (step==3) {
-    		SimukraftReloaded.log.info("Unloading ingredients");
+    		SimukraftReloaded.log.fine("Unloading ingredients");
     		theFolk.statusText="Unloading ingredients";
     		ArrayList<V3> back=theStore.getSpecialBlocks(0);
-    		SimukraftReloaded.log.info(back.get(0).toString());
+    		SimukraftReloaded.log.fine(back.get(0).toString());
     		ArrayList<IInventory> backstoreChests=inventoriesFindClosest(back.get(0), 3);
-    		SimukraftReloaded.log.info(backstoreChests.get(0).toString());
+    		SimukraftReloaded.log.fine(backstoreChests.get(0).toString());
     			boolean ok=inventoriesTransferFromFolk(theFolk.inventory, backstoreChests, null);
     			if (!ok) 
     			{

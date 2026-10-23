@@ -35,6 +35,7 @@ public class JobShepherd extends Job implements Serializable
     private transient ArrayList<IInventory> farmChests = new ArrayList<IInventory>();
     private transient EntitySheep sheepToShear = null;
     private transient boolean isShearing = false;
+    private transient long shearingUntil = 0;
 
     public JobShepherd()
     {
@@ -201,35 +202,22 @@ public class JobShepherd extends Job implements Serializable
             {
                 theFolk.theEntity.faceEntity(sheepToShear, 1f, 1f);
                 theFolk.isWorking = true;
-                mc.theWorld.playSound(theFolk.theEntity.posX, theFolk.theEntity.posY, theFolk.theEntity.posZ, "ashjacksimukraftreloaded:shears", 1f, 1f, false);
-                Thread t = new Thread(new Runnable()
-                {
-                    public void run()
-                    {
-                        isShearing = true;
-
-                        for (int d = 0; d < 12; d++)
-                        {
-                            spawnExplosionParticle(sheepToShear);
-
-                            try
-                            {
-                                Thread.sleep(150);
-                            }
-                            catch (Exception e) {}
-                        }
-
-                        isShearing = false;
-                        theFolk.statusText = "Watching the herd";
-                    }
-                });
-                t.start();
+                jobWorld.playSoundEffect(theFolk.theEntity.posX, theFolk.theEntity.posY, theFolk.theEntity.posZ, "ashjacksimukraftreloaded:shears", 1f, 1f);
+                // was a thread spawning particles and changing status text after ~2s
+                isShearing = true;
+                shearingUntil = System.currentTimeMillis() + 1800;
                 theFolk.theEntity.faceEntity(sheepToShear, 1f, 1f);
                 step = 4;
             }
         }
         else if (step == 4)
         {
+            if (isShearing && System.currentTimeMillis() < shearingUntil)
+            {
+                return;
+            }
+            isShearing = false;
+            theFolk.statusText = "Watching the herd";
             Random ra = new Random();
             int count = ra.nextInt(3) + 1; // 1 to 3
             placeWoolIntoAChest(sheepToShear.getFleeceColor(), count);

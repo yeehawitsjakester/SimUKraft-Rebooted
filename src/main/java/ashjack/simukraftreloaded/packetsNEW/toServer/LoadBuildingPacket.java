@@ -35,7 +35,7 @@ public class LoadBuildingPacket implements IMessage
 	 @Override
 	 public IMessage onMessage(LoadBuildingPacket message, MessageContext ctx) {
 	
-	 Building.loadAllBuildings();
+	 // No reload from disk: it replaced the live building list, losing unsaved tenants and orphaning Building references
 		 
 	 //player.openGui(ModSimukraft.instance, message.id, player.worldObj, (int) player.posX, (int) player.posY, (int) player.posZ);
 	 return null;

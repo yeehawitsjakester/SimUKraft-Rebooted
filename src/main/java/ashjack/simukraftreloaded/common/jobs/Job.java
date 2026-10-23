@@ -1,11 +1,11 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
-import ashjack.simukraftreloaded.blocks.functionality.TileEntityWindmill;
 import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
@@ -701,101 +701,49 @@ public abstract class Job
     /** sets the closestBlocks arraylist with V3 locations in world where the passed in Block types are found */
     public void setClosestBlocksOfType(final V3 startXYZ, final ArrayList<Block> blockIDs, final int distanceLimit, final boolean needsToSeeSky, final boolean scanDownwards, final boolean oneLayerOnly)
     {
-        Thread t = new Thread(new Runnable()
+        // This used to run on a background thread (unsafe world access) and re-scanned every square ring in full,
+        // so its cost grew with distance^4. One pass over the area gives the same set of blocks.
+        World theWorld = MinecraftServer.getServer().worldServerForDimension(startXYZ.theDimension);
+        if (theWorld == null)
         {
-            public void run()
+            return;
+        }
+        LinkedHashMap<String, V3> hm = new LinkedHashMap<String, V3>();
+        int YdistanceLimit = oneLayerOnly ? 0 : distanceLimit;
+        int x0 = startXYZ.x.intValue(), y0 = startXYZ.y.intValue(), z0 = startXYZ.z.intValue();
+
+        for (int yo = 0; yo <= YdistanceLimit; yo++)
+        {
+            int sy = scanDownwards ? y0 - yo : y0 + yo;
+            if (sy < 0 || sy > 255)
             {
-                World theWorld = MinecraftServer.getServer().worldServerForDimension(startXYZ.theDimension);
-                HashMap hm = new HashMap();
-                V3 v;
-                boolean skip = false;
-                int YdistanceLimit = distanceLimit;
-
-                if (oneLayerOnly)
+                continue;
+            }
+            for (int xo = -(distanceLimit - 1); xo <= distanceLimit - 1; xo++)
+            {
+                for (int zo = -(distanceLimit - 1); zo <= distanceLimit - 1; zo++)
                 {
-                    YdistanceLimit = 0;
-                }
-
-                for (int yo = 0; yo <= YdistanceLimit; yo++)
-                {
-                    for (int d = 1; d < distanceLimit; d++)
+                    if (xo == 0 && zo == 0)
                     {
-                        for (int xo = -d; xo <= d; xo++)
-                        {
-                            for (int zo = -d; zo <= d; zo++)
-                            {
-                                int sx = startXYZ.x.intValue() + xo;
-                                int sy;
-
-                                if (scanDownwards)
-                                {
-                                    sy = startXYZ.y.intValue() - yo;
-                                }
-                                else
-                                {
-                                    sy = startXYZ.y.intValue() + yo;
-                                }
-
-                                int sz = startXYZ.z.intValue() + zo;
-                                skip = false;
-
-                                for (int b = 0; b < blockIDs.size(); b++)
-                                {
-                                    Block blockID = blockIDs.get(b);
-
-                                    if (theWorld == null)
-                                    {
-                                        return;
-                                    }
-
-                                    Block blockInWorld = theWorld.getBlock(sx, sy, sz);
-
-                                    if (blockInWorld == blockID)
-                                    {
-                                        if (needsToSeeSky)
-                                        {
-                                            boolean canSeeSky;
-
-                                            if (theWorld.getBlock(sx, sy + 1, sz) == null)
-                                            {
-                                                canSeeSky = true;
-                                            }
-                                            else
-                                            {
-                                                canSeeSky = false;
-                                            }
-
-                                            if (canSeeSky)
-                                            {
-                                                skip = false;
-                                            }
-                                            else
-                                            {
-                                                skip = true;
-                                            }
-                                        }
-
-                                        if (!skip)
-                                        {
-                                            v = new V3((double) sx, (double) sy, (double) sz, startXYZ.theDimension);
-
-                                            if (!hm.containsKey(v.toString()))
-                                            {
-                                                hm.put(v.toString(), v);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        continue; // the original rings started at distance 1
+                    }
+                    int sx = x0 + xo, sz = z0 + zo;
+                    if (!theWorld.blockExists(sx, sy, sz))
+                    {
+                        continue; // never load chunks for a search
+                    }
+                    Block blockInWorld = theWorld.getBlock(sx, sy, sz);
+                    if (blockIDs.contains(blockInWorld) && (!needsToSeeSky || theWorld.isAirBlock(sx, sy + 1, sz)))
+                    {
+                        V3 v = new V3((double) sx, (double) sy, (double) sz, startXYZ.theDimension);
+                        hm.put(v.toString(), v);
                     }
                 }
-
-                closestBlocks = new ArrayList<V3>(hm.values());
-                step = 3;
             }
-        });
-        t.start();
+        }
+
+        closestBlocks = new ArrayList<V3>(hm.values());
+        step = 3;
     }
 
     /** find all the closest inventories/chests within the search area and returns an arraylist of chest-type things */
@@ -810,7 +758,7 @@ public abstract class Job
 
             if (te != null)
             {
-                if (te instanceof IInventory && !(te instanceof TileEntityFurnace) && !(te instanceof TileEntityWindmill))
+                if (te instanceof IInventory && !(te instanceof TileEntityFurnace))
                 {
                     ret.add((IInventory) te);
                 }
@@ -831,7 +779,7 @@ public abstract class Job
 
                             if (te != null)
                             {
-                                if (te instanceof IInventory && !(te instanceof TileEntityWindmill)
+                                if (te instanceof IInventory
                                 		&& !alreadyGotChest(ret,(IInventory)te))
                                 {
                                     ret.add((IInventory)te);
@@ -893,53 +841,62 @@ public abstract class Job
         
     }
     
-    /** searches up to 10 below the location and a distance of up to 80 for a certain type of block
-     * will return null if none is found in that area */
+    /** remembers searches that found nothing, so jobs retrying every few hundred ms don't rescan */
+    private static final HashMap<String, Long> failedSearches = new HashMap<String, Long>();
+    private static final long FAILED_SEARCH_MEMORY_MS = 30000;
+
+    private static boolean recentlyFailed(String key)
+    {
+        Long when = failedSearches.get(key);
+        return when != null && System.currentTimeMillis() - when < FAILED_SEARCH_MEMORY_MS;
+    }
+
+    private static void rememberFailure(String key)
+    {
+        if (failedSearches.size() > 512)
+        {
+            failedSearches.clear();
+        }
+        failedSearches.put(key, System.currentTimeMillis());
+    }
+
+    /**
+     * searches outwards, up to 12 blocks up or down, for the closest block of a type within searchDistance.
+     * Returns null if none is found. Only looks in loaded chunks.
+     */
     public static V3 findClosestBlockType(V3 startXYZ, Block block, int searchDistance, boolean mustSeeSky)
     {
-        World theWorld = MinecraftServer.getServer().worldServerForDimension(startXYZ.theDimension);
-       // SimukraftReloaded.log("findClosestBlockType: Id="+block.blockID);
-        
-        if (theWorld.getBlock(startXYZ.x.intValue(), startXYZ.y.intValue(), startXYZ.z.intValue()) == block)
-        {
-            return startXYZ;
-        }
-
-        for (int d = 1; d < searchDistance; d++)
-        {
-            for (int yo = -searchDistance; yo <= searchDistance; yo++)
-            {
-                for (int xo = -d; xo <= d; xo++)
-                {
-                    for (int zo = -d; zo <= d; zo++)
-                    {
-                        int sx = startXYZ.x.intValue() + xo;
-                        int sy = startXYZ.y.intValue() + yo;
-                        int sz = startXYZ.z.intValue() + zo;
-
-                        if (theWorld.getBlock(sx, sy, sz) == block)
-                        {
-                            V3 ret = new V3((double)sx, (double)sy, (double)sz, startXYZ.theDimension);
-                            return ret;
-                        } else {
-
-                        }
-                    }
-                }
-            }
-        }
-
-        return null;
+        return findClosestBlockType(startXYZ, block, searchDistance, mustSeeSky, 12);
     }
 
     /** searches on the same Y level only within the searchDistance for the block type and return V3 or null */
     public static V3 findClosestBlockType(V3 startXYZ, Block block, int searchDistance)
     {
+        return findClosestBlockType(startXYZ, block, searchDistance, false, 0);
+    }
+
+    /**
+     * Ring search: checks only the perimeter of each square ring (the old code re-scanned the whole square at every
+     * distance and every height, so cost grew with distance^4), nearest heights first, skipping unloaded chunks.
+     */
+    private static V3 findClosestBlockType(V3 startXYZ, Block block, int searchDistance, boolean mustSeeSky, int yRange)
+    {
         World theWorld = MinecraftServer.getServer().worldServerForDimension(startXYZ.theDimension);
-        
-        if (theWorld.getBlock(startXYZ.x.intValue(), startXYZ.y.intValue(), startXYZ.z.intValue()) == block)
+        if (theWorld == null)
+        {
+            return null;
+        }
+        int x0 = startXYZ.x.intValue(), y0 = startXYZ.y.intValue(), z0 = startXYZ.z.intValue();
+
+        if (theWorld.blockExists(x0, y0, z0) && theWorld.getBlock(x0, y0, z0) == block)
         {
             return startXYZ;
+        }
+
+        String key = startXYZ.toString() + "|" + Block.getIdFromBlock(block) + "|" + searchDistance + "|" + mustSeeSky + "|" + yRange;
+        if (recentlyFailed(key))
+        {
+            return null;
         }
 
         for (int d = 1; d < searchDistance; d++)
@@ -948,23 +905,37 @@ public abstract class Job
             {
                 for (int zo = -d; zo <= d; zo++)
                 {
-                    int sx = startXYZ.x.intValue() + xo;
-                    int sy = startXYZ.y.intValue();
-                    int sz = startXYZ.z.intValue() + zo;
-
-                    if (theWorld.getBlock(sx, sy, sz) == block)
+                    if (Math.abs(xo) != d && Math.abs(zo) != d)
                     {
-                        V3 ret = new V3((double)sx, (double)sy, (double)sz, startXYZ.theDimension);
-                        return ret;
+                        continue; // inside the ring - already searched at a smaller distance
+                    }
+                    int sx = x0 + xo, sz = z0 + zo;
+                    if (!theWorld.blockExists(sx, 64, sz))
+                    {
+                        continue;
+                    }
+                    for (int dy = 0; dy <= yRange * 2; dy++)
+                    {
+                        // 0, -1, +1, -2, +2 ...
+                        int yo = (dy % 2 == 1) ? -((dy + 1) / 2) : dy / 2;
+                        int sy = y0 + yo;
+                        if (sy < 0 || sy > 255)
+                        {
+                            continue;
+                        }
+                        if (theWorld.getBlock(sx, sy, sz) == block && (!mustSeeSky || theWorld.canBlockSeeTheSky(sx, sy + 1, sz)))
+                        {
+                            return new V3((double) sx, (double) sy, (double) sz, startXYZ.theDimension);
+                        }
                     }
                 }
             }
         }
 
+        rememberFailure(key);
         return null;
     }
-    
-    
+
     /** find an arraylist of locations where the specified block is found sorted into closest first */
     public static ArrayList<V3> findClosestBlocks(V3 startXYZ, Block block, int distanceLimit)
     {

@@ -7,6 +7,7 @@ public class SimukraftReloadedEvents
 {
 	public static void loadEvents()
 	{
-		FMLCommonHandler.instance().bus().register(new UpdateChecker()); 
+		// The update checker downloaded from a dead Dropbox URL, synchronously, on every login
+		//FMLCommonHandler.instance().bus().register(new UpdateChecker());
 	}
 }

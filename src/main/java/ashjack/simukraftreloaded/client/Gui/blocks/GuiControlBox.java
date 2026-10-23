@@ -50,7 +50,7 @@ public class GuiControlBox extends GuiScreen
     public GuiControlBox(V3 location, EntityPlayer thePlayer)
     {
         this.location = location.clone();
-        Building.loadAllBuildings(); //re-load the buildings client side
+        // No reload from disk: it replaced the live building list, losing unsaved tenants and orphaning Building references
         theBuilding = Building.getBuilding(location);
         playerWhoClickedIt = thePlayer;
     }
@@ -59,7 +59,7 @@ public class GuiControlBox extends GuiScreen
     public GuiControlBox(V3 location, FolkData folk)     //called after choosing hired staff
     {
         this.location = location;
-        Building.loadAllBuildings(); //re-load the buildings client side
+        // No reload from disk: it replaced the live building list, losing unsaved tenants and orphaning Building references
         theBuilding = Building.getBuilding(location);
         theFolk = folk;
 
@@ -749,7 +749,8 @@ public class GuiControlBox extends GuiScreen
             }
 
             theWorld.playSoundAtEntity(playerWhoClickedIt, "random.explode", 1.0f, 1.0f);
-            SimukraftReloaded.theBuildings.remove(bindex);
+            // by object, not by index: the index could point at a different building by now
+            Building.removeBuilding(theBuilding, "demolished");
             mc.displayGuiScreen(null);
         }
     }

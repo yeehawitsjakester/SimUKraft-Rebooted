@@ -151,7 +151,7 @@ public class JobBrickMaker extends Job implements Serializable
 
         try
         {
-        	blockOfClay = findClosestBlockType(theFolk.employedAt, Blocks.clay, 80, true);
+        	blockOfClay = findClosestBlockType(theFolk.employedAt, Blocks.clay, 48, true); // was 80
 
             if (blockOfClay == null)
             {

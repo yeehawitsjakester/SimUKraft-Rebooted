@@ -72,10 +72,6 @@ public class JobCheesemaker extends Job {
         	theCheeseFactory=Building.getBuilding(theFolk.employedAt);
         }
         if (theCheeseFactory==null) {
-        	Building.loadAllBuildings();
-        	theCheeseFactory=Building.getBuilding(theFolk.employedAt);
-        }
-        if (theCheeseFactory==null) {
         	theFolk.selfFire();
         	SimukraftReloaded.sendChat("There was a problem with the Cheese factory, try re-starting Minecraft");
         	return;

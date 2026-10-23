@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.packetsNEW.toServer;
 
+import net.minecraft.block.material.Material;
 import java.util.ArrayList;
 
 import net.minecraft.block.Block;
@@ -70,7 +71,7 @@ public class DemolishBuildingPacket implements IMessage
 	            {
 	                Block l = theWorld.getBlock(blockLoc.x.intValue(), blockLoc.y.intValue(), blockLoc.z.intValue());
 
-	                if (l != null && SimukraftReloaded.demolishBlocks.size() < 500)
+	                if (l != null && l.getMaterial() != Material.air && SimukraftReloaded.demolishBlocks.size() < 500)
 	                {
 	                    blockLoc.blockID = Block.getIdFromBlock(l);
 	                    SimukraftReloaded.demolishBlocks.add(blockLoc);

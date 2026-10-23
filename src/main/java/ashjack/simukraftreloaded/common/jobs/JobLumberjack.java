@@ -42,6 +42,7 @@ public class JobLumberjack extends Job implements Serializable
     private transient Building lumbermill = null;
     private transient long startedGoing = 0l;
     private transient boolean isChopping = false;
+    private transient long choppingUntil = 0;
     private transient float pay = 0f;
     private transient boolean onRoute = false;
 
@@ -283,44 +284,11 @@ public class JobLumberjack extends Job implements Serializable
                                     foundWoodAt.z.intValue()) == Blocks.log || jobWorld.getBlock(foundWoodAt.x.intValue(), foundWoodAt.y.intValue(),
                                     foundWoodAt.z.intValue()) == Blocks.log2)
             {
-                Thread t = new Thread(new Runnable()
-                {
-                    public void run()
-                    {
-                        isChopping = true;
-
-                        for (int d = 0; d < 12; d++)
-                        {
-                            try
-                            {
-                                mc.theWorld.playSound(theFolk.location.x, theFolk.location.y, theFolk.location.z, "step.wood", 1f, 1f, false);
-                            }
-                            catch (Exception e) {}
-
-                            if (theFolk.theEntity != null)
-                            {
-                                theFolk.theEntity.swingProgress = 0.3f;
-
-                                try
-                                {
-                                    Thread.sleep(100);
-                                }
-                                catch (Exception e) {}
-
-                                theFolk.theEntity.swingProgress = 0.7f;
-
-                                try
-                                {
-                                    Thread.sleep(100);
-                                }
-                                catch (Exception e) {}
-                            }
-                        }
-
-                        isChopping = false;
-                    }
-                });
-                t.start();
+                // chop for ~2.4s (was a thread sleeping and poking the entity and client world)
+                isChopping = true;
+                choppingUntil = System.currentTimeMillis() + 2400;
+                theFolk.isWorking = true;
+                jobWorld.playSoundEffect(foundWoodAt.x, foundWoodAt.y, foundWoodAt.z, "dig.wood", 1f, 1f);
                 step = 3;
             }
             else
@@ -331,10 +299,11 @@ public class JobLumberjack extends Job implements Serializable
         }
         else if (step == 3)
         {
-            if (isChopping)
+            if (isChopping && System.currentTimeMillis() < choppingUntil)
             {
                 return;
             }
+            isChopping = false;
 
             ArrayList<ItemStack> log = this.translateBlockWhenMined(jobWorld, foundWoodAt);
             jobWorld.setBlock(foundWoodAt.x.intValue(), foundWoodAt.y.intValue(), foundWoodAt.z.intValue(), Blocks.air, 0, 0x03);
@@ -512,7 +481,7 @@ public class JobLumberjack extends Job implements Serializable
     {
         if (theFolk.isSpawned())
         {
-            if (jobWorld.getBlock((int)theFolk.theEntity.posX, (int)theFolk.theEntity.posY, (int)theFolk.theEntity.posZ) == null)
+            if (jobWorld.isAirBlock((int)theFolk.theEntity.posX, (int)theFolk.theEntity.posY, (int)theFolk.theEntity.posZ))
             {
                 jobWorld.setBlock((int)theFolk.theEntity.posX, (int)theFolk.theEntity.posY, (int)theFolk.theEntity.posZ,
                                   is);

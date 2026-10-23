@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.core.building;
 
+import ashjack.simukraftreloaded.folk.FolkData.FolkAction;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.File;
@@ -866,137 +867,148 @@ public class Building implements Serializable
         return null;
     }
 
-    public void saveThisBuilding() {
-    	ArrayList<String> strings=new ArrayList<String>();
-    	strings.clear();
-        
-        if (this.primaryXYZ !=null) {
-            String xyz = "b"+ this.primaryXYZ.toString().replaceAll(",", "_");
-        	strings.add("displayname|"+this.displayName);
-        	strings.add("type|"+this.type);
-        	strings.add("primaryxyz|"+this.primaryXYZ.toString());
-        	if (this.livingXYZ==null) {
-        		strings.add("livingxyz|null");
-        	} else {
-        		strings.add("livingxyz|"+this.livingXYZ.toString());
-        	}
-        	strings.add("buildingcomplete|"+this.buildingComplete);
-        	strings.add("capacity|"+this.capacity);
-        	strings.add("builddir|"+this.buildDirection);
-        	if (this.lumbermillMarker==null) {
-        		strings.add("lmarker|null");
-        	} else {
-        		strings.add("lmarker|"+this.lumbermillMarker.toString());
-        	}
-        	strings.add("blocksinbuilding|"+this.blocksInBuilding);
-        	String temp="tennants|";
-        	for(String tennant:this.tennants) {
-        		if (!tennant.trim().contentEquals("")) {
-        			temp+=tennant.trim()+",";
-        		}
-        	}
-        	strings.add(temp);
-        	
-        	temp="blocklocs|";
-        	for(V3 block:this.blockLocations) {
-        		if (block !=null  & block.toString().contains(",")) {
-        			temp+=block.toString()+"B";
-        		}
-        	}
-        	strings.add(temp);
-        	
-        	if(blockSpecial.size() >0) {
-	        	temp="blockspecial|";
-	        	for(V3 block:this.blockSpecial) {
-	        		if (block !=null  & block.toString().contains(",")) {
-	        			temp+=block.toString()+","+ block.meta+"B";
-	        		}
-	        	}
-	        	strings.add(temp);
-        	}
-        	
-        	SimukraftReloaded.saveSK2(SimukraftReloaded.getSavesDataFolder() + "Buildings" + File.separator + xyz + ".sk2", strings);
+    /** the lines written to this building's .sk2 file */
+    private ArrayList<String> toSaveLines()
+    {
+        ArrayList<String> strings = new ArrayList<String>();
+        strings.add("displayname|" + this.displayName);
+        strings.add("type|" + this.type);
+        strings.add("primaryxyz|" + this.primaryXYZ.toString());
+        strings.add("livingxyz|" + (this.livingXYZ == null ? "null" : this.livingXYZ.toString()));
+        strings.add("buildingcomplete|" + this.buildingComplete);
+        strings.add("capacity|" + this.capacity);
+        strings.add("builddir|" + this.buildDirection);
+        strings.add("lmarker|" + (this.lumbermillMarker == null ? "null" : this.lumbermillMarker.toString()));
+        strings.add("blocksinbuilding|" + this.blocksInBuilding);
 
+        StringBuilder temp = new StringBuilder("tennants|");
+        for (String tennant : new ArrayList<String>(this.tennants))
+        {
+            if (!tennant.trim().isEmpty())
+            {
+                temp.append(tennant.trim()).append(',');
+            }
         }
-        
+        strings.add(temp.toString());
+
+        // copies, so a job adding blocks mid-save can't throw ConcurrentModificationException
+        temp = new StringBuilder("blocklocs|");
+        for (V3 block : new ArrayList<V3>(this.blockLocations))
+        {
+            if (block != null)
+            {
+                temp.append(block.toString()).append('B');
+            }
+        }
+        strings.add(temp.toString());
+
+        if (this.blockSpecial.size() > 0)
+        {
+            temp = new StringBuilder("blockspecial|");
+            for (V3 block : new ArrayList<V3>(this.blockSpecial))
+            {
+                if (block != null)
+                {
+                    temp.append(block.toString()).append(',').append(block.meta).append('B');
+                }
+            }
+            strings.add(temp.toString());
+        }
+        return strings;
     }
-    
+
+    private File saveFile()
+    {
+        String xyz = "b" + this.primaryXYZ.toString().replaceAll(",", "_");
+        return new File(SimukraftReloaded.getSavesDataFolder() + "Buildings" + File.separator + xyz + ".sk2");
+    }
+
+    public void saveThisBuilding() {
+        if (this.primaryXYZ != null) {
+        	SimukraftReloaded.saveSK2(saveFile().getPath(), toSaveLines());
+        }
+    }
+
+    /**
+     * Call when a building no longer exists in the world (control box broken, exploded or demolished).
+     * Fires its staff, turns its tenants out to find a new home, and forgets it, in memory and on disk.
+     * Before this, breaking a control box left the building in memory: tenants kept "living" there and
+     * workers kept working at it until the game was restarted.
+     */
+    public static void removeBuilding(Building building, String reason)
+    {
+        if (building == null || !SimukraftReloaded.theBuildings.remove(building))
+        {
+            return;
+        }
+        SimukraftReloaded.log.info("Building: removed " + building.displayNameWithoutPK + " at " + building.primaryXYZ + " (" + reason + ")");
+
+        for (FolkData folk : new ArrayList<FolkData>(SimukraftReloaded.theFolks))
+        {
+            boolean worksHere = building.primaryXYZ != null && building.primaryXYZ.isSameCoordsAs(folk.employedAt, true, true);
+            boolean buildingIt = folk.theBuilding == building;
+            if (worksHere || buildingIt)
+            {
+                folk.selfFire();
+            }
+
+            if (building.tennants.contains(folk.name))
+            {
+                if (folk.action == FolkAction.ATHOME || folk.action == FolkAction.GOINGHOME || folk.action == FolkAction.STAYINGHOME)
+                {
+                    folk.action = FolkAction.WANDER;
+                    folk.actionArrival = null;
+                    folk.destination = null;
+                    folk.stayPut = false;
+                    folk.statusText = "Wandering";
+                }
+                SimukraftReloaded.sendChat(folk.name + " has lost their home (" + building.displayNameWithoutPK + ")");
+            }
+        }
+        building.tennants.clear();
+
+        if (building.primaryXYZ != null)
+        {
+            File f = building.saveFile();
+            if (f.exists())
+            {
+                f.delete();
+            }
+        }
+    }
+
     public static void saveAllBuildings()
     {
-    	Block id;
-        Minecraft mc = Minecraft.getMinecraft();
-        
-       // Side side = cpw.mods.fml.common.FMLCommonHandler.instance().getEffectiveSide();
-    	//if (side==Side.SERVER) { 
-    		ArrayList<String> strings=new ArrayList<String>();
-    		
-	        for (int b = 0; b < SimukraftReloaded.theBuildings.size(); b++)
-	        {
-	        	strings.clear();
-	            Building building = (Building) SimukraftReloaded.theBuildings.get(b);
-	            if (building !=null && building.primaryXYZ !=null) {
-	            	V3 pxyz = building.primaryXYZ;
-                    World buildingWorld = MinecraftServer.getServer().worldServerForDimension(building.primaryXYZ.theDimension);
-                    id = buildingWorld.getBlock(pxyz.x.intValue(),pxyz.y.intValue(), pxyz.z.intValue());
-                    String xyz = "b"+ building.primaryXYZ.toString().replaceAll(",", "_");
-                    if (id == SimukraftReloadedBlocks.controlBox || id == SimukraftReloadedBlocks.buildingConstructor) {
-                    	strings.add("displayname|"+building.displayName);
-                    	strings.add("type|"+building.type);
-                    	strings.add("primaryxyz|"+building.primaryXYZ.toString());
-                    	if (building.livingXYZ==null) {
-                    		strings.add("livingxyz|null");
-                    	} else {
-                    		strings.add("livingxyz|"+building.livingXYZ.toString());
-                    	}
-                    	strings.add("buildingcomplete|"+building.buildingComplete);
-                    	strings.add("capacity|"+building.capacity);
-                    	strings.add("builddir|"+building.buildDirection);
-                    	if (building.lumbermillMarker==null) {
-                    		strings.add("lmarker|null");
-                    	} else {
-                    		strings.add("lmarker|"+building.lumbermillMarker.toString());
-                    	}
-                    	strings.add("blocksinbuilding|"+building.blocksInBuilding);
-                    	String temp="tennants|";
-                    	for(String tennant:building.tennants) {
-                    		if (!tennant.trim().contentEquals("")) {
-                    			temp+=tennant.trim()+",";
-                    		}
-                    	}
-                    	strings.add(temp);
-                    	
-                    	try {
-	                    	temp="blocklocs|";
-	                    	for(V3 block:building.blockLocations) {
-	                    		if (block !=null  & block.toString().contains(",")) {
-	                    			temp+=block.toString()+"B";
-	                    		}
-	                    	}
-	                    	strings.add(temp);
-                    	} catch(Exception e) {} //Concurrent exception, not a proper fix!
-                    	
-                    	try {
-	                    	if(building.blockSpecial.size() >0) {
-	            	        	temp="blockspecial|";
-	            	        	for(V3 block:building.blockSpecial) {
-	            	        		if (block !=null  & block.toString().contains(",")) {
-	            	        			temp+=block.toString()+","+block.meta+"B";
-	            	        		}
-	            	        	}
-	            	        	strings.add(temp);
-	                    	}
-                    	} catch(Exception e) {}
-                    	
-                    	SimukraftReloaded.saveSK2(SimukraftReloaded.getSavesDataFolder() + "Buildings" + File.separator + xyz + ".sk2", strings);
-           
-                    	
-                    } else {  //no control block, building destroyed in world
-                    	File f=new File(SimukraftReloaded.getSavesDataFolder() + "Buildings" + File.separator + xyz + ".sk2");
-                    	if (f.exists()) { f.delete(); }
-                    }
-	            }
-	        }
-	        SimukraftReloaded.log.info("Building.saveAllBuildings "+SimukraftReloaded.theBuildings.size()+" buildings");
+        ArrayList<Building> gone = new ArrayList<Building>();
+
+        for (Building building : new ArrayList<Building>(SimukraftReloaded.theBuildings))
+        {
+            if (building == null || building.primaryXYZ == null)
+            {
+                continue;
+            }
+            V3 pxyz = building.primaryXYZ;
+            World buildingWorld = MinecraftServer.getServer().worldServerForDimension(pxyz.theDimension);
+            int x = pxyz.x.intValue(), y = pxyz.y.intValue(), z = pxyz.z.intValue();
+
+            // only judge buildings whose chunk is loaded - getBlock on an unloaded chunk loads it
+            if (buildingWorld != null && buildingWorld.blockExists(x, y, z))
+            {
+                Block id = buildingWorld.getBlock(x, y, z);
+                if (id != SimukraftReloadedBlocks.controlBox && id != SimukraftReloadedBlocks.buildingConstructor)
+                {
+                    gone.add(building);   //no control block, building destroyed in world
+                    continue;
+                }
+            }
+            building.saveThisBuilding();
+        }
+
+        for (Building building : gone)
+        {
+            removeBuilding(building, "control box missing");
+        }
+        SimukraftReloaded.log.info("Building.saveAllBuildings "+SimukraftReloaded.theBuildings.size()+" buildings");
         
         /*
         for (int b = 0; b < ModSimukraft.theBuildings.size(); b++)

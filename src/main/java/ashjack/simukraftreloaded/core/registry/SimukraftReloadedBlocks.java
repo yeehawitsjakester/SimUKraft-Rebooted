@@ -15,7 +15,6 @@ import ashjack.simukraftreloaded.blocks.BlockMarker;
 import ashjack.simukraftreloaded.blocks.BlockMiningBox;
 import ashjack.simukraftreloaded.blocks.BlockSpecialBlock;
 import ashjack.simukraftreloaded.blocks.functionality.FluidMilk;
-import ashjack.simukraftreloaded.blocks.functionality.TileEntityWindmill;
 import ashjack.simukraftreloaded.items.ItemBlockFolkLivingBlock;
 import ashjack.simukraftreloaded.items.ItemBlockLightBox;
 import ashjack.simukraftreloaded.items.ItemSUKDrink;
@@ -71,8 +70,6 @@ public class SimukraftReloadedBlocks
         blockCompositeBrick = new BlockCompositeBrick();
         blockCheese=new BlockCheeseBlock();
         
-      //windmill = new BlockWindmill(windmillId, false).
-      //setStepSound(Block.soundTypeWood).setHardness(3F).setResistance(3.0F).setBlockName("SUKWindmill");
 
       //pathConstructor = new BlockPathConstructor(pathConstructorId).
       //setStepSound(Block.soundWoodFootstep).setHardness(2F).setResistance(1.0F).setUnlocalizedName("SUKpathConstructor");
@@ -97,7 +94,6 @@ public class SimukraftReloadedBlocks
         GameRegistry.registerBlock(lightBox, ItemBlockLightBox.class, "SUKlight");
         GameRegistry.registerBlock(specialBlock, "SUKspecial");
         //GameRegistry.registerBlock(pathConstructor,"SUKpathConstructor");
-        GameRegistry.registerTileEntity(TileEntityWindmill.class, "tileentitywindmill");
         
 	}
 }

@@ -51,38 +51,29 @@ public class ClientTickHandler
        FMLCommonHandler.instance().bus().register(this);
     }
     
-    @SubscribeEvent
-    public void tick(WorldTickEvent event)
-    {
-    	onTickInGame();
-    	//System.out.println("WorldLoad event tick(client side)");
-    }
-    
+    // Was a WorldTickEvent, which is a server event: it ran this client code on the server thread, per dimension, twice a tick
     @SubscribeEvent
     public void tick(ClientTickEvent event)
     {
-    	//System.out.println("Client event tick(client side)");
+    	if (event.phase == TickEvent.Phase.END)
+    	{
+    		onTickInGame();
+    	}
     }
     
     @SubscribeEvent
     public void tick(RenderTickEvent event)
     {
-    	onGui(event);
-    	//System.out.println("Render event tick(client side)");
+    	// fires at START and END of each frame; draw the HUD once
+    	if (event.phase == TickEvent.Phase.END)
+    	{
+    		onGui(event);
+    	}
     }
 
     public void onTickInGame()
     {
 
-    	if (mc.currentScreen != null)
-        	
-        {
-            if (mc.currentScreen.toString().toLowerCase().contains("guimainmenu"))
-            {
-            	//SimukraftReloaded.log.info("CommTH: in Gui Main menu");
-            }
-        }
-    	
         if (beamingTo != null)
         {
             beamingPlayer();
@@ -98,36 +89,7 @@ public class ClientTickHandler
         }
         catch (Exception e) {}
 
-        if (mc.currentScreen != null)
-        {
-            if (mc.currentScreen.toString().toLowerCase().contains("ingamemenu"))
-            {
-                if (System.currentTimeMillis() - timeSinceLastSave > 10000)
-                {
-                	
-                	
-                   
-                	SimukraftReloadedConfig.config.save();
-                	SimukraftReloaded.states.saveStates();
-                    Building.saveAllBuildings();
-                    CourierTask.saveCourierTasksAndPoints();
-                    MiningBox.saveMiningBoxes();
-                    FarmingBox.saveFarmingBoxes();
-
-                    for (int f = 0; f < SimukraftReloaded.theFolks.size(); f++)
-                    {
-                        FolkData folk = SimukraftReloaded.theFolks.get(f);
-                        folk.updateLocationFromEntity();
-                        folk.saveThisFolk();
-                    }
-					
-                   // SimukraftReloaded.log("Saved ALL game data via in Game Menu");
-                    timeSinceLastSave = System.currentTimeMillis();
-                }
-            }
-        }
-
-
+        // Game data is saved server-side on WorldEvent.Save (see CommonTickHandler), not from the client thread
     }
 
     /*@SideOnly(Side.CLIENT)

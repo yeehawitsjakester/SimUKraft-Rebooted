@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import net.minecraft.block.material.Material;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Random;
@@ -693,33 +694,8 @@ public class JobMiner extends Job implements Serializable
             }
         }
 
-        Thread t = new Thread(new Runnable()
-        {
-            public void run()
-            {
-                for (int d = 0; d < 5; d++)
-                {
-                    try
-                    {
-                        jobWorld.playSound(vNextMineableBlock.x,
-                                           vNextMineableBlock.y, vNextMineableBlock.z,
-                                           "dig.stone", 1f, 1f, false);
-                    }
-                    catch (Exception e)
-                    {
-                    }
-
-                    try
-                    {
-                        Thread.sleep(100);
-                    }
-                    catch (Exception e)
-                    {
-                    }
-                }
-            }
-        });
-        t.start();
+        // was a thread calling playSound 5 times on the server world, which plays nothing server-side
+        jobWorld.playSoundEffect(vNextMineableBlock.x, vNextMineableBlock.y, vNextMineableBlock.z, "dig.stone", 1f, 1f);
 
         // remove the block and replace with air
         if (lastMinedBlockName.contentEquals(""))
@@ -810,7 +786,7 @@ public class JobMiner extends Job implements Serializable
                               theFolk.employedAt.y.intValue(),
                               vNextMineableBlock.z.intValue());
 
-                if (gid == null)
+                if (gid.getMaterial() == Material.air)
                 {
                     if (miningChests.size() > 0)
                     {

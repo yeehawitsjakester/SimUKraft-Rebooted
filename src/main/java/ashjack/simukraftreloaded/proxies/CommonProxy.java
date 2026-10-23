@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.proxies;
 
+import net.minecraftforge.common.MinecraftForge;
+
 import io.netty.buffer.ByteBuf;
 
 import java.io.FileInputStream;
@@ -265,8 +267,10 @@ public class CommonProxy
     {
         //TickRegistry.registerTickHandler(new CommonTickHandler(), Side.SERVER);
         //TickRegistry.registerTickHandler(new CommonTickHandler(), Side.CLIENT);
-    	FMLCommonHandler.instance().bus().register(new CommonTickHandler());
-    	FMLCommonHandler.instance().bus().register(new ClientTickHandler());
+    	CommonTickHandler tickHandler = new CommonTickHandler();
+    	FMLCommonHandler.instance().bus().register(tickHandler);
+    	MinecraftForge.EVENT_BUS.register(tickHandler); // WorldEvent.Save
+    	// ClientTickHandler is client-only; it is registered by ClientProxy
     }
 
     @SideOnly(Side.CLIENT)

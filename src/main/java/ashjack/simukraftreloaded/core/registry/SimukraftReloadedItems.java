@@ -1,12 +1,7 @@
 package ashjack.simukraftreloaded.core.registry;
 
-import ashjack.simukraftreloaded.items.ItemGranulesGold;
-import ashjack.simukraftreloaded.items.ItemGranulesIron;
 import ashjack.simukraftreloaded.items.ItemSUKDrink;
 import ashjack.simukraftreloaded.items.ItemSUKFood;
-import ashjack.simukraftreloaded.items.ItemWindmillBase;
-import ashjack.simukraftreloaded.items.ItemWindmillSails;
-import ashjack.simukraftreloaded.items.ItemWindmillVane;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.common.registry.LanguageRegistry;
 import net.minecraft.block.Block;
@@ -18,12 +13,6 @@ public class SimukraftReloadedItems
 	
 	//static Block pathConstructor;
     // static int pathConstructorId = 0;
-	public static Block windmill;
-    public static Item itemGranulesIron;
-    public static Item itemGranulesGold;
-    public static Item itemWindmillBase;
-    public static Item itemWindmillVane;
-    public static Item itemWindmillSails;
     //public static Item itemGranulesCopper;
     //public static int itemGranulesCopperId;
     //public static Item itemGranulesTin;
@@ -41,16 +30,10 @@ public class SimukraftReloadedItems
 	{
 		itemDrink = new ItemSUKDrink().setUnlocalizedName("SUKdrink");
 		
-		itemGranulesGold=new ItemGranulesGold();
-		itemGranulesIron=new ItemGranulesIron();
 	//  itemGranulesCopper=new ItemGranulesCopper(itemGranulesCopperId); 
 	//  itemGranulesTin=new ItemGranulesTin(itemGranulesTinId); 
 		
-		itemWindmillBase=new ItemWindmillBase(); 
-		itemWindmillVane=new ItemWindmillVane(); 
-		itemWindmillSails=new ItemWindmillSails(); 
 	//	Item.itemsList[lightBox] = new ItemBlockLightBox(lightBox, lightBox);
-	//	Item.itemsList[windmillId] = new ItemBlockWindmill(windmillId - 256, windmill);
 
 		registerItems();
 		nameItems();
@@ -63,14 +46,7 @@ public class SimukraftReloadedItems
 	
 	public static void nameItems()
 	{
-		LanguageRegistry.addName(itemGranulesGold, "Gold granules"); 
-		LanguageRegistry.addName(itemGranulesIron, "Iron granules"); 
-	//	LanguageRegistry.addName(itemGranulesCopper, "dustCopper"); 
-	//	LanguageRegistry.addName(itemGranulesTin, "Tin granules"); 
         
-		LanguageRegistry.addName(itemWindmillBase, "Windmill base"); 
-		LanguageRegistry.addName(itemWindmillVane, "Windmill vane"); 
-		LanguageRegistry.addName(itemWindmillBase, "Windmill sails"); 
 		
 		LanguageRegistry.addName(new ItemStack(itemFood, 1, 0), "Cheese Slice");
         LanguageRegistry.addName(new ItemStack(itemFood, 1, 1), "Hamburger");

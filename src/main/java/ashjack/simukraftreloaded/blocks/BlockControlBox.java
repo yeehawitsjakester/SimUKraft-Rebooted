@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.blocks;
 
+import ashjack.simukraftreloaded.core.building.Building;
 import java.util.Random;
 
 import ashjack.simukraftreloaded.client.Gui.blocks.GuiBankATM;
@@ -125,6 +126,18 @@ public class BlockControlBox extends Block
         
 
         return true;
+    }
+
+    /** however the control box goes (player, explosion, demolish), the building goes with it */
+    @Override
+    public void breakBlock(World world, int x, int y, int z, Block block, int meta)
+    {
+        if (!world.isRemote)
+        {
+            Building building = Building.getBuilding(new V3((double) x, (double) y, (double) z, world.provider.dimensionId));
+            Building.removeBuilding(building, "control box broken");
+        }
+        super.breakBlock(world, x, y, z, block, meta);
     }
 
     @Override

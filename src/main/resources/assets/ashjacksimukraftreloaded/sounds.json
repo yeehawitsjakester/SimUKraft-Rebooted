@@ -138,6 +138,5 @@
   "shears": {"category": "master","sounds": [{"name": "shears","stream": false}]},
   "SneezeF": {"category": "master","sounds": [{"name": "SneezeF","stream": false}]},
   "SneezeM": {"category": "master","sounds": [{"name": "SneezeM","stream": false}]},
-  "welcome": {"category": "master","sounds": [{"name": "welcome","stream": false}]},
-  "windmill": {"category": "master","sounds": [{"name": "windmill","stream": false}]}
+  "welcome": {"category": "master","sounds": [{"name": "welcome","stream": false}]}
 }

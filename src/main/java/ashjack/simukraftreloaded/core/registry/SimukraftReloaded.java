@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.core.registry;
 
+import net.minecraftforge.common.DimensionManager;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -133,8 +134,17 @@ public class SimukraftReloaded
         {
             if (runModui == null)
             {
-                GuiRunMod runModui = new GuiRunMod();
-                Minecraft.getMinecraft().displayGuiScreen(runModui);
+                // assign the field (a local used to shadow it, so the menu was re-opened every second), and open
+                // it on the client thread - this runs on the server thread
+                runModui = new GuiRunMod();
+                final GuiRunMod gui = runModui;
+                Minecraft.getMinecraft().func_152344_a(new Runnable()
+                {
+                    public void run()
+                    {
+                        Minecraft.getMinecraft().displayGuiScreen(gui);
+                    }
+                });
             }
 
             return;
@@ -185,8 +195,29 @@ public class SimukraftReloaded
     }
     
     /** gets the .minecraft/saves/CURRENTWORLD/simukraft/   folder as a string  */
+    private static File cachedSaveRoot = null;
+    private static String cachedSavesDataFolder = null;
+
     public static String getSavesDataFolder()
     {
+        // Forge knows the world folder on both client and dedicated server. Cached, because this is called from
+        // hot paths and used to build paths, check existence and mkdirs on every call.
+        File root = DimensionManager.getCurrentSaveRootDirectory();
+        if (root != null)
+        {
+            if (!root.equals(cachedSaveRoot))
+            {
+                File f = new File(root, "simukraft");
+                if (!f.exists())
+                {
+                    f.mkdirs();
+                }
+                cachedSavesDataFolder = f.getAbsolutePath() + File.separator;
+                cachedSaveRoot = root;
+            }
+            return cachedSavesDataFolder;
+        }
+
         String worldname = MinecraftServer.getServer().getFolderName();
         String strmc = new File(".").getAbsolutePath();
         strmc = strmc.substring(0, strmc.length() - 1);
@@ -510,17 +541,8 @@ public class SimukraftReloaded
         Random rand = new Random();
         log.info("evolving folks");
         //collect rent
-        Thread t = new Thread(new Runnable()
+        // collect rent - this used to run on a background thread that slept 3s and then changed credits from it
         {
-            public void run()
-            {
-
-                try
-                {
-                    Thread.sleep(3000);
-                }
-                catch (Exception e) {}
-
                 float totalRent = 0f;
                 float totalCorpTax = 0f;
 
@@ -562,20 +584,18 @@ public class SimukraftReloaded
                     sendChat("Collected " + displayMoney(totalCorpTax) + " Sim-u-credits in corporation tax today.");
                     states.credits += totalRent;
                     states.credits += totalCorpTax;
-                    EntityPlayer p = Minecraft.getMinecraft().thePlayer;
-
-                    if (p != null)
+                    for (Object o : MinecraftServer.getServer().getConfigurationManager().playerEntityList)
                     {
-                        ModSimukraft.proxy.getClientWorld().playSound(p.posX, p.posY, p.posZ, "ashjacksimukraftreloaded:cash", 1f, 1f, false);
+                        EntityPlayer p = (EntityPlayer) o;
+                        p.worldObj.playSoundEffect(p.posX, p.posY, p.posZ, "ashjacksimukraftreloaded:cash", 1f, 1f);
                     }
                 }
                 else if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                 {
                     sendChat("No rent collected today, you should hire a folk to build a residential house.");
                 }
-            }
-        });
-        t.start();
+        }
+        
 
         for (int f = 0; f < theFolks.size(); f++)
         {

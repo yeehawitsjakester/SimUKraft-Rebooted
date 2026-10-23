@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.entity;
 
+import net.minecraft.nbt.NBTTagCompound;
+import java.util.Collections;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.Iterator;
@@ -143,7 +145,8 @@ public class EntityFolk extends EntityCreature implements INpc {
 
 				theData = FolkData.getFolkDataByEntityId(this.getEntityId());
 
-				if (theData == null
+				// only the server decides an entity is an orphan
+				if (theData == null && !this.worldObj.isRemote
 						&& (System.currentTimeMillis() - ghostTimer > 5000)) {
 					SimukraftReloaded.log
 							.info("EntityFolk: "
@@ -161,7 +164,8 @@ public class EntityFolk extends EntityCreature implements INpc {
 			}
 
 			// // greet player
-			if (System.currentTimeMillis() - greetTimer > 1000) {
+			// greetings and starvation are server-side; the sound is broadcast to nearby players
+			if (!this.worldObj.isRemote && System.currentTimeMillis() - greetTimer > 1000) {
 				Random r = new Random();
 				double dist = this.theData.getDistanceToPlayer();
 
@@ -338,10 +342,8 @@ public class EntityFolk extends EntityCreature implements INpc {
 							if (r.nextBoolean()) {
 								try {
 									// SimukraftReloaded.log("greeting: " + fn);
-									ModSimukraft.proxy.getClientWorld()
-											.playSound(this.posX, this.posY,
-													this.posZ, fn, 1.0f, 1.0f,
-													false);
+									this.worldObj.playSoundEffect(this.posX, this.posY,
+											this.posZ, fn, 1.0f, 1.0f);
 								} catch (Exception e) {
 								}
 							}
@@ -361,11 +363,14 @@ public class EntityFolk extends EntityCreature implements INpc {
 			}
 		}
 
-		// /pick up food items
-		List list1 = worldObj.getEntitiesWithinAABBExcludingEntity(
-				this,
-				AxisAlignedBB.getBoundingBox(posX, posY, posZ, posX + 1.0D,
-						posY + 1.0D, posZ + 1.0D).expand(2D, 4D, 2D));
+		// /pick up food items - server side, twice a second (was every tick, on both sides)
+		List list1 = Collections.EMPTY_LIST;
+		if (!worldObj.isRemote && this.ticksExisted % 10 == 0) {
+			list1 = worldObj.getEntitiesWithinAABBExcludingEntity(
+					this,
+					AxisAlignedBB.getBoundingBox(posX, posY, posZ, posX + 1.0D,
+							posY + 1.0D, posZ + 1.0D).expand(2D, 4D, 2D));
+		}
 		Iterator iterator1 = list1.iterator();
 
 		if (!list1.isEmpty()) {
@@ -410,9 +415,23 @@ public class EntityFolk extends EntityCreature implements INpc {
 	}
 
 	public boolean gotPath;
+	/** ticks to wait before asking the pathfinder again after it failed */
+	private int pathRetryTicks = 0;
+
 	@Override
 	public void moveEntity(double d, double d1, double d2) {
-		if (this.isDead || theData == null) {
+		if (this.isDead) {
+			return;
+		}
+
+		// Only the server runs folk movement and arrival logic. In singleplayer the client entity can see the
+		// server's FolkData through the shared static list, so it used to race the server and clear destinations.
+		if (this.worldObj.isRemote) {
+			super.moveEntity(d, d1, d2);
+			return;
+		}
+
+		if (theData == null) {
 			return;
 		}
 
@@ -424,13 +443,13 @@ public class EntityFolk extends EntityCreature implements INpc {
 				dist = this.getDistance(theData.destination.x,
 						theData.destination.y, theData.destination.z);
 			} catch (Exception e) {
-				SimukraftReloaded.log.warning("Folk's theData.destination was null in moveEntity()");
+				SimukraftReloaded.log.fine("Folk's theData.destination was null in moveEntity()");
 				return;
 			} // this can still NPE, not important, so skip rest of code here
 
 			if (dist <=2) {
 				try {
-					SimukraftReloaded.log.info("EntityFolk: " + theData.name
+					SimukraftReloaded.log.fine("EntityFolk: " + theData.name
 							+ " has arrived at "
 							+ theData.destination.toString() + " Dim:"
 							+ theData.destination.theDimension);
@@ -452,7 +471,15 @@ public class EntityFolk extends EntityCreature implements INpc {
 				
 			} else {
 				try {
-					if (!gotPath) {
+					// the navigator finished or dropped its path short of the destination: path again shortly
+					if (gotPath && getNavigator().noPath()) {
+						gotPath = false;
+						pathRetryTicks = 20;
+					}
+
+					if (!gotPath && pathRetryTicks > 0) {
+						pathRetryTicks--;
+					} else if (!gotPath) {
 						
 						 PathEntity path=this.worldObj.getEntityPathToXYZ(this, theData.destination.x.intValue(), 
 								 theData.destination.y.intValue(),theData.destination.z.intValue()
@@ -460,6 +487,9 @@ public class EntityFolk extends EntityCreature implements INpc {
 						if (path !=null) {
 							getNavigator().setPath(path, 0.3f);
 							gotPath=true;
+						} else {
+							// a failed search is expensive; don't repeat it every tick (the 40s timeout beams them instead)
+							pathRetryTicks = 40;
 						}
 						/*SimukraftReloaded.log.info(theData.name +" gotPath="+gotPath +" Destination:"+theData.destination.toString()
 								+" entity location="+(int)this.posX+","+
@@ -483,7 +513,7 @@ public class EntityFolk extends EntityCreature implements INpc {
 					getNavigator().clearPathEntity();
 
 					if (dist > 2) {
-						SimukraftReloaded.log.info("EntityFolk: " + theData.name
+						SimukraftReloaded.log.fine("EntityFolk: " + theData.name
 								+ " took too long to walk, so beaming...");
 						theData.stayPut = true;
 						theData.timeStartedGotoing = System.currentTimeMillis();
@@ -639,13 +669,13 @@ public class EntityFolk extends EntityCreature implements INpc {
 					(int) this.posY, (int) this.posZ - 1);
 			this.motionY += 0.4;
 
-			if (idX1 == null) {
+			if (idX1.isAir(worldObj, (int) this.posX + 1, (int) this.posY, (int) this.posZ)) {
 				this.motionX += 0.9f;
-			} else if (idX2 == null) {
+			} else if (idX2.isAir(worldObj, (int) this.posX - 1, (int) this.posY, (int) this.posZ)) {
 				this.motionX -= 0.9f;
-			} else if (idZ1 == null) {
+			} else if (idZ1.isAir(worldObj, (int) this.posX, (int) this.posY, (int) this.posZ + 1)) {
 				this.motionZ += 0.9f;
-			} else if (idZ2 == null) {
+			} else if (idZ2.isAir(worldObj, (int) this.posX + 1, (int) this.posY, (int) this.posZ - 1)) {
 				this.motionZ -= 0.9f;
 			}
 
@@ -693,9 +723,16 @@ public class EntityFolk extends EntityCreature implements INpc {
 		return 200;
 	}
 
+	/** FolkData spawns and despawns folk entities itself */
 	@Override
 	public boolean canDespawn() {
-		return true;
+		return false;
+	}
+
+	/** don't save folk entities into chunks - FolkData respawns them, and saved ones came back as ghosts */
+	@Override
+	public boolean writeToNBTOptional(NBTTagCompound tag) {
+		return false;
 	}
 
 	public AxisAlignedBB getCollisionBox(Entity par1Entity) {

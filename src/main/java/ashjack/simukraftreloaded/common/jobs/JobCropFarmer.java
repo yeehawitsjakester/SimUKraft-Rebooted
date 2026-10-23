@@ -422,7 +422,7 @@ public class JobCropFarmer extends Job implements Serializable
                             canHarvest = true;
                         }
 
-                        if (id == null)
+                        if (id == null || id.getMaterial() == Material.air)
                         {
                             canHarvest = false; //override above code when custom farms have nothing planted there or partial farm
                         }

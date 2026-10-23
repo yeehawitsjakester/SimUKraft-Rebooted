@@ -119,46 +119,7 @@ GameRegistry.addRecipe(new ItemStack(SimukraftReloadedBlocks.blockCompositeBrick
 'C', Blocks.hardened_clay,   
 'S', Blocks.stone,
 'I', Blocks.fence
-});  
-
-
-/*GameRegistry.addRecipe(new ItemStack(SimukraftReloadedItems.itemWindmillBase), new Object[]
-{
-" C ", 
-"CCC",
-"CCC",  
-'C', SimukraftReloadedBlocks.blockCompositeBrick
 });
 
-for (int c=0;c<16;c++) {
-GameRegistry.addRecipe(new ItemStack(SimukraftReloadedItems.itemWindmillVane,1,c), new Object[]
- {
-  "WWW",
-  "SSS",  
-  'S', Items.stick, 'W', new ItemStack(Blocks.wool,1,c)
- });
-}
-
-for(int c=0;c<16;c++) {
-GameRegistry.addRecipe(new ItemStack(SimukraftReloadedItems.itemWindmillSails,1,c), new Object[]
- {
-  " V ", 
-  "VPV",
-  " V ",  
-  'V', new ItemStack(SimukraftReloadedItems.itemWindmillVane,1,c) , 'P', Blocks.planks
- });
-}
-
-for(int c=0;c<16;c++) {
-GameRegistry.addRecipe(new ItemStack(SimukraftReloadedItems.windmill,1,c), new Object[]
-{
-"S", 
-"B", 
-'S', new ItemStack(SimukraftReloadedItems.itemWindmillSails,1,c), 'B', SimukraftReloadedItems.itemWindmillBase
-});
-}
-
-GameRegistry.addSmelting(SimukraftReloadedItems.itemGranulesGold, new ItemStack(Items.gold_ingot), 0.1f);
-GameRegistry.addSmelting(SimukraftReloadedItems.itemGranulesIron, new ItemStack(Items.iron_ingot), 0.1f);*/
 	}
 }

@@ -29,7 +29,6 @@ import ashjack.simukraftreloaded.blocks.BlockSpecialBlock;
 import ashjack.simukraftreloaded.blocks.functionality.FarmingBox;
 import ashjack.simukraftreloaded.blocks.functionality.FluidMilk;
 import ashjack.simukraftreloaded.blocks.functionality.MiningBox;
-import ashjack.simukraftreloaded.blocks.functionality.TileEntityWindmill;
 import ashjack.simukraftreloaded.client.ClientTickHandler;
 import ashjack.simukraftreloaded.client.Gui.GuiHandler;
 import ashjack.simukraftreloaded.client.Gui.other.GuiRunMod;
@@ -56,7 +55,6 @@ import ashjack.simukraftreloaded.core.registry.SimukraftReloadedTabs;
 import ashjack.simukraftreloaded.entity.EntityAlignBeam;
 import ashjack.simukraftreloaded.entity.EntityConBox;
 import ashjack.simukraftreloaded.entity.EntityFolk;
-import ashjack.simukraftreloaded.entity.EntityWindmill;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.folk.traits.Trait;
 import ashjack.simukraftreloaded.folk.traits.TraitBrave;
@@ -69,13 +67,8 @@ import ashjack.simukraftreloaded.folk.traits.TraitReligious;
 import ashjack.simukraftreloaded.folk.traits.TraitStrong;
 import ashjack.simukraftreloaded.folk.traits.TraitWorkaholic;
 import ashjack.simukraftreloaded.folk.traits.Traits;
-import ashjack.simukraftreloaded.items.ItemGranulesGold;
-import ashjack.simukraftreloaded.items.ItemGranulesIron;
 import ashjack.simukraftreloaded.items.ItemSUKDrink;
 import ashjack.simukraftreloaded.items.ItemSUKFood;
-import ashjack.simukraftreloaded.items.ItemWindmillBase;
-import ashjack.simukraftreloaded.items.ItemWindmillSails;
-import ashjack.simukraftreloaded.items.ItemWindmillVane;
 import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
 import ashjack.simukraftreloaded.packetsNEW.toClient.UpdateFolkPositionPacket;
 import ashjack.simukraftreloaded.packetsNEW.toServer.LoadBuildingPacket;
@@ -184,10 +177,6 @@ public class ModSimukraft
         EntityRegistry.registerGlobalEntityID(EntityConBox.class,
                 "ConBox", EntityRegistry.findGlobalUniqueEntityId());
         EntityRegistry.registerModEntity(EntityConBox.class, "ConBox", 2, this, 250, 2, true);
-        
-        EntityRegistry.registerGlobalEntityID(EntityWindmill.class,
-                "SUKWindmill", EntityRegistry.findGlobalUniqueEntityId());
-        EntityRegistry.registerModEntity(EntityWindmill.class,"SUKWindmill", 3, this, 250, 1, false);
         
         //Traits
         Traits.loadTraits();

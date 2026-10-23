@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import net.minecraft.block.material.Material;
 import java.io.Serializable;
 import java.util.ArrayList;
 
@@ -464,7 +465,7 @@ public class JobBuilder extends Job implements Serializable
                     }
                 }
 
-                if (blockId == SimukraftReloadedBlocks.livingBlock && theBuilding.type == "residential")
+                if (blockId == SimukraftReloadedBlocks.livingBlock && "residential".equals(theBuilding.type))
                 {
                     theBuilding.livingXYZ = new V3((double)(bx + xo), (double)(by + l),
                                                    (double)(bz + zo), theFolk.employedAt.theDimension);
@@ -530,7 +531,7 @@ public class JobBuilder extends Job implements Serializable
                 if (!alreadyPlaced)   // air block it first to clear dirt
                 {
                     // away
-                    if (currBlockId != null)
+                    if (currBlockId != null && currBlockId.getMaterial() != Material.air)
                     {
                         V3 blockToRemove = new V3(bx + xo, by + l, bz + zo);
                         constructorChests = inventoriesFindClosest(theFolk.employedAt, 5);

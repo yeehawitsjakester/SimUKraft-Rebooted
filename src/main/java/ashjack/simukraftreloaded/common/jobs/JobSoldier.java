@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.common.WorldUtil;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Random;
@@ -137,13 +138,13 @@ public class JobSoldier extends Job implements Serializable
             int zo = rand.nextInt(60) - 30;
             V3 wanderTo = new V3(theFolk.location.x + xo, theFolk.location.y - 1, theFolk.location.z + zo, theFolk.location.theDimension);
 
-            while (jobWorld.getBlock(wanderTo.x.intValue(), wanderTo.y.intValue(), wanderTo.z.intValue()) != null
-                    && wanderTo.y < 255)
-            {
-                wanderTo.y++;
-            }
+            int wy = WorldUtil.findStandableY(jobWorld, wanderTo.x.intValue(), wanderTo.y.intValue(), wanderTo.z.intValue(), 12);
 
-            theFolk.gotoXYZ(wanderTo, GotoMethod.WALK);
+            if (wy >= 0)
+            {
+                wanderTo.y = (double) wy;
+                theFolk.gotoXYZ(wanderTo, GotoMethod.WALK);
+            }
         }
 
         List list = jobWorld

@@ -35,7 +35,7 @@ public class GuiCityBox extends GuiScreen
     public GuiCityBox(V3 location, EntityPlayer thePlayer)
     {
         this.location = location.clone();
-        Building.loadAllBuildings(); //re-load the buildings client side
+        // No reload from disk: it replaced the live building list, losing unsaved tenants and orphaning Building references
         theBuilding = Building.getBuilding(location);
         playerWhoClickedIt = thePlayer;
     }
