@@ -381,35 +381,35 @@ public class GuiMarker extends GuiScreen
                             /*Light Blocks*/
                             /*else if (iD == Block.getIdFromBlock(SimukraftReloadedBlocks.lightBox) && meta == 0)
                             {
-                                letter = "¿";
+                                letter = "√Ä";
                             }
                             else if (iD == Block.getIdFromBlock(SimukraftReloadedBlocks.lightBox) && meta == 1)
                             {
-                                letter = "∆";
+                                letter = "√Ü";
                             }
                             else if (iD == Block.getIdFromBlock(SimukraftReloadedBlocks.lightBox) && meta == 2)
                             {
-                                letter = "«";
+                                letter = "√á";
                             }
                             else if (iD == Block.getIdFromBlock(SimukraftReloadedBlocks.lightBox) && meta == 3)
                             {
-                                letter = "»";
+                                letter = "√à";
                             }
                             else if (iD == Block.getIdFromBlock(SimukraftReloadedBlocks.lightBox) && meta == 4)
                             {
-                                letter = "Ã";
+                                letter = "√å";
                             }
                             else if (iD == Block.getIdFromBlock(SimukraftReloadedBlocks.lightBox) && meta == 5)
                             {
-                                letter = "–";
+                                letter = "√ê";
                             }
                             else if (iD == Block.getIdFromBlock(SimukraftReloadedBlocks.lightBox) && meta == 6)
                             {
-                                letter = "—";
+                                letter = "√ë";
                             }
                             else if (iD == Block.getIdFromBlock(SimukraftReloadedBlocks.lightBox) && meta == 7)
                             {
-                                letter = "“";
+                                letter = "√í";
                             }*/
                             else
                             {
