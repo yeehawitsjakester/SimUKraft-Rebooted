@@ -603,14 +603,24 @@ public class Relationship implements Serializable
                                     Building oldhome = folk1.getHome();
                                     Building newhome = folk2.getHome();
 
-                                    if (oldhome != null)
+                                    // folk1 moves in with folk2, or the other way round if only folk1's place has room
+                                    // (a single room or a hotel room can't take a partner)
+                                    FolkData mover = folk1;
+                                    if (newhome != null && !newhome.hasSpaceFor(1) && oldhome != null && oldhome.hasSpaceFor(1))
                                     {
-                                        oldhome.removeTennant(folk1.name);
+                                        mover = folk2;
+                                        Building swap = oldhome;
+                                        oldhome = newhome;
+                                        newhome = swap;
                                     }
 
-                                    if (newhome != null)
+                                    if (newhome != null && newhome.hasSpaceFor(1))
                                     {
-                                        newhome.tennants.add(folk1.name);
+                                        if (oldhome != null)
+                                        {
+                                            oldhome.removeTennant(mover.name);
+                                        }
+                                        newhome.tennants.add(mover.name);
                                     }
 
                                     Building.saveAllBuildings();
@@ -923,6 +933,11 @@ public class Relationship implements Serializable
         {
         	SimukraftReloaded.log.warning("Relationship: meddleWithRelationship() with same folk for both");
             return;
+        }
+
+        if (folk1.isVisitor || folk2.isVisitor)
+        {
+            return; // passing through town
         }
 
         Relationship rel = Relationship.getRelationshipBetween(folk1, folk2);

@@ -136,6 +136,8 @@ public class FolkData implements Serializable
     public Building theBuilding = null;
     public TerraformerType terraformerType = null;
     public int terraformerRadius = 1;
+    /** a hotel guest from out of town: no job, no relationships, leaves when they check out */
+    public boolean isVisitor = false;
 
     /////// TRANSIENT VARIABLES NOT STORED WHEN SAVING THIS FOLK
     /** the folk's own inventory for carrying stuff around the world and dropping off stuff */
@@ -213,6 +215,11 @@ public class FolkData implements Serializable
     /** create a new folk with random name, skin etc and drop into arrayList */
     public FolkData(World theWorld)
     {
+        this(theWorld, true);
+    }
+
+    public FolkData(World theWorld, boolean announce)
+    {
         Random rand = new Random();
         this.gender = rand.nextInt(2);
         this.name = generateName(gender, false, "");
@@ -245,7 +252,58 @@ public class FolkData implements Serializable
 
         respawnEntity(theWorld);
         SimukraftReloaded.theFolks.add(this);
-        SimukraftReloaded.sendChat(this.name + " has just wandered into the area.");
+        if (announce)
+        {
+            SimukraftReloaded.sendChat(this.name + " has just wandered into the area.");
+        }
+    }
+
+    /** a visitor from out of town arrives to stay in a hotel room */
+    public static FolkData createVisitor(World world, Building room, int nights)
+    {
+        FolkData visitor = new FolkData(world, false);
+        if (visitor.location == null)
+        {
+            return null;
+        }
+        visitor.isVisitor = true;
+        room.tennants.add(visitor.name);
+        room.stayNightsLeft = nights;
+        room.saveThisBuilding();
+
+        visitor.action = FolkAction.GOINGHOME;
+        visitor.actionArrival = FolkAction.STAYINGHOME;
+        visitor.statusText = "Checking in";
+        visitor.gotoXYZ(room.livingXYZ != null ? room.livingXYZ : room.primaryXYZ, null);
+        visitor.saveThisFolk();
+        SimukraftReloaded.sendChat(visitor.name + " is visiting and has checked into " + room.displayNameWithoutPK
+                + " for " + nights + (nights == 1 ? " night" : " nights"));
+        return visitor;
+    }
+
+    /** takes this folk out of the game completely: home, relationships, save file and entity */
+    public void removeFromWorld()
+    {
+        evictThem();
+
+        for (int q = SimukraftReloaded.theRelationships.size() - 1; q >= 0; q--)
+        {
+            Relationship rel = SimukraftReloaded.theRelationships.get(q);
+            if (rel.folk1.name.contentEquals(this.name) || rel.folk2.name.contentEquals(this.name))
+            {
+                String fn = rel.folk1.name.replaceAll(" ", "") + rel.folk2.name.replaceAll(" ", "");
+                new File(SimukraftReloaded.getSavesDataFolder() + "Relationships" + File.separator + fn + ".sk2").delete();
+                SimukraftReloaded.theRelationships.remove(q);
+            }
+        }
+
+        new File(SimukraftReloaded.getSavesDataFolder() + "folks" + File.separator + this.name + ".sk2").delete();
+        SimukraftReloaded.theFolks.remove(this);
+
+        if (this.theEntity != null && !this.theEntity.isDead)
+        {
+            this.theEntity.setDead();
+        }
     }
     
     public FolkData(World theWorld, String theName)
@@ -1066,36 +1124,52 @@ public class FolkData implements Serializable
     /** runs this once a second ONLY if they are homeless */
     private void getHomeForHomeless()
     {
-        if (this.action == FolkAction.WANDER)
+        if (this.action == FolkAction.WANDER && !this.isVisitor)
         {
-            for (int b = 0; b < SimukraftReloaded.theBuildings.size(); b++)
+            // permanent homes (houses, apartments) first; a hotel room only while none are free
+            Building home = null;
+            for (Building building : SimukraftReloaded.theBuildings)
             {
-                Building building = (Building) SimukraftReloaded.theBuildings.get(b);
-
-                if (building.tennants.size() == 0 && building.buildingComplete == true
-                        && building.type.contentEquals("residential"))
+                if (building.isPermanentHome() && building.tennants.size() == 0 && building.hasSpaceFor(1))
                 {
-                    building.tennants.add(this.name);
-                    this.action = FolkAction.GOINGHOME;
-                    this.actionArrival = FolkAction.STAYINGHOME;
-
-                    if (building.livingXYZ != null)
-                    {
-                        gotoXYZ(building.livingXYZ, null);
-                    }
-                    else
-                    {
-                        gotoXYZ(building.primaryXYZ, null);
-                    }
-
-                   //SimukraftReloaded.states.population++;
-                    SimukraftReloaded.states.saveStates();
-                    SimukraftReloaded.sendChat(this.name + " is moving into their " + building.displayNameWithoutPK);
-                    statusText = "Moved into my " + building.displayNameWithoutPK;
-                    Building.saveAllBuildings();
+                    home = building;
                     break;
                 }
             }
+            if (home == null)
+            {
+                for (Building building : SimukraftReloaded.theBuildings)
+                {
+                    if (building.isHotel() && building.buildingComplete && building.hasSpaceFor(1))
+                    {
+                        home = building;
+                        home.stayNightsLeft = 3;
+                        break;
+                    }
+                }
+            }
+            if (home == null)
+            {
+                return;
+            }
+
+            home.tennants.add(this.name);
+            this.action = FolkAction.GOINGHOME;
+            this.actionArrival = FolkAction.STAYINGHOME;
+            gotoXYZ(home.livingXYZ != null ? home.livingXYZ : home.primaryXYZ, null);
+
+            SimukraftReloaded.states.saveStates();
+            if (home.isHotel())
+            {
+                SimukraftReloaded.sendChat(this.name + " has checked into " + home.displayNameWithoutPK + " until a home is free");
+                statusText = "Staying at " + home.displayNameWithoutPK;
+            }
+            else
+            {
+                SimukraftReloaded.sendChat(this.name + " is moving into their " + home.displayNameWithoutPK);
+                statusText = "Moved into my " + home.displayNameWithoutPK;
+            }
+            home.saveThisBuilding();
         }
     }
 
@@ -1863,6 +1937,8 @@ public class FolkData implements Serializable
 	        	    				if (!value.contentEquals("null")) {
 	        	    					folkd.terraformerType=TerraformerType.valueOf(value);
 	        	    				}
+	        	    			}else if (name.contentEquals("visitor")) {
+	        	    				folkd.isVisitor=Boolean.parseBoolean(value);
 	        	    			}else if (name.contentEquals("terraformradius")) {
 	        	    				folkd.terraformerRadius=Integer.parseInt(value);
 	        	    			}
@@ -1951,6 +2027,9 @@ public class FolkData implements Serializable
     			strings.add("terraformtype|"+this.terraformerType.name());
     		}
     		strings.add("terraformradius|"+this.terraformerRadius);
+    		if (this.isVisitor) {
+    			strings.add("visitor|true");
+    		}
     		
     		if (!this.name.contentEquals("")) {
     			SimukraftReloaded.saveSK2(folder+this.name+".sk2", strings);
@@ -1989,12 +2068,26 @@ public class FolkData implements Serializable
     {
         ArrayList<FolkData> fds = FolkData.getFolkHomeless();
 
-        if (fds.size() == 0 && SimukraftReloaded.theFolks.size() < SimukraftReloadedConfig.configPopulationLimit)
+        if (fds.size() == 0 && getResidentCount() < SimukraftReloadedConfig.configPopulationLimit)
         {
             new FolkData(world);
         }
     }
     
+    /** population without hotel visitors */
+    public static int getResidentCount()
+    {
+        int count = 0;
+        for (FolkData folk : SimukraftReloaded.theFolks)
+        {
+            if (!folk.isVisitor)
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
     public static void forceGenerateNewFolk(World world)
     {
         FolkData folk = new FolkData(world);
@@ -2101,7 +2194,7 @@ public class FolkData implements Serializable
             }
             else
             {
-                if (folk.employedAt == null && folk.age > 17 && folk.pregnancyStage == 0.0f)
+                if (folk.employedAt == null && folk.age > 17 && folk.pregnancyStage == 0.0f && !folk.isVisitor)
                 {
                     f.add(folk);
                 }
@@ -2120,7 +2213,7 @@ public class FolkData implements Serializable
         {
             FolkData folk = (FolkData) SimukraftReloaded.theFolks.get(x);
 
-            if (folk.getHome() == null)
+            if (folk.getHome() == null && !folk.isVisitor)
             {
                 f.add(folk);
             }
@@ -2301,63 +2394,8 @@ public class FolkData implements Serializable
         SimukraftReloaded.sendChat(this.name
                               + oldJob + " has just died! " + deathBy + only);
         this.action = FolkAction.WANDER;
-        int i = 0;
-
-        //find the folk in the array
-        for (int fn = 0; fn < SimukraftReloaded.theFolks.size(); fn++)
-        {
-            FolkData fo = SimukraftReloaded.theFolks.get(fn);
-
-            if (fo.name.contentEquals(this.name))
-            {
-                i = fn;
-                break;
-            }
-        }
-
-        evictThem();
-
-        //if partnered, un-partner them
-        try
-        {
-            //remove all their relationships
-            for (int q = 0; q < SimukraftReloaded.theRelationships.size(); q++)
-            {
-                try
-                {
-                    Relationship rel = SimukraftReloaded.theRelationships.get(q);
-
-                    if (rel.folk1.name.contentEquals(this.name) || rel.folk2.name.contentEquals(this.name))
-                    {
-                        String fn = rel.folk1.name.replaceAll(" ", "") + rel.folk2.name.replaceAll(" ", "");
-                        File f = new File(SimukraftReloaded.getSavesDataFolder() + "Relationships" + File.separator
-                                          + fn + ".sk2");
-                        f.delete();
-                        SimukraftReloaded.theRelationships.remove(q);
-                    }
-                }
-                catch (Exception e)
-                {
-                    e.printStackTrace();
-                }
-            }
-
-            File f = new File(SimukraftReloaded.getSavesDataFolder() + "folks" + File.separator + this.name + ".sk2");
-            f.delete();
-
-            if (i >= 0)
-            {
-                if (i < SimukraftReloaded.theFolks.size())
-                {
-                	SimukraftReloaded.theFolks.remove(i);
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            SimukraftReloaded.log.warning("FolkData: eventDied() "+e.toString());
-
-        }
+        // the old cleanup skipped relationships after each removal and removed folk #0 if this one wasn't found
+        removeFromWorld();
     }
 
     /** called when they die, also when they turn 18 and get evicted from their parents house */

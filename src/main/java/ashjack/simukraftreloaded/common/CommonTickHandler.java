@@ -96,6 +96,7 @@ public class CommonTickHandler
     	{
     		return;
     	}
+    	ServerTasks.runPending();
     	if(ticks == 200)
     	{
     		onTickInGame();

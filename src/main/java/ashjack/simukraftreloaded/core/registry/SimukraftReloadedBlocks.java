@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.core.registry;
 
+import ashjack.simukraftreloaded.blocks.BlockRoomBox;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.common.registry.LanguageRegistry;
 import ashjack.simukraftreloaded.blocks.BlockCheeseBlock;
@@ -26,6 +27,7 @@ public class SimukraftReloadedBlocks
 {
 	
 	public static Block livingBlock;
+	public static Block roomBox;
     public static Block buildingConstructor;
     public static Block controlBox;
     public static Block marker;
@@ -65,6 +67,7 @@ public class SimukraftReloadedBlocks
         miningBox = new BlockMiningBox();
         farmingBox = new BlockFarmingBox();
         lightBox = new BlockLightBox();
+        roomBox = new BlockRoomBox();
         
         //Pretty Blocks
         blockCompositeBrick = new BlockCompositeBrick();
@@ -93,6 +96,7 @@ public class SimukraftReloadedBlocks
         GameRegistry.registerBlock(blockFluidMilk,"fluidMilk");
         GameRegistry.registerBlock(lightBox, ItemBlockLightBox.class, "SUKlight");
         GameRegistry.registerBlock(specialBlock, "SUKspecial");
+        GameRegistry.registerBlock(roomBox, "SUKroombox");
         //GameRegistry.registerBlock(pathConstructor,"SUKpathConstructor");
         
 	}

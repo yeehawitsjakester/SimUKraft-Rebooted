@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.core.registry;
 
+import net.minecraftforge.oredict.ShapedOreRecipe;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
@@ -16,6 +17,15 @@ public class SimukraftReloadedRecipes
                     'P', Blocks.planks,
                     'W', Blocks.crafting_table
                 });
+// Room Box: a bed surrounded by planks (any wood)
+GameRegistry.addRecipe(new ShapedOreRecipe(new ItemStack(SimukraftReloadedBlocks.roomBox, 1), new Object[]
+{
+" P ",
+"PBP",
+" P ",
+'P', "plankWood", 'B', Items.bed
+}));
+
 GameRegistry.addRecipe(new ItemStack(SimukraftReloadedBlocks.marker, 3), new Object[]
                 {
                     "G", "S",

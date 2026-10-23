@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.packetsNEW;
 
+import ashjack.simukraftreloaded.packetsNEW.toServer.RoomBoxPacket;
 import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.packetsNEW.toClient.UpdateFolkPositionPacket;
 import ashjack.simukraftreloaded.packetsNEW.toServer.DemolishBuildingPacket;
@@ -21,6 +22,7 @@ public class PacketHandler
 	net.registerMessage(LoadBuildingPacket.Handler.class, LoadBuildingPacket.class, 1, Side.SERVER); 
 	net.registerMessage(DemolishBuildingPacket.Handler.class, DemolishBuildingPacket.class, 2, Side.SERVER);
 	net.registerMessage(GenerateFolkPacket.Handler.class, GenerateFolkPacket.class, 3, Side.SERVER);
+	net.registerMessage(RoomBoxPacket.Handler.class, RoomBoxPacket.class, 4, Side.SERVER);
 	
   }
   

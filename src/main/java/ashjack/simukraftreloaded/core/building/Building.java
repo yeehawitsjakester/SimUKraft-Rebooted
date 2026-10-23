@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.core.building;
 
+import java.util.Random;
+import ashjack.simukraftreloaded.core.registry.SimukraftReloadedConfig;
+import ashjack.simukraftreloaded.common.WorldUtil;
 import ashjack.simukraftreloaded.folk.FolkData.FolkAction;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
@@ -75,6 +78,18 @@ public class Building implements Serializable
     private transient static ArrayList<Building> buildingsInd = new ArrayList<Building>();
     private transient static ArrayList<Building> buildingsOth = new ArrayList<Building>();
     private transient static ArrayList<Building> buildingsSpec = new ArrayList<Building>();
+
+    /** null for a normal building; ROOM_APARTMENT or ROOM_HOTEL when this "building" is a single Room Box unit */
+    public String roomMode = null;
+    /** how many folks the room is for: 1 single, 2 couple, 4 family */
+    public int roomSize = 2;
+    /** hotel rooms: nights left for the current guests */
+    public int stayNightsLeft = 0;
+
+    public static final String ROOM_APARTMENT = "apartment";
+    public static final String ROOM_HOTEL = "hotel";
+    public static final float APARTMENT_RENT_PER_FOLK = 0.75f;
+    public static final float HOTEL_RATE_PER_FOLK = 1.5f;
 
     /** special blocks inside the building, used by the mod */
     public ArrayList<V3> blockSpecial = new ArrayList<V3>();
@@ -880,6 +895,13 @@ public class Building implements Serializable
         strings.add("builddir|" + this.buildDirection);
         strings.add("lmarker|" + (this.lumbermillMarker == null ? "null" : this.lumbermillMarker.toString()));
         strings.add("blocksinbuilding|" + this.blocksInBuilding);
+        if (this.roomMode != null)
+        {
+            strings.add("roommode|" + this.roomMode);
+            strings.add("roomsize|" + this.roomSize);
+            strings.add("staynights|" + this.stayNightsLeft);
+            strings.add("rent|" + this.rent);
+        }
 
         StringBuilder temp = new StringBuilder("tennants|");
         for (String tennant : new ArrayList<String>(this.tennants))
@@ -929,6 +951,147 @@ public class Building implements Serializable
         }
     }
 
+    public boolean isRoom()
+    {
+        return roomMode != null;
+    }
+
+    public boolean isHotel()
+    {
+        return ROOM_HOTEL.equals(roomMode);
+    }
+
+    /** a permanent home: a house, or an apartment room */
+    public boolean isPermanentHome()
+    {
+        return "residential".equals(type) && buildingComplete && !isHotel();
+    }
+
+    /** whether count more folks can move in. Houses never limited this; rooms go by their size, hotels take no extra partners */
+    public boolean hasSpaceFor(int count)
+    {
+        if (!isRoom())
+        {
+            return true;
+        }
+        if (isHotel())
+        {
+            return tennants.isEmpty() && count <= roomSize;
+        }
+        return tennants.size() + count <= roomSize;
+    }
+
+    /** what the room charges per day: rent for apartments, a nightly rate for hotel rooms */
+    public void updateRoomRent()
+    {
+        if (isRoom())
+        {
+            rent = roomSize * (isHotel() ? HOTEL_RATE_PER_FOLK : APARTMENT_RENT_PER_FOLK);
+        }
+    }
+
+    public static String roomSizeName(int size)
+    {
+        return size <= 1 ? "Single" : size == 2 ? "Couple" : "Family";
+    }
+
+    /** creates the building record for a Room Box placed in the world */
+    public static Building createRoom(World world, int x, int y, int z)
+    {
+        V3 box = new V3((double) x, (double) y, (double) z, world.provider.dimensionId);
+        Building existing = getBuilding(box);
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        Building room = new Building("Apartment", "residential", box, findRoomLivingSpot(world, x, y, z), true);
+        room.roomMode = ROOM_APARTMENT;
+        room.roomSize = 2;
+        room.displayNameWithoutPK = room.displayName;
+        room.author = "";
+        room.updateRoomRent();
+        SimukraftReloaded.theBuildings.add(room);
+        room.saveThisBuilding();
+        return room;
+    }
+
+    /** where folks stand when "at home" in a room: a free spot beside the box, or on top of it */
+    private static V3 findRoomLivingSpot(World world, int x, int y, int z)
+    {
+        int[][] around = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        for (int[] d : around)
+        {
+            for (int dy = 0; dy >= -1; dy--)
+            {
+                if (WorldUtil.canStandAt(world, x + d[0], y + dy, z + d[1]))
+                {
+                    return new V3(x + d[0] + 0.5d, (double) (y + dy), z + d[1] + 0.5d, world.provider.dimensionId);
+                }
+            }
+        }
+        return new V3(x + 0.5d, (double) (y + 1), z + 0.5d, world.provider.dimensionId);
+    }
+
+    /**
+     * Once a day (morning): hotel guests use up a night and check out when their stay is over, and empty hotel
+     * rooms may get visitors from out of town. Hotel income is collected with the rent in evolveFolks().
+     */
+    public static void dailyRoomUpdate(World world)
+    {
+        Random rand = new Random();
+
+        for (Building room : new ArrayList<Building>(SimukraftReloaded.theBuildings))
+        {
+            if (!room.isHotel())
+            {
+                continue;
+            }
+
+            if (!room.tennants.isEmpty())
+            {
+                room.stayNightsLeft--;
+                if (room.stayNightsLeft <= 0)
+                {
+                    room.checkOut();
+                }
+            }
+            else if (rand.nextInt(100) < SimukraftReloadedConfig.configHotelVisitorChance)
+            {
+                FolkData.createVisitor(world, room, rand.nextInt(4) + 1);
+            }
+        }
+    }
+
+    /** ends a hotel stay: visitors leave town, locals go looking for a permanent home */
+    public void checkOut()
+    {
+        for (String name : new ArrayList<String>(tennants))
+        {
+            FolkData folk = FolkData.getFolkByName(name);
+            removeTennant(name);
+            if (folk == null)
+            {
+                continue;
+            }
+            if (folk.isVisitor)
+            {
+                SimukraftReloaded.sendChat(folk.name + " checked out of " + displayNameWithoutPK + " and left town");
+                folk.removeFromWorld();
+            }
+            else
+            {
+                SimukraftReloaded.sendChat(folk.name + " checked out of " + displayNameWithoutPK);
+                folk.action = FolkAction.WANDER;
+                folk.actionArrival = null;
+                folk.stayPut = false;
+                folk.statusText = "Looking for a home";
+            }
+        }
+        stayNightsLeft = 0;
+        saveThisBuilding();
+    }
+
     /**
      * Call when a building no longer exists in the world (control box broken, exploded or demolished).
      * Fires its staff, turns its tenants out to find a new home, and forgets it, in memory and on disk.
@@ -952,7 +1115,12 @@ public class Building implements Serializable
                 folk.selfFire();
             }
 
-            if (building.tennants.contains(folk.name))
+            if (building.tennants.contains(folk.name) && folk.isVisitor)
+            {
+                SimukraftReloaded.sendChat(folk.name + " has left town - their hotel room is gone");
+                folk.removeFromWorld();
+            }
+            else if (building.tennants.contains(folk.name))
             {
                 if (folk.action == FolkAction.ATHOME || folk.action == FolkAction.GOINGHOME || folk.action == FolkAction.STAYINGHOME)
                 {
@@ -995,7 +1163,8 @@ public class Building implements Serializable
             if (buildingWorld != null && buildingWorld.blockExists(x, y, z))
             {
                 Block id = buildingWorld.getBlock(x, y, z);
-                if (id != SimukraftReloadedBlocks.controlBox && id != SimukraftReloadedBlocks.buildingConstructor)
+                if (id != SimukraftReloadedBlocks.controlBox && id != SimukraftReloadedBlocks.buildingConstructor
+                        && id != SimukraftReloadedBlocks.roomBox)
                 {
                     gone.add(building);   //no control block, building destroyed in world
                     continue;
@@ -1108,6 +1277,14 @@ public class Building implements Serializable
 	        					}
 	        				} else if (name.contentEquals("blocksinbuilding")) {
 	        					build.blocksInBuilding=Integer.parseInt(value);
+	        				} else if (name.contentEquals("roommode")) {
+	        					build.roomMode=value;
+	        				} else if (name.contentEquals("roomsize")) {
+	        					build.roomSize=Integer.parseInt(value);
+	        				} else if (name.contentEquals("staynights")) {
+	        					build.stayNightsLeft=Integer.parseInt(value);
+	        				} else if (name.contentEquals("rent")) {
+	        					build.rent=Float.parseFloat(value);
 	        				} else if (name.contentEquals("tennants")) {
 	        					if (value.trim().contentEquals("")) {
 	        						build.tennants.clear();
@@ -1146,7 +1323,11 @@ public class Building implements Serializable
 	            		}
 	            	}
 	            	
-	            	build.loadStructure();  //fills in several more fields about this building
+	            	if (build.roomMode == null) {
+	            		build.loadStructure();  //fills in several more fields about this building
+	            	} else {
+	            		build.displayNameWithoutPK = build.displayName;
+	            	}
 	            	SimukraftReloaded.theBuildings.add(build);
 	            }
 	        }

@@ -19,6 +19,7 @@ public class SimukraftReloadedConfig
     public static int configMaterialReminderInterval = 3;
     public static int configHUDoffset = 0;
     public static boolean configStopRain = false;
+    public static int configHotelVisitorChance = 40;
     public static boolean configFolkTalkingEnglish = true;
     public static String[] configMaleNames;
     public static String[] configFemaleNames;
@@ -95,6 +96,10 @@ public class SimukraftReloadedConfig
             configStopRain = p.getBoolean(false);
             p.comment = "This is just a personal mod :-) If you too find it rains ALL THE TIME in your world and it annoys you/causes lag, set this to true and you'll only have brief showers instead";
        
+            p = config.get("Settings", "HotelVisitorChance", 40);
+            configHotelVisitorChance = Math.max(0, Math.min(100, p.getInt(40)));
+            p.comment = "Chance (0-100) each morning that an empty hotel room gets a visitor from out of town for 1-4 nights. 0 turns visitors off.";
+
             ///////////// Random name generator stuff
             p= config.get("Names", "MaleNames", "Aaron, Adam, Alan, Albatrude, Alexander, Amaranth, Andrew, Angelo, Baldric, Bartholomew, Basher, Beau, Ben, Benie, Bennie, Bill, Blaize, Bob, Boots, Brad, Bradley, Breaker, Brian, Bruce, Butler, Cable, Caeser, Carlos, Carrington, Cassius, Clarence, CrazyDave, Dan, Darren, Darth, David, Derek, Dorian, Dougal, Drake, Drakkar, Draven, Earl, Ed, Edward, Fane, Fark, Fernando, Frank, Frankie, Fred, Gabe, Gary, Ged, Gerry, Glynne, Godfrey, Grendel, Grunter, Happy, Harry, Hercules, Horatio, Howard, Ike, Isaac, Jack, James, Jay, Jean-Luc, Jens, Jeremy, Jerry, Jessie, Jesus, Jim, Jimmy, Joe, John, Jose, Jose, Joseph, Juan, Justin, Justin, Kellam, Ken, Kevin, Knuckles, Lars, Lazarus, Lewis, Loki, Lorenzo, Louis,Lumpy, Lynk, Malcolm, Markus, Martin, Maximus, Michael,Mozart, Noire, Norman, Notch, Obsidian, Olaf, Oswaldo, Oxnard, Ozzy, Perkin, Pete, Philip, Pumpkin, Ralph, Randy, Red, Reks, Rick, Rogue, Romeo, Roy,Samuel, Schmitty, Scott, Sean, Seifer, Seth, Seymour, Sheldon, Sid, Simon, Slash, Spud, Steele, Stephen, Steve, Steven, Storm, Stryker, Tazer, Thunder, Tidus, Todd, Tom, Uther, Valen, Vance, Velderveer, Victor, Virion, Wayne, Wendle, William, Willie, Wolfgang, Wyatt, Xensor, Yoda, Zac, Zander, Zelroth, Zero, Zorro");
             String temp= p.getString();

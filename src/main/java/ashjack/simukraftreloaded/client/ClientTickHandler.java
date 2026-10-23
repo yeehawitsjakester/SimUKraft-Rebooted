@@ -145,12 +145,12 @@ public class ClientTickHandler
                     {
                     	
                         hud.drawString(mc.fontRenderer, worldname + " (" + SimukraftReloaded.getDayOfWeek() +
-                                       ") - Population: " + SimukraftReloaded.theFolks.size() , hud.width / 2, 2 + HUDoffset, 0xffffff);
+                                       ") - Population: " + FolkData.getResidentCount() , hud.width / 2, 2 + HUDoffset, 0xffffff);
                     }
                     else
                     {
                         hud.drawString(mc.fontRenderer, worldname + " (" + SimukraftReloaded.getDayOfWeek() +
-                                       ") - Population: " + SimukraftReloaded.theFolks.size() +
+                                       ") - Population: " + FolkData.getResidentCount() +
                                        "   Sim-U-credits: " + SimukraftReloaded.displayMoney(SimukraftReloaded.states.credits), hud.width / 2, 2 + HUDoffset, 0xffffff);
                     }
                 }

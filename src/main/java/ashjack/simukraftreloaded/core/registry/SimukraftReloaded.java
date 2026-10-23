@@ -544,6 +544,7 @@ public class SimukraftReloaded
         // collect rent - this used to run on a background thread that slept 3s and then changed credits from it
         {
                 float totalRent = 0f;
+                float totalHotel = 0f;
                 float totalCorpTax = 0f;
 
                 if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
@@ -559,9 +560,16 @@ public class SimukraftReloaded
                                 building.rent = 1f;
                             }
 
-                            log.info("Building rent for " + building.displayNameWithoutPK + ": " + building.rent + "(" +
+                            log.fine("Building rent for " + building.displayNameWithoutPK + ": " + building.rent + "(" +
                                 building.blocksInBuilding + ")");
-                            totalRent += building.rent;
+                            if (building.isHotel())
+                            {
+                                totalHotel += building.rent;
+                            }
+                            else
+                            {
+                                totalRent += building.rent;
+                            }
                         }
                         
                         /*if (building.type.contentEquals("commercial") && FolkData.getFolkByEmployedAt(building.primaryXYZ) != null)
@@ -578,11 +586,15 @@ public class SimukraftReloaded
                     }
                 }
 
-                if (totalRent > 0f)
+                if (totalRent > 0f || totalHotel > 0f)
                 {
                     sendChat("Collected " + displayMoney(totalRent) + " Sim-u-credits in rent today.");
+                    if (totalHotel > 0f)
+                    {
+                        sendChat("Hotel guests paid " + displayMoney(totalHotel) + " Sim-u-credits last night.");
+                    }
                     sendChat("Collected " + displayMoney(totalCorpTax) + " Sim-u-credits in corporation tax today.");
-                    states.credits += totalRent;
+                    states.credits += totalRent + totalHotel;
                     states.credits += totalCorpTax;
                     for (Object o : MinecraftServer.getServer().getConfigurationManager().playerEntityList)
                     {
@@ -595,6 +607,9 @@ public class SimukraftReloaded
                     sendChat("No rent collected today, you should hire a folk to build a residential house.");
                 }
         }
+
+        // hotel stays end and new visitors arrive (after rent, so last night is paid for)
+        Building.dailyRoomUpdate(MinecraftServer.getServer().worldServerForDimension(0));
         
 
         for (int f = 0; f < theFolks.size(); f++)
