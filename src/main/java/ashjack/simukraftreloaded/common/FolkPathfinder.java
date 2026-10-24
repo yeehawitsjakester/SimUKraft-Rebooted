@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.common;
 
+import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
+import ashjack.simukraftreloaded.entity.EntityFolk;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.PriorityQueue;
@@ -60,6 +62,9 @@ public final class FolkPathfinder
     public static PathEntity findPath(Entity entity, int tx, int ty, int tz)
     {
         World world = entity.worldObj;
+        // only miners go into mine pits; everyone else keeps a block back from the rim
+        mines = isMiner(entity) ? new ArrayList<int[]>() : MineSafety.areas();
+        dim = entity.dimension;
         int sx = MathHelper.floor_double(entity.posX);
         int sy = MathHelper.floor_double(entity.posY + 0.1);
         int sz = MathHelper.floor_double(entity.posZ);
@@ -169,10 +174,24 @@ public final class FolkPathfinder
         return Integer.MIN_VALUE;
     }
 
+    /** mines this search keeps out of (empty for miners); the server thread is the only caller */
+    private static ArrayList<int[]> mines = new ArrayList<int[]>();
+    private static int dim;
+
+    private static boolean isMiner(Entity entity)
+    {
+        return entity instanceof EntityFolk && ((EntityFolk) entity).theData != null
+                && ((EntityFolk) entity).theData.vocation == Vocation.MINER;
+    }
+
     /** room for feet and head, and ground to stand on */
     private static boolean canStand(World world, int x, int y, int z)
     {
         if (y < 1 || y > 254 || !isOpen(world, x, y, z) || !isOpen(world, x, y + 1, z))
+        {
+            return false;
+        }
+        if (!mines.isEmpty() && MineSafety.inMine(mines, dim, x, y, z, 1))
         {
             return false;
         }

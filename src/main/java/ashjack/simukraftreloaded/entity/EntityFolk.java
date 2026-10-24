@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.entity;
 
+import ashjack.simukraftreloaded.common.MineSafety;
 import ashjack.simukraftreloaded.client.ClientGuiOpener;
 import net.minecraft.nbt.NBTTagCompound;
 import java.util.Collections;
@@ -699,7 +700,19 @@ public class EntityFolk extends EntityCreature implements INpc {
 
 	@Override
 	public boolean canBePushed() {
-		return true;
+		// nobody gets shoved over the rim of a mine (or about inside one)
+		return worldObj.isRemote || !MineSafety.inMine(dimension, posX, posY, posZ, 2);
+	}
+
+	@Override
+	protected void fall(float distance) {
+		// miners wear a harness, and anyone who ends up in a mine pit lands safely
+		if (!worldObj.isRemote && theData != null
+				&& (theData.vocation == Vocation.MINER || MineSafety.inMine(dimension, posX, posY, posZ, 1))) {
+			fallDistance = 0;
+			return;
+		}
+		super.fall(distance);
 	}
 
 	@Override

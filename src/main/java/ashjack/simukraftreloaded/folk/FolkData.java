@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.folk;
 
+import ashjack.simukraftreloaded.common.MineSafety;
 import net.minecraft.nbt.NBTSizeTracker;
 import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTTagCompound;
@@ -779,7 +780,8 @@ public class FolkData implements Serializable
                     // pick a spot on the ground near the target; skip this wander if there isn't one (or it isn't loaded)
                     int wy = WorldUtil.findStandableY(world, wanderTo.x.intValue(), wanderTo.y.intValue(), wanderTo.z.intValue(), 12);
 
-                    if (wy >= 0)
+                    // never wander into (or to the rim of) a mine pit
+                    if (wy >= 0 && !MineSafety.inMine(location.theDimension, wanderTo.x, wy, wanderTo.z, 2))
                     {
                         wanderTo.y = (double) wy;
                         SimukraftReloaded.log.fine("FolkData:onUpdate() WANDER COMMAND FOR " + this.name + " to " + wanderTo.toString());
@@ -2424,7 +2426,9 @@ public class FolkData implements Serializable
     public void eventDied(DamageSource d)
     {
     	Side side = cpw.mods.fml.common.FMLCommonHandler.instance().getEffectiveSide();
-    	SimukraftReloaded.log.info("eventDied in FolkData fired on "+side.toString()+" side");
+    	SimukraftReloaded.log.info("FolkData: " + this.name + " (" + this.vocation + ") died of " + (d == null ? "?" : d.getDamageType())
+    			+ " at " + (theEntity != null ? (int) theEntity.posX + "," + (int) theEntity.posY + "," + (int) theEntity.posZ : String.valueOf(location))
+    			+ " (" + side + " side)");
     	
     	String oldJob = "";
 
