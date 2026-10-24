@@ -1462,6 +1462,10 @@ public class Building implements Serializable
     {
     	
     	File f = new File(SimukraftReloaded.getSimukraftFolder() + "/buildings/" + type);
+    	if (f.list() == null)
+    	{
+    		return; // no folder for this type (e.g. nobody has made a "special" building)
+    	}
 
         for (int i = 0; i < f.list().length; i++)
         {

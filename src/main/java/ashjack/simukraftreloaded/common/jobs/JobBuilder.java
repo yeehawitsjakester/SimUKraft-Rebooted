@@ -182,6 +182,14 @@ public class JobBuilder extends Job implements Serializable
 
     private void stageBlueprint()
     {
+        if (theFolk.theBuilding == null)
+        {
+            Building pending = Building.getBuildingByConBox(theFolk.employedAt);
+            if (pending != null && !pending.buildingComplete)
+            {
+                theFolk.theBuilding = pending;
+            }
+        }
         theBuilding = theFolk.theBuilding;
 
         if (theBuilding == null)

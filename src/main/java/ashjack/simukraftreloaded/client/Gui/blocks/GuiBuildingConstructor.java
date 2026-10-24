@@ -150,7 +150,7 @@ public class GuiBuildingConstructor extends GuiScreen
             }
 
             drawCenteredString(fontRendererObj, "Current status: " + s , width / 2, 30, 0xaaffff);
-            //drawCenteredString(fontRendererObj, "Building type: " + t , width / 2, 40, 0xaaffff);
+            drawCenteredString(fontRendererObj, "Building: " + t , width / 2, 40, 0xaaffff);
 
             if (currentPage == 0)
             {

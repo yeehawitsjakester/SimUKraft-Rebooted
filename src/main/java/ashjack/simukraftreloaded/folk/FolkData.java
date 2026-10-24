@@ -1504,7 +1504,9 @@ public class FolkData implements Serializable
     /** fire this folk, resets lots of values */
     public void selfFire()
     {
-        SimukraftReloaded.log.info("FolkData: selfFire() " + this.name);
+        StackTraceElement caller = Thread.currentThread().getStackTrace()[2];
+        SimukraftReloaded.log.info("FolkData: " + this.name + " quit their job as " + this.vocation + " at " + this.employedAt
+                + " (from " + caller.getClassName().substring(caller.getClassName().lastIndexOf('.') + 1) + ":" + caller.getLineNumber() + ")");
         isWorking = false;
 
         if (this.inventory.size() > 0)

@@ -48,6 +48,7 @@ public final class ServerActions
             SimukraftReloaded.log.warning("ServerActions: unknown action '" + name + "' from " + player.getCommandSenderName());
             return;
         }
+        SimukraftReloaded.log.info("ServerActions: " + player.getCommandSenderName() + " -> " + name + " " + data);
         try
         {
             action.run(player, data);

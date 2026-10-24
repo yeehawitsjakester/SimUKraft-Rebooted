@@ -2,6 +2,7 @@ package ashjack.simukraftreloaded.network;
 
 import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.game.GameMode;
+import ashjack.simukraftreloaded.core.building.Building;
 
 import java.util.ArrayList;
 
@@ -133,6 +134,11 @@ public final class ActionHandlers
                     folk.statusText = "Going to my new job...";
                     folk.employedAt = box.clone();
                     folk.setTheirJob(vocation);
+                    Building pending = vocation == Vocation.BUILDER ? Building.getBuildingByConBox(box) : null;
+                    if (pending != null && !pending.buildingComplete)
+                    {
+                        folk.theBuilding = pending; // the building was chosen before anyone was hired here
+                    }
                     if (SimukraftReloaded.isDayTime())
                     {
                         folk.gotoXYZ(folk.employedAt, null);

@@ -49,11 +49,13 @@ final class BuildingActions
                 SimukraftReloaded.serverBuildings.add(chosen);
                 chosen.saveThisBuilding();
 
+                ArrayList<String> builders = new ArrayList<String>();
                 for (FolkData worker : SimukraftReloaded.serverFolks)
                 {
                     if (box.isSameCoordsAs(worker.employedAt, true, true))
                     {
                         worker.theBuilding = chosen;
+                        builders.add(worker.name);
                         if (worker.vocation == Vocation.BUILDER && worker.theirJob instanceof JobBuilder)
                         {
                             JobBuilder job = (JobBuilder) worker.theirJob;
@@ -65,6 +67,9 @@ final class BuildingActions
                         worker.saveThisFolk();
                     }
                 }
+                ActionHandlers.tell(player, builders.isEmpty()
+                        ? chosen.displayNameWithoutPK + " is chosen. Hire a builder here and they'll start on it."
+                        : String.join(" and ", builders) + (builders.size() == 1 ? " is" : " are") + " going to build the " + chosen.displayNameWithoutPK + ".");
             }
         });
 

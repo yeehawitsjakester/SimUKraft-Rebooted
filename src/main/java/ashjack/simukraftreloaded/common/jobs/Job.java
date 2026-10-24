@@ -104,17 +104,18 @@ public abstract class Job
                 theFolk.gotoXYZ(work, GotoMethod.SHIFT);
                 theFolk.location = work;
             }
+            else if (theFolk.destination == null || !theFolk.destination.isSameCoordsAs(theFolk.employedAt, true, false))
+            {
+                // still heading wherever they were going before work started (often home): point them at work
+                theFolk.gotoXYZ(theFolk.employedAt, null);
+            }
         }
 
         if (SimukraftReloaded.isDayTime() && theFolk.action != FolkAction.ONWAYTOWORK && theFolk.action != FolkAction.ATWORK)
         {
             theFolk.action = FolkAction.ONWAYTOWORK;
             theFolk.stayPut = false;
-
-            if (theFolk.destination == null)
-            {
-                theFolk.gotoXYZ(theFolk.employedAt, null);
-            }
+            theFolk.gotoXYZ(theFolk.employedAt, null);
         }
     }
 

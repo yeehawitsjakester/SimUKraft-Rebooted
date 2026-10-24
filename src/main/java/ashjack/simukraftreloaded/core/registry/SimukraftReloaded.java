@@ -48,6 +48,26 @@ import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 public class SimukraftReloaded 
 {
 	public static Logger log = Logger.getLogger("Sim-U-Kraft Reloaded");
+	static
+	{
+		// java.util.logging goes nowhere in this pack, so hand our messages to the game's log (fml-client-latest.log)
+		final org.apache.logging.log4j.Logger out = org.apache.logging.log4j.LogManager.getLogger("SimUKraft");
+		log.setUseParentHandlers(false);
+		log.addHandler(new java.util.logging.Handler()
+		{
+			public void publish(java.util.logging.LogRecord r)
+			{
+				int level = r.getLevel().intValue();
+				String msg = r.getMessage();
+				if (level >= java.util.logging.Level.SEVERE.intValue()) out.error(msg, r.getThrown());
+				else if (level >= java.util.logging.Level.WARNING.intValue()) out.warn(msg, r.getThrown());
+				else if (level >= java.util.logging.Level.INFO.intValue()) out.info(msg, r.getThrown());
+				else out.debug(msg, r.getThrown());
+			}
+			public void flush() {}
+			public void close() {}
+		});
+	}
 	
 	/** used to detect when we are in-world (not main menu) and when player changes worlds/maps */
     public static String currentSavePath = "";
