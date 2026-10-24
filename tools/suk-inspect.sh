@@ -10,6 +10,7 @@
 #   suk-inspect.sh get <path>            any static field path, e.g. SimukraftReloaded.serverFolks[0].theirJob
 #   suk-inspect.sh set <path> <value>    set a number/boolean/string field, e.g. SimukraftReloaded.serverStates.credits 150
 #   suk-inspect.sh cmd <command>         run a server command as the console (needs the game unpaused)
+#   suk-inspect.sh path <name> [x y z]   the route a Sim would take to x,y,z (default: their work), on a map (needs the game unpaused)
 #   suk-inspect.sh log [n]               the mod's last n log lines (default 30)
 #   suk-inspect.sh quits                 every Sim that quit or was fired this session, and which code did it
 set -euo pipefail
@@ -28,7 +29,7 @@ case "${1:-}" in
         grep -a 'quit their job' "$LOG" | sed 's/ \[Server thread\/[A-Z]*\] \[SimUKraft\/\]: FolkData://' || echo "Nobody has quit this session."
         ;;
     ""|-h|--help)
-        sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
         ;;
     *)
         exec "$JAVA" --add-modules jdk.jdi "$REPO/tools/inspect/SukInspect.java" "$PORT" "$@"

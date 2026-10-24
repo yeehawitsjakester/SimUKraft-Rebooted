@@ -32,7 +32,7 @@ public class SukInspect
     {
         if (args.length < 2)
         {
-            System.out.println("usage: SukInspect <port> folks|folk|buildings|boxes|states|get|set|cmd ...");
+            System.out.println("usage: SukInspect <port> folks|folk|buildings|boxes|states|get|set|cmd|path ...");
             System.exit(1);
         }
         try
@@ -60,6 +60,9 @@ public class SukInspect
                 case "get": status = get(String.join(" ", rest)); break;
                 case "set": status = rest.size() < 2 ? 1 : set(rest.get(0), String.join(" ", rest.subList(1, rest.size()))); break;
                 case "cmd": status = runCommand(String.join(" ", rest)); break;
+                case "path": status = rest.isEmpty() ? 1 : path(rest); break;
+                case "block": status = rest.size() < 3 ? 1 : block(Integer.parseInt(rest.get(0)), Integer.parseInt(rest.get(1)), Integer.parseInt(rest.get(2)),
+                        rest.size() > 3 ? Integer.parseInt(rest.get(3)) : 1); break;
                 default:
                     System.out.println("unknown command: " + cmd);
                     status = 1;
@@ -275,10 +278,233 @@ public class SukInspect
     /** run a command as the server console, on the server thread */
     static int runCommand(String command) throws Exception
     {
-        if (command.startsWith("/"))
+        final String cmd = command.startsWith("/") ? command.substring(1) : command;
+        return onServerThread(thread -> {
+            ClassType serverType = (ClassType) findClass("net.minecraft.server.MinecraftServer");
+            Method getServer = method(serverType, "()Lnet/minecraft/server/MinecraftServer;", "getServer", "func_71276_C");
+            ObjectReference server = (ObjectReference) serverType.invokeMethod(thread, getServer, Collections.emptyList(),
+                    ObjectReference.INVOKE_SINGLE_THREADED);
+            Method getManager = method((ClassType) server.referenceType(), "()Lnet/minecraft/command/ICommandManager;",
+                    "getCommandManager", "func_71187_D");
+            ObjectReference manager = (ObjectReference) server.invokeMethod(thread, getManager, Collections.emptyList(),
+                    ObjectReference.INVOKE_SINGLE_THREADED);
+            Method execute = method((ClassType) manager.referenceType(),
+                    "(Lnet/minecraft/command/ICommandSender;Ljava/lang/String;)I", "executeCommand", "func_71556_a");
+            Value result = manager.invokeMethod(thread, execute, Arrays.asList(server, vm.mirrorOf(cmd)),
+                    ObjectReference.INVOKE_SINGLE_THREADED);
+            System.out.println("Ran /" + cmd + " (result " + s(result) + ")");
+            return 0;
+        });
+    }
+
+    /**
+     * Ask Sim-U-Kraft's pathfinder for a route from a Sim to x,y,z (default: their workplace), and draw it on a map of
+     * the blocks at their feet level. Also shows the path the Sim is following right now, if any.
+     */
+    static int path(List<String> args) throws Exception
+    {
+        int split = args.size();
+        while (split > 0 && args.get(split - 1).matches("-?\\d+"))
         {
-            command = command.substring(1);
+            split--;
         }
+        ObjectReference folk = findFolk(String.join(" ", args.subList(0, split)));
+        if (folk == null)
+        {
+            System.out.println("No Sim called " + String.join(" ", args.subList(0, split)));
+            return 1;
+        }
+        final ObjectReference entity = (ObjectReference) field(folk, "theEntity");
+        if (entity == null)
+        {
+            System.out.println(s(field(folk, "name")) + " isn't in the world right now");
+            return 1;
+        }
+        final int[] target = new int[3];
+        if (args.size() - split >= 3)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                target[i] = Integer.parseInt(args.get(split + i));
+            }
+        }
+        else
+        {
+            ObjectReference at = (ObjectReference) field(folk, "employedAt");
+            if (at == null)
+            {
+                System.out.println(s(field(folk, "name")) + " has no workplace; give x y z");
+                return 1;
+            }
+            target[0] = (int) Double.parseDouble(s(field(at, "x")));
+            target[1] = (int) Double.parseDouble(s(field(at, "y")));
+            target[2] = (int) Double.parseDouble(s(field(at, "z")));
+        }
+        final int sx = (int) Math.floor(Double.parseDouble(s(fieldAny(entity, "posX", "field_70165_t"))));
+        final int sy = (int) Math.floor(Double.parseDouble(s(fieldAny(entity, "posY", "field_70163_u"))) + 0.1);
+        final int sz = (int) Math.floor(Double.parseDouble(s(fieldAny(entity, "posZ", "field_70161_v"))));
+
+        ObjectReference nav = (ObjectReference) fieldAny(entity, "navigator", "field_70699_by");
+        ObjectReference live = nav == null ? null : (ObjectReference) fieldAny(nav, "currentPath", "field_75514_c");
+        final List<int[]> livePoints = points(live);
+
+        return onServerThread(thread -> {
+            ClassType finder = (ClassType) findClass(PKG + "common.FolkPathfinder");
+            Method find = method(finder, "(Lnet/minecraft/entity/Entity;III)Lnet/minecraft/pathfinding/PathEntity;", "findPath");
+            ObjectReference result = (ObjectReference) finder.invokeMethod(thread, find,
+                    Arrays.asList(entity, vm.mirrorOf(target[0]), vm.mirrorOf(target[1]), vm.mirrorOf(target[2])),
+                    ObjectReference.INVOKE_SINGLE_THREADED);
+            List<int[]> planned = points(result);
+
+            System.out.println("From " + sx + "," + sy + "," + sz + " to " + target[0] + "," + target[1] + "," + target[2]);
+            System.out.println("Planned now: " + describe(planned));
+            System.out.println("Following:   " + describe(livePoints));
+
+            // map of the feet level, around the start, the target and the path
+            int x0 = Math.min(sx, target[0]) - 6, x1 = Math.max(sx, target[0]) + 6;
+            int z0 = Math.min(sz, target[2]) - 6, z1 = Math.max(sz, target[2]) + 6;
+            for (int[] p : planned)
+            {
+                x0 = Math.min(x0, p[0] - 2); x1 = Math.max(x1, p[0] + 2);
+                z0 = Math.min(z0, p[2] - 2); z1 = Math.max(z1, p[2] + 2);
+            }
+            x1 = Math.min(x1, x0 + 70);
+            z1 = Math.min(z1, z0 + 50);
+            ObjectReference world = (ObjectReference) fieldAny(entity, "worldObj", "field_70170_p");
+            Method getBlock = method((ClassType) world.referenceType(), "(III)Lnet/minecraft/block/Block;", "getBlock", "func_147439_a");
+            java.util.Map<Long, Character> cache = new java.util.HashMap<Long, Character>();
+            System.out.println("Map at y=" + sy + " (feet) / " + (sy + 1) + " (head); x " + x0 + ".." + x1 + " left to right, z " + z0 + ".." + z1 + " top to bottom");
+            System.out.println("  S start  T target  * planned path  o path being followed  # solid  F fence/wall  D door  G gate  ~ water  . open  _ open (low ceiling)");
+            for (int z = z0; z <= z1; z++)
+            {
+                StringBuilder row = new StringBuilder(String.format("%5d ", z));
+                for (int x = x0; x <= x1; x++)
+                {
+                    char c;
+                    if (x == sx && z == sz) c = 'S';
+                    else if (x == target[0] && z == target[2]) c = 'T';
+                    else if (on(planned, x, z)) c = '*';
+                    else if (on(livePoints, x, z)) c = 'o';
+                    else
+                    {
+                        char feet = classify(thread, world, getBlock, cache, x, sy, z);
+                        char head = classify(thread, world, getBlock, cache, x, sy + 1, z);
+                        c = feet == '.' && head != '.' ? (head == '#' ? '_' : head) : feet;
+                    }
+                    row.append(c);
+                }
+                System.out.println(row);
+            }
+            return 0;
+        });
+    }
+
+    /** the blocks in a column, from y up: class, name, metadata and collision box height */
+    static int block(final int x, final int y, final int z, final int count) throws Exception
+    {
+        return onServerThread(thread -> {
+            ClassType serverType = (ClassType) findClass("net.minecraft.server.MinecraftServer");
+            ObjectReference server = (ObjectReference) serverType.invokeMethod(thread,
+                    method(serverType, "()Lnet/minecraft/server/MinecraftServer;", "getServer", "func_71276_C"),
+                    Collections.emptyList(), ObjectReference.INVOKE_SINGLE_THREADED);
+            ObjectReference world = (ObjectReference) ((ArrayReference) fieldAny(server, "worldServers", "field_71305_c")).getValue(0);
+            ClassType wt = (ClassType) world.referenceType();
+            Method getBlock = method(wt, "(III)Lnet/minecraft/block/Block;", "getBlock", "func_147439_a");
+            Method getMeta = method(wt, "(III)I", "getBlockMetadata", "func_72805_g");
+            for (int yy = y + count - 1; yy >= y; yy--)
+            {
+                List<Value> at = Arrays.asList(vm.mirrorOf(x), vm.mirrorOf(yy), vm.mirrorOf(z));
+                ObjectReference b = (ObjectReference) world.invokeMethod(thread, getBlock, at, ObjectReference.INVOKE_SINGLE_THREADED);
+                Value meta = world.invokeMethod(thread, getMeta, at, ObjectReference.INVOKE_SINGLE_THREADED);
+                Method box = method((ClassType) b.referenceType(),
+                        "(Lnet/minecraft/world/World;III)Lnet/minecraft/util/AxisAlignedBB;", "getCollisionBoundingBoxFromPool", "func_149668_a");
+                ObjectReference bb = (ObjectReference) b.invokeMethod(thread, box, Arrays.asList(world, at.get(0), at.get(1), at.get(2)),
+                        ObjectReference.INVOKE_SINGLE_THREADED);
+                String h = bb == null ? "none" : String.format("%.2f", Double.parseDouble(s(fieldAny(bb, "maxY", "field_72337_e"))) - yy);
+                System.out.println(x + "," + yy + "," + z + "  " + b.referenceType().name() + "  "
+                        + s(fieldAny(b, "unlocalizedName", "field_149770_b")) + "  meta " + s(meta) + "  collision top " + h);
+            }
+            return 0;
+        });
+    }
+
+    static char classify(ThreadReference thread, ObjectReference world, Method getBlock, java.util.Map<Long, Character> cache,
+            int x, int y, int z) throws Exception
+    {
+        ObjectReference block = (ObjectReference) world.invokeMethod(thread, getBlock,
+                Arrays.asList(vm.mirrorOf(x), vm.mirrorOf(y), vm.mirrorOf(z)), ObjectReference.INVOKE_SINGLE_THREADED);
+        Character c = cache.get(block.uniqueID());
+        if (c == null)
+        {
+            String n = block.referenceType().name().toLowerCase();
+            String id = s(fieldAny(block, "unlocalizedName", "field_149770_b")).toLowerCase();
+            if (n.endsWith("blockair")) c = '.';
+            else if (n.contains("door") && !n.contains("trap")) c = 'D';
+            else if (n.contains("fencegate") || n.contains("gate")) c = 'G';
+            else if (n.contains("fence") || n.contains("wall") || n.contains("pane")) c = 'F';
+            else if (n.contains("liquid") || id.contains("water")) c = '~';
+            else if (n.contains("flower") || n.contains("tallgrass") || n.contains("doubleplant") || n.contains("torch")
+                    || n.contains("carpet") || n.contains("sapling") || n.contains("rail") || n.contains("button")
+                    || n.contains("lever") || n.contains("sign") || n.contains("snow") || n.contains("pressure")
+                    || n.contains("redstonewire") || n.contains("ladder") || n.contains("vine") || n.contains("bush")) c = '.';
+            else c = '#';
+            cache.put(block.uniqueID(), c);
+        }
+        return c;
+    }
+
+    /** the points of a PathEntity, as x,y,z */
+    static List<int[]> points(ObjectReference pathEntity)
+    {
+        List<int[]> out = new ArrayList<int[]>();
+        if (pathEntity == null)
+        {
+            return out;
+        }
+        for (Value v : list(fieldAny(pathEntity, "points", "field_75884_a")))
+        {
+            ObjectReference p = (ObjectReference) v;
+            out.add(new int[] {Integer.parseInt(s(fieldAny(p, "xCoord", "field_75839_a"))),
+                    Integer.parseInt(s(fieldAny(p, "yCoord", "field_75837_b"))),
+                    Integer.parseInt(s(fieldAny(p, "zCoord", "field_75838_c")))});
+        }
+        return out;
+    }
+
+    static String describe(List<int[]> points)
+    {
+        if (points.isEmpty())
+        {
+            return "none";
+        }
+        StringBuilder sb = new StringBuilder(points.size() + " steps:");
+        for (int[] p : points)
+        {
+            sb.append(' ').append(p[0]).append(',').append(p[1]).append(',').append(p[2]);
+        }
+        return sb.toString();
+    }
+
+    static boolean on(List<int[]> points, int x, int z)
+    {
+        for (int[] p : points)
+        {
+            if (p[0] == x && p[2] == z)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    interface ServerWork
+    {
+        int run(ThreadReference thread) throws Exception;
+    }
+
+    /** wait for the server thread to reach Sim-U-Kraft's tick handler, hold it there while work runs, then let it go */
+    static int onServerThread(ServerWork work) throws Exception
+    {
         ClassType handler = (ClassType) findClass(PKG + "common.CommonTickHandler");
         Method tick = null;
         for (Method m : handler.methodsByName("tick"))
@@ -336,24 +562,11 @@ public class SukInspect
 
         try
         {
-            ClassType serverType = (ClassType) findClass("net.minecraft.server.MinecraftServer");
-            Method getServer = method(serverType, "()Lnet/minecraft/server/MinecraftServer;", "getServer", "func_71276_C");
-            ObjectReference server = (ObjectReference) serverType.invokeMethod(thread, getServer, Collections.emptyList(),
-                    ObjectReference.INVOKE_SINGLE_THREADED);
-            Method getManager = method((ClassType) server.referenceType(), "()Lnet/minecraft/command/ICommandManager;",
-                    "getCommandManager", "func_71187_D");
-            ObjectReference manager = (ObjectReference) server.invokeMethod(thread, getManager, Collections.emptyList(),
-                    ObjectReference.INVOKE_SINGLE_THREADED);
-            Method execute = method((ClassType) manager.referenceType(),
-                    "(Lnet/minecraft/command/ICommandSender;Ljava/lang/String;)I", "executeCommand", "func_71556_a");
-            Value result = manager.invokeMethod(thread, execute, Arrays.asList(server, vm.mirrorOf(command)),
-                    ObjectReference.INVOKE_SINGLE_THREADED);
-            System.out.println("Ran /" + command + " (result " + s(result) + ")");
-            return 0;
+            return work.run(thread);
         }
         catch (InvocationException e)
         {
-            System.out.println("/" + command + " threw " + e.exception().referenceType().name());
+            System.out.println("The game threw " + e.exception().referenceType().name());
             return 3;
         }
         finally
@@ -428,6 +641,20 @@ public class SukInspect
     {
         Field f = o.referenceType().fieldByName(name);
         return f == null ? null : o.getValue(f);
+    }
+
+    /** a field by its dev name or its SRG name (the game runs with SRG names) */
+    static Value fieldAny(ObjectReference o, String... names)
+    {
+        for (String n : names)
+        {
+            Field f = o.referenceType().fieldByName(n);
+            if (f != null)
+            {
+                return o.getValue(f);
+            }
+        }
+        return null;
     }
 
     static ObjectReference findFolk(String name)

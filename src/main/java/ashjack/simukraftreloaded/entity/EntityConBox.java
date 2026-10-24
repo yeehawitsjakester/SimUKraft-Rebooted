@@ -25,6 +25,8 @@ public class EntityConBox extends Entity
 
     /** reference to the folk -> building being built, as we need the requirements hashmap */
     public FolkData theFolk = null;
+    /** client: the ClientMirror sync theFolk was looked up in */
+    public int folkSync = -1;
 
     private Long lastCheck = 0l;
     private EntityPlayer closestPlayer;
@@ -86,7 +88,7 @@ public class EntityConBox extends Entity
             {
                 if (fd.employedAt.isSameCoordsAs(where, true, false))
                 {
-                    SimukraftReloaded.log.info("EntityConBox: found folk " + fd.name);
+                    SimukraftReloaded.log.fine("EntityConBox: found folk " + fd.name);
                     ret = fd;
                     break;
                 }

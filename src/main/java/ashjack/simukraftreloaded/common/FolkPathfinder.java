@@ -18,7 +18,7 @@ import net.minecraft.world.World;
 /**
  * A* pathfinding for folk. Vanilla's pathfinder recognises fences and walls by render type, so modded fences and
  * walls (graveyards, decorative mods...) look like 1-block steps: folk plan to hop onto them and walk into them
- * forever. This judges blocks by their real collision box instead: anything taller than a block is a wall.
+ * forever. This judges blocks by their real collision boxes instead: anything taller than a block is a wall.
  * Never loads chunks; unloaded blocks count as solid.
  */
 public final class FolkPathfinder
@@ -223,13 +223,23 @@ public final class FolkPathfinder
         return top <= 0.25; // -1 = no collision at all
     }
 
-    /** height of the block's collision box above its own y, or -1 if it has none */
+    /**
+     * height of the block's collision above its own y, or -1 if it has none. Asks for the full collision boxes:
+     * fences and walls report a plain 1-block box from getCollisionBoundingBoxFromPool and only add their 1.5-high
+     * box here, which made folk plan to walk along the top of fences.
+     */
     private static double collisionTop(World world, Block block, int x, int y, int z)
     {
         try
         {
-            AxisAlignedBB bb = block.getCollisionBoundingBoxFromPool(world, x, y, z);
-            return bb == null ? -1 : bb.maxY - y;
+            ArrayList<AxisAlignedBB> boxes = new ArrayList<AxisAlignedBB>();
+            block.addCollisionBoxesToList(world, x, y, z, AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 2, z + 1), boxes, null);
+            double top = -1;
+            for (AxisAlignedBB bb : boxes)
+            {
+                top = Math.max(top, bb.maxY - y);
+            }
+            return top;
         }
         catch (Exception e)
         {

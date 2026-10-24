@@ -74,6 +74,8 @@ public class Building implements Serializable
     public transient ArrayList<V3> blockLocations = new ArrayList<V3>();
 
     public transient HashMap<ItemStack, Integer> requirements = new HashMap<ItemStack, Integer>();
+    /** requirements as "item|damage|count", for MirrorSync: ItemStacks can't be serialised */
+    public ArrayList<String> syncedRequirements;
     public transient V3 conBoxLocation = null;
     private transient static ArrayList<Building> buildingsRes = new ArrayList<Building>();
     private transient static ArrayList<Building> buildingsCom = new ArrayList<Building>();

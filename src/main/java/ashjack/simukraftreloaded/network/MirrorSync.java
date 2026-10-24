@@ -13,6 +13,8 @@ import java.io.ObjectOutputStream;
 import java.io.ObjectStreamClass;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -74,6 +76,14 @@ public final class MirrorSync
         for (FolkData f : SimukraftReloaded.serverFolks)
         {
             f.syncedJobStage = f.theirJob instanceof JobBuilder ? String.valueOf(((JobBuilder) f.theirJob).theStage) : "";
+        }
+        for (Building bld : SimukraftReloaded.serverBuildings)
+        {
+            packRequirements(bld);
+        }
+        for (FolkData f : SimukraftReloaded.serverFolks)
+        {
+            packRequirements(f.theBuilding);
         }
         Bundle b = new Bundle();
         b.folks = new ArrayList<FolkData>(SimukraftReloaded.serverFolks);
@@ -151,6 +161,14 @@ public final class MirrorSync
             ObjectInputStream in = new SafeObjectInputStream(new GZIPInputStream(new ByteArrayInputStream(payload)));
             Bundle b = (Bundle) in.readObject();
             in.close();
+            for (Building bld : b.buildings)
+            {
+                unpackRequirements(bld);
+            }
+            for (FolkData f : b.folks)
+            {
+                unpackRequirements(f.theBuilding);
+            }
             ClientMirror.folks = b.folks;
             ClientMirror.buildings = b.buildings;
             ClientMirror.relationships = b.relationships;
@@ -178,6 +196,46 @@ public final class MirrorSync
         {
             SimukraftReloaded.log.warning("MirrorSync: couldn't read server data: " + e);
         }
+    }
+
+    private static void packRequirements(Building b)
+    {
+        if (b == null)
+        {
+            return;
+        }
+        ArrayList<String> out = new ArrayList<String>();
+        if (b.requirements != null)
+        {
+            for (Map.Entry<ItemStack, Integer> e : b.requirements.entrySet())
+            {
+                if (e.getKey() != null && e.getKey().getItem() != null && e.getValue() != null)
+                {
+                    out.add(Item.itemRegistry.getNameForObject(e.getKey().getItem()) + "|" + e.getKey().getItemDamage() + "|" + e.getValue());
+                }
+            }
+        }
+        b.syncedRequirements = out;
+    }
+
+    /** client: rebuild a building's requirements, which the floating list over its constructor box shows */
+    private static void unpackRequirements(Building b)
+    {
+        if (b == null || b.syncedRequirements == null)
+        {
+            return;
+        }
+        HashMap<ItemStack, Integer> req = new HashMap<ItemStack, Integer>();
+        for (String line : b.syncedRequirements)
+        {
+            String[] p = line.split("\\|");
+            Item item = p.length == 3 ? (Item) Item.itemRegistry.getObject(p[0]) : null;
+            if (item != null)
+            {
+                req.put(new ItemStack(item, 1, Integer.parseInt(p[1])), Integer.parseInt(p[2]));
+            }
+        }
+        b.requirements = req;
     }
 
     /** only lets the mod's own classes and plain Java collections/values be read */

@@ -6,6 +6,7 @@ import java.util.Random;
 
 import org.lwjgl.opengl.GL11;
 
+import ashjack.simukraftreloaded.common.ClientMirror;
 import ashjack.simukraftreloaded.entity.EntityConBox;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 import net.minecraft.client.Minecraft;
@@ -21,7 +22,7 @@ public class RenderConBox extends Render
 
     EntityConBox entity = null;
     ModelConBox modelBox;
-    private int actualCount = -1;
+    private int actualCount;
     private boolean displayBox = true;
 
     public RenderConBox(ModelConBox modelBox)
@@ -50,8 +51,10 @@ public class RenderConBox extends Render
         modelBox.render(entity, 0f, 0f, 0f, 0f, 0f, 0f); // no idea what the parms do :-)
         GL11.glPopMatrix();
 
-        if (entity.theFolk == null)
+        // look again after every sync: the mirror's FolkData (and its building's requirements) are replaced each time
+        if (entity.theFolk == null || entity.folkSync != ClientMirror.syncCount)
         {
+            entity.folkSync = ClientMirror.syncCount;
             entity.theFolk = EntityConBox.getFolk(new V3(entity.posX, entity.posY, entity.posZ, entity.dimension));
         }
 
@@ -63,7 +66,7 @@ public class RenderConBox extends Render
                 {
                     if (entity.theFolk.theBuilding.requirements != null && entity.theFolk.theBuilding.requirements.size() > 0)
                     {
-                        if (actualCount == -1)
+                        // counted every frame: this renderer draws every box, and each list shrinks as it's built
                         {
                             Iterator it = entity.theFolk.theBuilding.requirements.entrySet().iterator();
                             actualCount = 0;
