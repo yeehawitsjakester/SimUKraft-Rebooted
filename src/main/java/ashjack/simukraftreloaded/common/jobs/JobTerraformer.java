@@ -279,16 +279,18 @@ public class JobTerraformer extends Job
                 setClosestBlocksOfType(v, blockIDs, radius, false, true, false);
             }
 
-            step = 2;
+            // the scan finishes before it returns now (it used to be a thread that set step 3 when done, and this
+            // line then said step 2 - "Scanning Terrain..." forever)
+            step = 3;
         }
         else if (step == 2)
         {
-            //searching in progress (thread)
             theFolk.statusText = "Scanning Terrain...";
+            step = 1; // a save from the old version: scan again
         }
         else if (step == 3)
         {
-            totalBlockCount = closestBlocks.size();
+            totalBlockCount = closestBlocks == null ? 0 : closestBlocks.size();
 
             if (totalBlockCount == 0)
             {

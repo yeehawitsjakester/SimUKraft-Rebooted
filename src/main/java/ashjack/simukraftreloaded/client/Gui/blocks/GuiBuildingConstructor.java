@@ -54,6 +54,10 @@ public class GuiBuildingConstructor extends GuiScreen
     private String search = "";
     private Building selectedBuilding = null;
     private int previousPage = 1;
+    private BuildingPreview preview;
+    private boolean draggingPreview;
+    private int lastDragX;
+    private long lastFrame;
 
     public GuiBuildingConstructor(V3 location, String buildDirection, ArrayList<FolkData> theFolks)
     {
@@ -195,19 +199,39 @@ public class GuiBuildingConstructor extends GuiScreen
             }
             else if (currentPage == 10)
             {
-            	String realCost;
-            	realCost = " (" + SimukraftReloaded.displayMoney((float)(selectedBuilding.blocksInBuilding * 0.02f) * theWorkers.size()) + ")";
-            	
-            	drawCenteredString(fontRendererObj, "Building details for " + selectedBuilding.displayNameWithoutPK, width / 2, 50, 0xffffaa);
-            
-            	drawCenteredString(fontRendererObj, "Name: " + selectedBuilding.displayNameWithoutPK, width/2, 80, 0xffffaa);
-            	drawCenteredString(fontRendererObj, "Description: " + selectedBuilding.description, width/2, 110, 0xffffaa);
-            	drawCenteredString(fontRendererObj, "Author: " + selectedBuilding.author, width/2, 140, 0xffffaa);
-            	drawCenteredString(fontRendererObj, "Cost: " + SimukraftReloaded.displayMoney((float)(selectedBuilding.blocksInBuilding * 0.02f)), width/2, 170, 0xffffaa);
-            	drawCenteredString(fontRendererObj, "Dimensions: " + selectedBuilding.dimensions, width/2, 200, 0xffffaa);
-            	drawCenteredString(fontRendererObj, "Number of Blocks Underground Constructor Should Be: " + selectedBuilding.elevationLevel, width/2, 230, 0xffffaa);
-            	
-            	//BOOKMARK
+            	// details on the left, the blueprint turning on the right
+            	drawCenteredString(fontRendererObj, selectedBuilding.displayNameWithoutPK, width / 2, 55, 0xffffaa);
+            	int colW = width / 2 - 30;
+            	int y = 75;
+            	y = detail("Author", selectedBuilding.author, y, colW);
+            	y = detail("Cost", SimukraftReloaded.displayMoney((float)(selectedBuilding.blocksInBuilding * 0.02f)), y, colW);
+            	y = detail("Size", selectedBuilding.ltrCount + " wide, " + selectedBuilding.ftbCount + " deep, " + selectedBuilding.layerCount + " high", y, colW);
+            	y = detail("Blocks", String.valueOf(selectedBuilding.blocksInBuilding), y, colW);
+            	y = detail("Constructor box", selectedBuilding.elevationLevel == 0 ? "at ground level"
+            			: selectedBuilding.elevationLevel + " block(s) underground", y, colW);
+            	if (selectedBuilding.description != null && !selectedBuilding.description.trim().isEmpty()
+            			&& !selectedBuilding.description.trim().equalsIgnoreCase("none"))
+            	{
+            		detail("About", selectedBuilding.description, y, colW);
+            	}
+
+            	int px = width / 2 + 10, py = 65, pw = width / 2 - 20, ph = height - 65 - 32;
+            	drawRect(px, py, px + pw, py + ph, 0x40000000);
+            	if (preview != null && !preview.isEmpty())
+            	{
+            		long now = System.currentTimeMillis();
+            		if (!draggingPreview && lastFrame != 0)
+            		{
+            			preview.yaw += (now - lastFrame) * 0.02f; // 20 degrees a second
+            		}
+            		lastFrame = now;
+            		preview.draw(px + 6, py + 6, pw - 12, ph - 12);
+            		drawCenteredString(fontRendererObj, "Drag to turn it", px + pw / 2, py + ph - 10, 0x808080);
+            	}
+            	else
+            	{
+            		drawCenteredString(fontRendererObj, "No preview for this building", px + pw / 2, py + ph / 2, 0x808080);
+            	}
             }
             else if (currentPage == 8)
             {
@@ -258,6 +282,17 @@ public class GuiBuildingConstructor extends GuiScreen
     }
 
     
+    /** a "Label: value" line in the details column, wrapped; returns the y for the next one */
+    private int detail(String label, String value, int y, int w)
+    {
+        for (Object line : fontRendererObj.listFormattedStringToWidth("\u00a77" + label + ": \u00a7f" + value, w))
+        {
+            drawString(fontRendererObj, (String) line, 20, y, 0xffffff);
+            y += 10;
+        }
+        return y + 4;
+    }
+
     private void displayReq(String block, int qty, int y)
     {
         double stacks = Math.floor(qty / 64);
@@ -291,6 +326,10 @@ public class GuiBuildingConstructor extends GuiScreen
         mc.setIngameNotInFocus();
         buttonList.clear();
         buttonList.add(new GuiButton(0, 2, 12, 50, 20, "Done"));
+        if (currentPage != 0)
+        {
+            buttonList.add(new GuiButton(1002, 54, 12, 50, 20, "Back"));
+        }
 
         if (selectedBuilding == null)
         {
@@ -550,6 +589,12 @@ public class GuiBuildingConstructor extends GuiScreen
             return;
         }
 
+        if (guibutton.id == 1002)
+        {
+            goBack();
+            return;
+        }
+
         if (currentPage == 0)
         {
             if (guibutton.displayString.contentEquals("Choose building"))   //chosen to construct a building
@@ -625,7 +670,12 @@ public class GuiBuildingConstructor extends GuiScreen
         {
             previousPage = currentPage;
 
-            if (guibutton.id == 500)  //next page of buildings
+            if (guibutton.id == 1 && guibutton.displayString.startsWith("Nothing found"))
+            {
+                goBack();
+                return;
+            }
+            else if (guibutton.id == 500)  //next page of buildings
             {
                 buildingOffset += fixedBuildingCount;
                 showPage();
@@ -672,6 +722,8 @@ public class GuiBuildingConstructor extends GuiScreen
                 	selectedBuilding.buildDirection = this.buildDirection;
                 } catch(Exception e) {} //probably not stood in the right place, live-ware issue!
                 
+                preview = selectedBuilding == null ? null : new BuildingPreview(selectedBuilding);
+                lastFrame = 0;
                 currentPage = 10;
                 showPage();
             }
@@ -724,6 +776,31 @@ public class GuiBuildingConstructor extends GuiScreen
     }
 
    
+    /** one step back towards the first page */
+    private void goBack()
+    {
+        if (currentPage == 10)
+        {
+            currentPage = previousPage;
+        }
+        else if (currentPage == 8)
+        {
+            currentPage = 10;
+        }
+        else if (currentPage == 2 || currentPage == 5 || currentPage == 6 || currentPage == 7 || currentPage == 9)
+        {
+            currentPage = 1;
+            buildingOffset = 0;
+            search = "";
+            tfSearch = null;
+        }
+        else
+        {
+            currentPage = 0;
+        }
+        showPage();
+    }
+
     public void fireAllFolksForThisBuilding()
     {
         NBTTagCompound data = new NBTTagCompound();
@@ -765,6 +842,29 @@ public class GuiBuildingConstructor extends GuiScreen
             tfSearch.mouseClicked(i, j, k);
         }
 
+        draggingPreview = currentPage == 10 && k == 0 && i > width / 2 + 10 && j > 65 && j < height - 32;
+        lastDragX = i;
         super.mouseClicked(i, j, k);
+    }
+
+    @Override
+    protected void mouseClickMove(int x, int y, int button, long timeHeld)
+    {
+        if (draggingPreview && preview != null)
+        {
+            preview.yaw += (x - lastDragX) * 2f;
+            lastDragX = x;
+        }
+        super.mouseClickMove(x, y, button, timeHeld);
+    }
+
+    @Override
+    protected void mouseMovedOrUp(int x, int y, int button)
+    {
+        if (button == 0)
+        {
+            draggingPreview = false;
+        }
+        super.mouseMovedOrUp(x, y, button);
     }
 }
