@@ -1,0 +1,40 @@
+# Push a version tag (e.g. `git tag 1.1.0 && git push origin 1.1.0`) and this builds the mod and publishes a GitHub
+# release with the jar attached. Free on public repositories. The jar's version comes from the tag.
+name: Release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the version is worked out from git tags
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25" # matches .java-version; Gradle fetches the Java 8 toolchain itself
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: ./gradlew --no-configuration-cache build
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          jar=$(ls build/libs/*.jar | grep -vE -- '-(dev|sources)\.jar$')
+          gh release create "$TAG" "$jar" \
+            --title "Sim-U-Kraft Rebooted $TAG (Minecraft 1.7.10)" \
+            --notes "For **Minecraft 1.7.10 with Forge 10.13.4.1614** only. Drop the jar in \`mods/\`; it needs the original Sim-U-Kraft blueprints in \`mods/Simukraft/buildings/\`." \
+            --generate-notes

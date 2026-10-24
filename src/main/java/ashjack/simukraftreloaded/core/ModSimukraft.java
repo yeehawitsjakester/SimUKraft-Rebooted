@@ -108,7 +108,6 @@ import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import cpw.mods.fml.common.registry.EntityRegistry;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.common.registry.LanguageRegistry;
-import cpw.mods.fml.relauncher.*;
 
 // the mod id stays AshJack's: it names every block, item and entity in existing worlds, so changing it would wipe them
 @Mod(modid = "ashjacksimukraftreloaded", name = "Sim-U-Kraft Rebooted", version = Tags.VERSION, dependencies = "required-after:Forge@[9.10,)")

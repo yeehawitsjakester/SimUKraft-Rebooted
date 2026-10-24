@@ -1,6 +1,8 @@
 # Sim-U-Kraft Rebooted
 
-An unofficial continuation of **Sim-U-Kraft Reloaded 1.0.3** for Minecraft 1.7.10 (Forge 10.13.4.1614). Sim-U-Folks
+> **Minecraft 1.7.10 only** (Forge 10.13.4.1614). There are no versions for other Minecraft releases.
+
+An unofficial continuation of **Sim-U-Kraft Reloaded 1.0.3** for Minecraft 1.7.10. Sim-U-Folks
 move into your world; you house them, hire them to build, mine, farm, bake, terraform and keep a warehouse, and watch
 them make friends and families.
 
@@ -36,11 +38,19 @@ Satscape released Sim-U-Kraft's source without naming a license, and AshJack's R
 license is granted here for their code or for the bundled skins and sounds. `libs/ae2-api-rv3-beta-6.jar` is Applied
 Energistics 2's API, used only to compile against.
 
+## Download
+
+Jars are on the [Releases page](https://github.com/yeehawitsjakester/SimUKraft-Rebooted/releases). Drop the jar in
+`mods/`. It also needs the original Sim-U-Kraft blueprints in `.minecraft/mods/Simukraft/buildings/` (the Warehouse
+blueprint is installed there automatically).
+
+To publish a release, push a version tag: `git tag 1.1.0 && git push origin 1.1.0`. GitHub Actions builds the jar and
+attaches it to a new release (`.github/workflows/release.yml`).
+
 ## Building
 
 ```
 ./gradlew build
 ```
 
-The jar lands in `build/libs/`. It needs the original Sim-U-Kraft blueprints in `.minecraft/mods/Simukraft/buildings/`
-(the Warehouse blueprint is installed there automatically).
+The jar lands in `build/libs/` as `SimUKraft-Rebooted-mc1.7.10-<version>.jar`.
