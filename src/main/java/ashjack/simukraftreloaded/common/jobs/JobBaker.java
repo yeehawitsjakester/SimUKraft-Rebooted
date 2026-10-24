@@ -377,6 +377,7 @@ public class JobBaker extends Job implements Serializable
                     if (breadStack.stackSize > 0)
                     {
                         folk.levelFood = 10;
+                        folk.lastMeal = "Bought bread at the bakery";
                         breadStack.stackSize--;
                     }
                 }

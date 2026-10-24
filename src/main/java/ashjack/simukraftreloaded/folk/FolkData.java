@@ -118,6 +118,11 @@ public class FolkData implements Serializable
     public ArrayList<String> happinessReasons = new ArrayList<String>();
     /** rough share of their time spent under open sky, 0-1, for the outdoors traits */
     public float outdoorShare = 0.5f;
+    /** why each need is where it is, for the hover tooltips on the Sim's screen */
+    public String lastMeal = "";
+    public String funNote = "";
+    public String socialNote = "";
+    public String environmentNote = "";
     /** this folks building level, increases with experience which makes them build faster */
     public float levelBuilder = 1.0f;
     /** this folks mining level, increases with experience which makes the mine faster */
@@ -578,11 +583,13 @@ public class FolkData implements Serializable
         	if(!this.statusText.contains("Hanging") && !this.statusText.startsWith("Shopping")&&!this.statusText.contains("Visiting") && !this.statusText.contains("Staying")&&!this.statusText.contains("Relaxing")&&this.levelFun > 1&&this.isWorking==false)
         	{
         		levelFun -= 1;
+        		funNote = "Bored, nothing fun to do";
         	}
         	
         	if(this.isWorking == true&&this.levelFun > 1)
         	{
         		levelFun -= 1;
+        		funNote = "Work is wearing them down";
         	}
         	
             if (this.getHome() == null && timeSinceLastMinute > 0)
@@ -593,6 +600,7 @@ public class FolkData implements Serializable
             if(!statusText.contains("Hanging")&&this.levelSocial > 1)
             {
             	levelSocial -= 1;
+            	socialNote = "Hasn't hung out with anyone lately";
             }
 
             //if pregnant and day 9, give birth!
@@ -1037,11 +1045,13 @@ public class FolkData implements Serializable
                 if(this.statusText.contains("Hanging")&&this.levelSocial < 10)
                 {
                 	levelSocial += 1;
+                	socialNote = statusText;
                 }
                 
                 if((this.statusText.contains("Visiting") || this.statusText.contains("Hanging") || this.statusText.contains("Staying")|| this.statusText.contains("Relaxing") || this.statusText.contains("Shopping")) &&this.levelFun < 10)
                 {
                 	levelFun += 1;
+                	funNote = "Having fun: " + statusText;
                 }
             	
                 timeSinceLastSave = System.currentTimeMillis();
@@ -2670,9 +2680,11 @@ public class FolkData implements Serializable
         }
 
         int score = 5 + Math.min(5, nice / 6) - Math.min(4, ugly / 3);
+        environmentNote = nice + " nice and " + ugly + " ugly blocks around " + (home == null ? "them" : "their home");
         if (home != null && world.getSavedLightValue(EnumSkyBlock.Block, cx, cy, cz) < 5 && !world.canBlockSeeTheSky(cx, cy, cz))
         {
             score--; // dark, torchless home
+            environmentNote += ", and it's dark inside";
         }
         levelEnvironment = Math.max(1, Math.min(10, score));
     }
@@ -2716,23 +2728,23 @@ public class FolkData implements Serializable
         }
         if (hasTrait(Traits.traitFriendly))
         {
-            score += hasFriend ? addReason(reasons, 10, "Has friends (Friendly)")
-                               : addReason(reasons, -10, "No friends (Friendly)");
+            score += hasFriend ? addReason(reasons, 10, "Has friends (" + Traits.traitFriendly.traitName + ")")
+                               : addReason(reasons, -10, "No friends (" + Traits.traitFriendly.traitName + ")");
         }
         if (adult && hasTrait(Traits.traitWorkaholic))
         {
-            score += employedAt != null ? addReason(reasons, 10, "Has a job (Workaholic)")
-                                        : addReason(reasons, -15, "No job (Workaholic)");
+            score += employedAt != null ? addReason(reasons, 10, "Has a job (" + Traits.traitWorkaholic.traitName + ")")
+                                        : addReason(reasons, -15, "No job (" + Traits.traitWorkaholic.traitName + ")");
         }
         if (hasTrait(Traits.traitLovesOutdoors))
         {
-            score += outdoorShare >= 0.5f ? addReason(reasons, 8, "Gets outside (Loves Outdoors)")
-                                          : addReason(reasons, -8, "Stuck indoors (Loves Outdoors)");
+            score += outdoorShare >= 0.5f ? addReason(reasons, 8, "Gets outside (" + Traits.traitLovesOutdoors.traitName + ")")
+                                          : addReason(reasons, -8, "Stuck indoors (" + Traits.traitLovesOutdoors.traitName + ")");
         }
         if (hasTrait(Traits.traitHatesOutdoors))
         {
-            score += outdoorShare < 0.5f ? addReason(reasons, 8, "Stays indoors (Hates Outdoors)")
-                                         : addReason(reasons, -8, "Out in the open (Hates Outdoors)");
+            score += outdoorShare < 0.5f ? addReason(reasons, 8, "Stays indoors (" + Traits.traitHatesOutdoors.traitName + ")")
+                                         : addReason(reasons, -8, "Out in the open (" + Traits.traitHatesOutdoors.traitName + ")");
         }
 
         happiness = Math.max(0, Math.min(100, score));

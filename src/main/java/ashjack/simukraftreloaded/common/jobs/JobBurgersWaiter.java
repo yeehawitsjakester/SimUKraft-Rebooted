@@ -135,6 +135,7 @@ public class JobBurgersWaiter extends Job {
 					int r=new Random().nextInt(SimukraftReloaded.folks().size()-1);
 					FolkData folk=SimukraftReloaded.folks().get(r);
 					if (folk.levelFood<10) {folk.levelFood++;}
+					folk.lastMeal = "Ate at the burger bar";
 					folk.saveThisFolk();
 					SimukraftReloaded.log.info("JobBurgersWaiter: Just fed "+folk.name);
 					SimukraftReloaded.states().credits -=0.45;

@@ -340,6 +340,7 @@ public class JobGrocer extends Job implements Serializable
                             piece = inventoriesGet(grocerChests, new ItemStack(chestStack.getItem(), count), false,false); //grab 1 piece
                             FolkData folk = (FolkData) SimukraftReloaded.folks().get(f);
                             folk.levelFood = 10;
+                            folk.lastMeal = "Bought food at the grocer";
                             sell += count;
                             break gotFood;
                         }
@@ -364,6 +365,7 @@ public class JobGrocer extends Job implements Serializable
                 if (piece !=null) {
                 	FolkData folk = (FolkData) ModSimukraft.theFolks.get(f);
                 	folk.levelFood=10;
+                	folk.lastMeal = "Bought food at the grocer";
                 	sell++;
                 }
                 */

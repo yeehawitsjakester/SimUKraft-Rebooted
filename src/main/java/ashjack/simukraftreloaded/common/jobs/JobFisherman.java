@@ -252,6 +252,7 @@ public class JobFisherman extends Job implements Serializable
                     if (fishStack.stackSize > 0)
                     {
                         folk.levelFood = 10;
+                        folk.lastMeal = "Bought fish from the fisherman";
                         fishStack.stackSize--;
                     }
                 }

@@ -38,6 +38,9 @@ public class RenderFolk extends RenderBiped
         }
     }
 
+    /** set while a GUI draws a folk as an avatar, so their floating name and status don't get drawn over it */
+    public static boolean drawingAvatar = false;
+
     @Override
     public void doRender(Entity par1Entity, double par2, double par4,
                          double par6, float par8, float par9)
@@ -62,7 +65,7 @@ public class RenderFolk extends RenderBiped
         float f3 = 0.01666667F * f2;
         float f6 = 0.2F;
 
-        if (entityFolk.theData != null)
+        if (entityFolk.theData != null && !drawingAvatar)
         {
             if (entityFolk != null)
             {

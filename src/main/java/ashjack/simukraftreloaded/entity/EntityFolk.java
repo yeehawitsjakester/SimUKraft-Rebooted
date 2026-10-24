@@ -456,6 +456,7 @@ public class EntityFolk extends EntityCreature implements INpc {
 									1.0f, 1.0f);
 							entityitem.setDead();
 							this.theData.levelFood++;
+							this.theData.lastMeal = "Ate food someone threw to them";
 						}
 					} catch (Exception e) {
 					} // Cast Exception when not food
@@ -676,7 +677,7 @@ public class EntityFolk extends EntityCreature implements INpc {
 				if (folk.vocation == Vocation.MERCHANT && SimukraftReloaded.isDayTime()) {
 					return new GuiMerchant();
 				}
-				return new GuiEntityFolk(folk, entityplayer);
+				return new GuiEntityFolk(folk, EntityFolk.this, entityplayer);
 			}
 		});
 
