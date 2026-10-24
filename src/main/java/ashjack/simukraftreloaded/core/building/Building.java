@@ -28,6 +28,7 @@ import ashjack.simukraftreloaded.proxies.CommonProxy;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 import cpw.mods.fml.relauncher.Side;
 import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.item.ItemStack;
@@ -252,12 +253,14 @@ public class Building implements Serializable
 
             for (int i = 0; i < d.length; i++)
             {
-                String[] k = d[i].split("=");
+                String[] k = d[i].split("=", 2);
+                if (k.length < 2)
+                {
+                    continue;
+                }
                 if(!k[0].toUpperCase().contentEquals("AU") && !k[0].toUpperCase().contentEquals("DESC") && !k[0].toUpperCase().contentEquals("ELEV") && !k[0].toUpperCase().contentEquals("REQ") && !k[0].toUpperCase().contentEquals("INFREQ"))
                 {
-                	 String[] blockInfo = k[1].split(",");
-                	 thekey.put(k[0], Block.getIdFromBlock(Block.getBlockFromName(blockInfo[0])) + ":" + blockInfo[1]); // / P minecraft:dirt
-
+                	 thekey.put(k[0], parseKeyBlock(k[1]));
                 }
                 
                 if (k[0].toUpperCase().contentEquals("AU"))   // Author of this
@@ -489,7 +492,14 @@ public class Building implements Serializable
                         }
                         catch (Exception e)
                         {
-                            //e.printStackTrace();
+                            // keep counting, or every block after this one lands one place early and the end goes missing
+                            if (acount < structure.length)
+                            {
+                                structure[acount] = Blocks.air;
+                                structureSub[acount] = 0;
+                            }
+                            acount++;
+                            bcount++;
                         }
                     }
                 }
@@ -503,6 +513,51 @@ public class Building implements Serializable
         {
             SimukraftReloaded.log.warning("Building loadStructure() "+e.toString());
         }
+    }
+
+    /**
+     * one blueprint key entry as "id:meta". Copied structures write "minecraft:stone,0"; the blueprints that ship
+     * with the mod are older and write the numeric "1:0" (vanilla block ids never change in 1.7.10).
+     */
+    private String parseKeyBlock(String value)
+    {
+        String v = value.trim();
+        Block b;
+        int meta = 0;
+        int comma = v.lastIndexOf(',');
+        try
+        {
+            if (comma > 0)
+            {
+                b = Block.getBlockFromName(v.substring(0, comma));
+                meta = Integer.parseInt(v.substring(comma + 1).trim());
+            }
+            else if (v.matches("\\d+:\\d+"))
+            {
+                String[] p = v.split(":");
+                int id = Integer.parseInt(p[0]);
+                b = Block.getBlockById(id);
+                meta = Integer.parseInt(p[1]);
+                if (id != 0 && b == Blocks.air)
+                {
+                    b = null;
+                }
+            }
+            else
+            {
+                b = Block.getBlockFromName(v);
+            }
+        }
+        catch (NumberFormatException e)
+        {
+            b = null;
+        }
+        if (b == null)
+        {
+            SimukraftReloaded.log.warning("Building: " + displayName + " uses a block this game doesn't have (" + v + "), leaving it empty");
+            return "0:0";
+        }
+        return Block.getIdFromBlock(b) + ":" + meta;
     }
 
     private void addToRequirements(Block block, int meta, int amount)
