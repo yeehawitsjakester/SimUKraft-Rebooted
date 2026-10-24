@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.client.Gui.other;
 
+import ashjack.simukraftreloaded.common.ClientMirror;
+
 import net.minecraft.nbt.NBTTagCompound;
 import ashjack.simukraftreloaded.network.ServerActions;
 import net.minecraft.client.Minecraft;
@@ -19,10 +21,25 @@ public class GuiRunMod extends GuiScreen
     public boolean running = true;
     private int mouseCount = 0;
 
+    /**
+     * Must not pause: a paused singleplayer server reads no packets, and the server keeps re-sending "choose a mode"
+     * every second, so each click's brief unpause reopened the menu before the server read the choice.
+     */
     @Override
     public boolean doesGuiPauseGame()
     {
-        return true;
+        return false;
+    }
+
+    /** close once the server has started Sim-U-Kraft (someone chose), in case a leftover prompt reopened us */
+    @Override
+    public void updateScreen()
+    {
+        if (ClientMirror.ranStartup)
+        {
+            mc.displayGuiScreen(null);
+            mc.setIngameFocus();
+        }
     }
 
     public GuiRunMod()

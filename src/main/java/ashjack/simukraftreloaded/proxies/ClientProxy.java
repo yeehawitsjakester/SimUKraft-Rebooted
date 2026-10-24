@@ -16,6 +16,7 @@ import ashjack.simukraftreloaded.client.RenderFolk;
 import ashjack.simukraftreloaded.client.Gui.KeyHandler;
 import ashjack.simukraftreloaded.common.CommonTickHandler;
 import ashjack.simukraftreloaded.core.ModSimukraft;
+import ashjack.simukraftreloaded.common.ClientMirror;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.entity.EntityAlignBeam;
 import ashjack.simukraftreloaded.entity.EntityConBox;
@@ -70,7 +71,7 @@ public class ClientProxy extends CommonProxy
             public void run()
             {
                 Minecraft mc = Minecraft.getMinecraft();
-                if (!(mc.currentScreen instanceof GuiRunMod))
+                if (!ClientMirror.ranStartup && !(mc.currentScreen instanceof GuiRunMod))
                 {
                     mc.displayGuiScreen(new GuiRunMod());
                 }
