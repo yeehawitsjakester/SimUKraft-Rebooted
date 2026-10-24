@@ -99,7 +99,7 @@ public final class FolkPathfinder
             // folk "arrive" within 2 blocks, so that's close enough
             if (Math.abs(n.x - tx) <= 1 && Math.abs(n.z - tz) <= 1 && Math.abs(n.y - ty) <= 2)
             {
-                return toPath(n);
+                return toPath(world, n);
             }
 
             for (int[] d : DIRS)
@@ -139,7 +139,7 @@ public final class FolkPathfinder
         // couldn't reach it: head for the closest point if that's real progress
         if (best != start && heuristic(sx, sy, sz, tx, ty, tz) - bestH >= 2f)
         {
-            return toPath(best);
+            return toPath(world, best);
         }
         return null;
     }
@@ -282,12 +282,22 @@ public final class FolkPathfinder
         return ((long) (x & 0x3FFFFFF) << 38) | ((long) (z & 0x3FFFFFF) << 12) | (y & 0xFFF);
     }
 
-    private static PathEntity toPath(Node end)
+    /**
+     * Points in water go at the water's surface, as vanilla's own paths do: PathNavigate measures a swimming entity at
+     * the surface and only moves on to the next point when it's at that height, so a point at a swimmer's feet is
+     * never reached and they turn on the spot forever.
+     */
+    private static PathEntity toPath(World world, Node end)
     {
         ArrayList<PathPoint> points = new ArrayList<PathPoint>();
         for (Node n = end; n != null; n = n.parent)
         {
-            points.add(0, new PathPoint(n.x, n.y, n.z));
+            int y = n.y;
+            while (y < 255 && inWater(world, n.x, y, n.z))
+            {
+                y++;
+            }
+            points.add(0, new PathPoint(n.x, y, n.z));
         }
         return new PathEntity(points.toArray(new PathPoint[points.size()]));
     }

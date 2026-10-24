@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.entity;
 
+import net.minecraft.pathfinding.PathPoint;
 import ashjack.simukraftreloaded.common.MineSafety;
 import ashjack.simukraftreloaded.client.ClientGuiOpener;
 import net.minecraft.nbt.NBTTagCompound;
@@ -481,6 +482,41 @@ public class EntityFolk extends EntityCreature implements INpc {
 	public boolean gotPath;
 	/** ticks to wait before asking the pathfinder again after it failed */
 	private int pathRetryTicks = 0;
+	/** where and when the folk last made progress on a walk, for unstick() */
+	private double progressX, progressY, progressZ;
+	private long progressTime;
+
+	/**
+	 * A folk that hasn't moved for 8 seconds while following a path hops onto the next point if it's right beside
+	 * them: whatever's holding them (a ledge out of water, a block corner, a mob in the way) the path itself says the
+	 * spot is safe to stand on.
+	 */
+	private void unstick() {
+		long now = System.currentTimeMillis();
+		double dx = posX - progressX, dy = posY - progressY, dz = posZ - progressZ;
+		if (dx * dx + dy * dy + dz * dz > 0.25 || progressTime == 0) {
+			progressX = posX; progressY = posY; progressZ = posZ;
+			progressTime = now;
+			return;
+		}
+		if (now - progressTime < 8000) {
+			return;
+		}
+		progressTime = now;
+		PathEntity path = getNavigator().getPath();
+		if (path == null || path.isFinished()) {
+			return;
+		}
+		int next = Math.min(path.getCurrentPathIndex() + 1, path.getCurrentPathLength() - 1);
+		PathPoint p = path.getPathPointFromIndex(next);
+		double hx = p.xCoord + 0.5 - posX, hz = p.zCoord + 0.5 - posZ;
+		if (hx * hx + hz * hz <= 2.25 && p.yCoord - posY <= 1.5 && p.yCoord - posY >= -3) {
+			SimukraftReloaded.log.info("EntityFolk: " + theData.name + " was stuck at " + (int) posX + "," + (int) posY + ","
+					+ (int) posZ + ", hopped to " + p.xCoord + "," + p.yCoord + "," + p.zCoord);
+			setPosition(p.xCoord + 0.5, p.yCoord, p.zCoord + 0.5);
+			path.setCurrentPathIndex(next);
+		}
+	}
 
 	@Override
 	public void moveEntity(double d, double d1, double d2) {
@@ -564,6 +600,10 @@ public class EntityFolk extends EntityCreature implements INpc {
 				}
 			}
 
+			if (theData.destination != null) {
+				unstick();
+			}
+
 			boolean donttimeout = false;
 
 			try {
@@ -571,8 +611,10 @@ public class EntityFolk extends EntityCreature implements INpc {
 			} catch (Exception e) {
 			}
 
-			if (theData.timeStartedGotoing != null && donttimeout == false) {
-				if (System.currentTimeMillis() - theData.timeStartedGotoing > 40000
+			// "don't time out" trips (wandering, visiting, a miner's walk) still give up after 3 minutes: a folk stuck
+			// somewhere used to stay stuck forever
+			if (theData.timeStartedGotoing != null) {
+				if (System.currentTimeMillis() - theData.timeStartedGotoing > (donttimeout ? 180000 : 40000)
 						&& theData.beamingTo == null) {
 					getNavigator().clearPathEntity();
 
