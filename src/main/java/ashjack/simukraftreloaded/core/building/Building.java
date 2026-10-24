@@ -76,7 +76,7 @@ public class Building implements Serializable
     public transient HashMap<ItemStack, Integer> requirements = new HashMap<ItemStack, Integer>();
     /** requirements as "item|damage|count", for MirrorSync: ItemStacks can't be serialised */
     public ArrayList<String> syncedRequirements;
-    public transient V3 conBoxLocation = null;
+    public transient V3 conBoxLocation = null; // transient for MirrorSync; saved in toSaveLines()
     private transient static ArrayList<Building> buildingsRes = new ArrayList<Building>();
     private transient static ArrayList<Building> buildingsCom = new ArrayList<Building>();
     private transient static ArrayList<Building> buildingsInd = new ArrayList<Building>();
@@ -961,6 +961,10 @@ public class Building implements Serializable
         strings.add("builddir|" + this.buildDirection);
         strings.add("lmarker|" + (this.lumbermillMarker == null ? "null" : this.lumbermillMarker.toString()));
         strings.add("blocksinbuilding|" + this.blocksInBuilding);
+        if (this.conBoxLocation != null)
+        {
+            strings.add("conbox|" + this.conBoxLocation.toString()); // the warehouse takes leftovers from chests by it
+        }
         if (this.roomMode != null)
         {
             strings.add("roommode|" + this.roomMode);
@@ -1321,6 +1325,8 @@ public class Building implements Serializable
 	        					if (!value.contentEquals("null")) {
 	        						build.livingXYZ=new V3(value);
 	        					}
+	        				} else if (name.contentEquals("conbox")) {
+	        					build.conBoxLocation=new V3(value);
 	        				} else if (name.contentEquals("buildingcomplete")) {
 	        					build.buildingComplete=Boolean.parseBoolean(value);
 	        				} else if (name.contentEquals("capacity")) {
@@ -1473,9 +1479,45 @@ public class Building implements Serializable
     }
 
     /* loads in all buildings files into an ArrayList for quicker access (slowly in a thread) */
+    /** blueprints this rewrite adds, shipped in the jar and copied into mods/Simukraft/buildings when missing */
+    private static final String[] BUNDLED_BLUEPRINTS = {"industrial/Warehouse.txt"};
+
+    private static void installBundledBlueprints()
+    {
+        for (String path : BUNDLED_BLUEPRINTS)
+        {
+            File target = new File(SimukraftReloaded.getSimukraftFolder() + File.separator + "buildings" + File.separator
+                    + path.replace('/', File.separatorChar));
+            if (target.exists())
+            {
+                continue;
+            }
+            java.io.InputStream in = Building.class.getResourceAsStream("/assets/ashjacksimukraftreloaded/buildings/" + path);
+            if (in == null)
+            {
+                continue;
+            }
+            try
+            {
+                target.getParentFile().mkdirs();
+                java.nio.file.Files.copy(in, target.toPath());
+                SimukraftReloaded.log.info("Building: installed the " + target.getName() + " blueprint");
+            }
+            catch (Exception e)
+            {
+                SimukraftReloaded.log.warning("Building: couldn't install the " + path + " blueprint: " + e);
+            }
+            finally
+            {
+                try { in.close(); } catch (Exception e) {}
+            }
+        }
+    }
+
     public static void initialiseAllBuildings()
     {
     	if (runningInitThread) {return;}
+    	installBundledBlueprints();
     	
         Thread t = new Thread(new Runnable()
         {

@@ -1,5 +1,10 @@
 package ashjack.simukraftreloaded.folk;
 
+import net.minecraft.nbt.NBTSizeTracker;
+import net.minecraft.nbt.CompressedStreamTools;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import ashjack.simukraftreloaded.common.jobs.JobWarehouse;
 import java.util.Collections;
 
 import java.util.Arrays;
@@ -163,6 +168,9 @@ public class FolkData implements Serializable
     public int terraformerRadius = 1;
     /** the job's current stage as text, filled in when folks are sent to clients (theirJob isn't sent) */
     public String syncedJobStage = "";
+    /** warehouse keepers: their stock and trips as text, for the stock screen (see JobWarehouse.publish) */
+    public ArrayList<String> warehouseStock = new ArrayList<String>();
+    public ArrayList<String> warehouseTrips = new ArrayList<String>();
     /** a hotel guest from out of town: no job, no relationships, leaves when they check out */
     public boolean isVisitor = false;
     /** a visitor who has checked out and is walking out of town */
@@ -170,7 +178,7 @@ public class FolkData implements Serializable
     private transient long leftHotelAt = 0;
 
     /////// TRANSIENT VARIABLES NOT STORED WHEN SAVING THIS FOLK
-    /** the folk's own inventory for carrying stuff around the world and dropping off stuff */
+    /** the folk's own inventory for carrying stuff around the world and dropping off stuff (saved as "inventory|") */
     public transient ArrayList<ItemStack> inventory = new ArrayList<ItemStack>();
     /** a reference to the entity so we can check it's isDead() and mess with it etc */
     public transient EntityFolk theEntity = null;
@@ -236,7 +244,10 @@ public class FolkData implements Serializable
         SimukraftReloaded.log.info("FolkData: hasLoaded() " + this.name + " (" + voc + ") at "
                          + vocat + " location= " + this.location.toString() + "  "  + SimukraftReloaded.folks().size() + " folks in total");
         } catch(Exception e) {}
-        this.inventory = new ArrayList<ItemStack>();
+        if (this.inventory == null)
+        {
+            this.inventory = new ArrayList<ItemStack>(); // otherwise keep what the save says they were carrying
+        }
         this.setTheirJob(vocation);
         respawnEntity(MinecraftServer.getServer().worldServerForDimension(this.location.theDimension));
         SimukraftReloaded.folks().add(this);
@@ -1501,6 +1512,57 @@ public class FolkData implements Serializable
         }
     }
 
+    /** what a folk is carrying, as base64 of gzipped NBT (keeps meta and NBT); null when empty */
+    static String inventoryToString(ArrayList<ItemStack> inv)
+    {
+        NBTTagList list = new NBTTagList();
+        for (ItemStack is : new ArrayList<ItemStack>(inv))
+        {
+            if (is != null && is.stackSize > 0)
+            {
+                list.appendTag(is.writeToNBT(new NBTTagCompound()));
+            }
+        }
+        if (list.tagCount() == 0)
+        {
+            return null;
+        }
+        NBTTagCompound tag = new NBTTagCompound();
+        tag.setTag("items", list);
+        try
+        {
+            return java.util.Base64.getEncoder().encodeToString(CompressedStreamTools.compress(tag));
+        }
+        catch (Exception e)
+        {
+            SimukraftReloaded.log.warning("FolkData: couldn't save a folk's inventory: " + e);
+            return null;
+        }
+    }
+
+    static ArrayList<ItemStack> inventoryFromString(String s)
+    {
+        ArrayList<ItemStack> inv = new ArrayList<ItemStack>();
+        try
+        {
+            NBTTagList list = CompressedStreamTools.func_152457_a(java.util.Base64.getDecoder().decode(s), NBTSizeTracker.field_152451_a)
+                    .getTagList("items", 10);
+            for (int i = 0; i < list.tagCount(); i++)
+            {
+                ItemStack is = ItemStack.loadItemStackFromNBT(list.getCompoundTagAt(i));
+                if (is != null)
+                {
+                    inv.add(is);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            SimukraftReloaded.log.warning("FolkData: couldn't load a folk's inventory: " + e);
+        }
+        return inv;
+    }
+
     /** fire this folk, resets lots of values */
     public void selfFire()
     {
@@ -1523,7 +1585,7 @@ public class FolkData implements Serializable
                     {
                         try
                         {
-                            theEntity.entityDropItem(is, is.stackSize);
+                            theEntity.entityDropItem(is, 0.5f); // the float is a height offset, not a count
                         }
                         catch (Exception e) {}
                     }
@@ -1531,7 +1593,7 @@ public class FolkData implements Serializable
                     {
                         try
                         {
-                            FolkData.getClosestPlayer(this.location).entityDropItem(is, is.stackSize);
+                            FolkData.getClosestPlayer(this.location).entityDropItem(is, 0.5f);
                         }
                         catch (Exception e) {}
                     }
@@ -1918,6 +1980,8 @@ public class FolkData implements Serializable
 	        	    					folkd.employedAt=new V3(value);
 	        	    				}
 	        	    				
+	        	    			}else if (name.contentEquals("inventory")) {
+	        	    				folkd.inventory = inventoryFromString(value);
 	        	    			}else if (name.contentEquals("vocation")) {
 	        	    				if (!value.contentEquals("null")) {
 	        	    					folkd.vocation=Vocation.valueOf(value);
@@ -2062,6 +2126,10 @@ public class FolkData implements Serializable
 	        	strings.add("vocation|null");
 	        } else {
 	        	strings.add("vocation|"+this.vocation.name());
+	        }
+	        String carrying = inventoryToString(this.inventory);
+	        if (carrying != null) {
+	        	strings.add("inventory|" + carrying);
 	        }
     		strings.add("name|"+this.name);
     		strings.add("age|"+this.age);
@@ -2525,6 +2593,10 @@ public class FolkData implements Serializable
         else if (this.vocation == Vocation.COURIER)
         {
             this.theirJob = new JobCourier(this);
+        }
+        else if (this.vocation == Vocation.WAREHOUSE)
+        {
+            this.theirJob = new JobWarehouse(this);
         }
         else if (this.vocation == Vocation.CROPFARMER)
         {

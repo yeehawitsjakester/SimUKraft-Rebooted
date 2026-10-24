@@ -373,6 +373,19 @@ public class GuiControlBox extends GuiScreen
                 }
             }
             
+            if (theBuilding.displayName.contains("Warehouse"))
+            {
+                GuiButton b;
+                buttonList.add(b = new GuiButton(1, 10, height - 30, 130, 20, "Hire Warehouse keeper"));
+
+                if (employeeCount > 1)
+                {
+                    b.enabled = false;
+                }
+
+                buttonList.add(new GuiButton(1040, 145, height - 30, 60, 20, "Stock"));
+            }
+
             //Cheese Factory
             if (theBuilding.displayName.contains("Cheese Factory"))
             {
@@ -610,6 +623,15 @@ public class GuiControlBox extends GuiScreen
             mc.currentScreen = null;
             GuiEmployFolk ui = new GuiEmployFolk(this.location, "", Vocation.DAIRYFARMER);
             mc.displayGuiScreen(ui);
+        }
+        else if (guibutton.displayString.contentEquals("Hire Warehouse keeper"))
+        {
+            mc.currentScreen = null;
+            mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.WAREHOUSE));
+        }
+        else if (guibutton.id == 1040)
+        {
+            mc.displayGuiScreen(new GuiWarehouse(this.location));
         }
         else if (guibutton.displayString.contentEquals("Hire Cheesemaker"))
         {

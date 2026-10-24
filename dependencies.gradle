@@ -2,4 +2,7 @@
  * Add your dependencies here. See the GTNH ExampleMod1.7.10 template for the supported configurations.
  */
 dependencies {
+    // AE2's API (appeng/api, MIT) from the test pack's appliedenergistics2-rv3-beta-6.jar. Compile-only: the warehouse
+    // only touches it through AE2Bridge, and only when AE2 is installed.
+    compileOnly(files("libs/ae2-api-rv3-beta-6.jar"))
 }

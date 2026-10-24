@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import net.minecraft.item.Item;
+import java.util.LinkedHashMap;
 import ashjack.simukraftreloaded.common.Effects;
 import net.minecraft.block.material.Material;
 import java.io.Serializable;
@@ -43,6 +45,9 @@ public class JobBuilder extends Job implements Serializable
      * regardless of build delay
      */
     private transient long soundLastPlayed = 0l;
+
+    /** what they're stuck waiting for (any meta), for the warehouse; null while they have what they need */
+    public transient ItemStack wanted = null;
 
     int l = 0, ftb = 0, ltr = 0; // 3d build loops
     int xo = 0, zo = 0, acount = 0;
@@ -549,16 +554,7 @@ public class JobBuilder extends Job implements Serializable
                 if (!alreadyPlaced)
                 {
                     boolean gotBlock = false;
-                    boolean requiredBlocks = blockId == Blocks.planks
-                                             || blockId == Blocks.cobblestone
-                                             || blockId == Blocks.glass
-                                             || blockId == Blocks.wool
-                                             || blockId == Blocks.brick_block
-                                             || blockId == Blocks.dirt
-                                             || blockId == Blocks.stonebrick
-                                             || blockId == Blocks.fence
-                                             || blockId == Blocks.stone
-                                             || blockId == Blocks.log;
+                    boolean requiredBlocks = isRequiredInNormal(blockId);
 
                     if (GameMode.gameMode == GameMode.GAMEMODES.NORMAL)
                     {
@@ -632,6 +628,8 @@ public class JobBuilder extends Job implements Serializable
                             gotBlock = true;
                         }
                     }
+
+                    wanted = gotBlock ? null : new ItemStack(blockId, 1, 0);
 
                     if (!gotBlock)
                     {
@@ -894,6 +892,50 @@ public class JobBuilder extends Job implements Serializable
         {
             theFolk.gotoXYZ(theFolk.employedAt, null);
         }
+    }
+
+    /** the blocks a builder has to be given in Normal mode; everything else is free */
+    public static boolean isRequiredInNormal(Block b)
+    {
+        return b == Blocks.planks || b == Blocks.cobblestone || b == Blocks.glass || b == Blocks.wool
+                || b == Blocks.brick_block || b == Blocks.dirt || b == Blocks.stonebrick || b == Blocks.fence
+                || b == Blocks.stone || b == Blocks.log;
+    }
+
+    /**
+     * what this builder still has to be given, by item (any meta: they take any planks, wool...), counted over the
+     * rest of the blueprint. Blocks already standing in the way get counted too, so it can run a little high.
+     */
+    public LinkedHashMap<Item, Integer> remainingNeeds()
+    {
+        LinkedHashMap<Item, Integer> needs = new LinkedHashMap<Item, Integer>();
+        Building b = theBuilding;
+        if (b == null || b.structure == null || theStage == Stage.COMPLETE || theStage == Stage.IDLE
+                || GameMode.gameMode == GameMode.GAMEMODES.CREATIVE)
+        {
+            return needs;
+        }
+        Block onlyThis = GameMode.gameMode == GameMode.GAMEMODES.HARDCORE && wanted != null
+                ? Block.getBlockFromItem(wanted.getItem()) : null;
+        if (GameMode.gameMode == GameMode.GAMEMODES.HARDCORE && onlyThis == null)
+        {
+            return needs; // hardcore needs almost everything; only chase what they're actually stuck on
+        }
+        for (int i = Math.max(0, acount); i < b.structure.length; i++)
+        {
+            Block block = b.structure[i];
+            if (block == null || (onlyThis != null ? block != onlyThis : !isRequiredInNormal(block)))
+            {
+                continue;
+            }
+            Item item = Item.getItemFromBlock(block);
+            if (item != null)
+            {
+                Integer n = needs.get(item);
+                needs.put(item, n == null ? 1 : n + 1);
+            }
+        }
+        return needs;
     }
 
     public enum Stage

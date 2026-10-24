@@ -623,6 +623,8 @@ public class EntityFolk extends EntityCreature implements INpc {
 			return new ItemStack(Items.melon, 1);
 		} else if (this.theData.vocation == Vocation.COURIER) {
 			return new ItemStack(Blocks.chest, 1);
+		} else if (this.theData.vocation == Vocation.WAREHOUSE) {
+			return new ItemStack(Items.book, 1);
 		} else if (this.theData.vocation == Vocation.MERCHANT) {
 			return new ItemStack(Blocks.brick_block, 1);
 		} else if (this.theData.vocation == Vocation.BUTCHER) {

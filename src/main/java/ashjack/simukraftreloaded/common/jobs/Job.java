@@ -276,6 +276,16 @@ public abstract class Job
         return null;
     }
 
+    /**
+     * same item, and the same damage/meta when compareMeta. Used to set the chest stack's damage to the wanted one
+     * before comparing, which recoloured wool and changed plank types (and repaired tools) in every chest searched.
+     */
+    static boolean stacksMatch(ItemStack chestStack, ItemStack whatItem, boolean compareMeta)
+    {
+        return chestStack.getItem() == whatItem.getItem()
+                && (!compareMeta || chestStack.getItemDamage() == whatItem.getItemDamage());
+    }
+
     //called by public function
     private static ItemStack inventoryGet(IInventory chest, ItemStack whatItem, boolean getRandomItem, boolean compareMeta,ItemStack ignoreId)
     {
@@ -296,15 +306,13 @@ public abstract class Job
                 
                 if (chestStack != null && ignore==false)
                 {
-                	if (!compareMeta) {
-                		chestStack.setItemDamage(whatItem.getItemDamage());
-                	}
-                    if (chestStack.isItemEqual(whatItem))
+                    if (stacksMatch(chestStack, whatItem, compareMeta))
                     {
                         while (chestStack.stackSize >= 1)
                         {
                             returnStack.stackSize++;
                             chestStack.stackSize--;
+                            chest.markDirty();
 
                             if (chestStack.stackSize <= 0)
                             {
@@ -389,15 +397,13 @@ public abstract class Job
                 
                 if (chestStack != null && ignore==false)
                 {
-                	if (!compareMeta) {
-                		chestStack.setItemDamage(whatItem.getItemDamage());
-                	}
-                    if (chestStack.isItemEqual(whatItem))
+                    if (stacksMatch(chestStack, whatItem, compareMeta))
                     {
                         while (chestStack.stackSize >= 1)
                         {
                             returnStack.stackSize++;
                             chestStack.stackSize--;
+                            chest.markDirty();
 
                             if (chestStack.stackSize <= 0)
                             {
@@ -1056,7 +1062,7 @@ public abstract class Job
         BUILDER, LUMBERJACK, MINER, CROPFARMER, BAKER, SOLDIER, SHEPHERD, GROCER, COURIER,
         MERCHANT, BUTCHER, PIGFARMER, CATTLEFARMER, CHICKENFARMER, TERRAFORMER, GLASSMAKER,
         FISHERMAN, PATHBUILDER, DAIRYFARMER, CHEESEMAKER,BURGERSMANAGER,BURGERSFRYCOOK,BURGERSWAITER, EGGFARMER
-        ,BRICKMAKER;
+        ,BRICKMAKER, WAREHOUSE;
 
         public static Vocation getVocation(String s)
         {
@@ -1220,6 +1226,11 @@ public abstract class Job
             if (this == Vocation.COURIER)
             {
                 return "Courier";
+            }
+
+            if (this == Vocation.WAREHOUSE)
+            {
+                return "Warehouse Keeper";
             }
 
             if (this == Vocation.MERCHANT)
