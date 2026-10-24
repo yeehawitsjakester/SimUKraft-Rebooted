@@ -104,9 +104,17 @@ public class SimukraftReloaded
      * copy; everywhere else (server thread, dedicated server) they return the real data. In singleplayer both sides
      * live in one JVM, and the GUIs used to read and write the server's lists directly.
      */
+    /** the game's render/tick thread, set at startup on a client; stays null on a dedicated server */
+    public static volatile Thread clientThread = null;
+
+    /**
+     * true only on the client's own thread, which reads the synced mirror. Every other thread works on the real
+     * data: FML's "effective side" counted any non-server thread as client, so the save Minecraft runs on its
+     * shutdown thread (closing the game mid-world) wrote the just-cleared mirror over settings.sk2.
+     */
     public static boolean isClientThread()
     {
-        return FMLCommonHandler.instance().getSide().isClient() && FMLCommonHandler.instance().getEffectiveSide().isClient();
+        return clientThread != null && Thread.currentThread() == clientThread;
     }
 
     public static ArrayList<FolkData> folks() { return isClientThread() ? ClientMirror.folks : serverFolks; }

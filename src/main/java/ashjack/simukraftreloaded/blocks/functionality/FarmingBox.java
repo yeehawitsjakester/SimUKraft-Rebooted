@@ -500,8 +500,8 @@ public class FarmingBox  implements Serializable
 
     public static void saveFarmingBoxes()
     {
-    	Side side = cpw.mods.fml.common.FMLCommonHandler.instance().getEffectiveSide();
-    	if (side==Side.SERVER) { 
+    	// any thread but the client's own, including the one that saves while the game closes
+    	if (!SimukraftReloaded.isClientThread()) { 
     		ArrayList<String> strings=new ArrayList<String>();
     		
 	    	for (int b = 0; b < SimukraftReloaded.farmingBoxes().size(); b++)

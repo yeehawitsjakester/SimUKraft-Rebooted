@@ -47,6 +47,7 @@ public class ClientProxy extends CommonProxy
     @Override
     public void registerRenderInfo()
     {
+        SimukraftReloaded.clientThread = Thread.currentThread();
         RenderingRegistry.registerEntityRenderingHandler(EntityAlignBeam.class, new RenderAlignBeam(new ModelAlignBeam()));
         RenderingRegistry.registerEntityRenderingHandler(EntityFolk.class, new RenderFolk(new ModelFolkFemale()));
         RenderingRegistry.registerEntityRenderingHandler(EntityConBox.class, new RenderConBox(new ModelConBox()));

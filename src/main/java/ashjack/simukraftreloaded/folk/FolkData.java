@@ -2050,8 +2050,8 @@ public class FolkData implements Serializable
             f.mkdirs();
         }
 
-        Side side = cpw.mods.fml.common.FMLCommonHandler.instance().getEffectiveSide();
-    	if (side==Side.SERVER) { 
+        // any thread but the client's own, including the one that saves while the game closes
+    	if (!SimukraftReloaded.isClientThread()) { 
     		ArrayList<String> strings=new ArrayList<String>();
     		if (employedAt ==null) {
     			strings.add("employedat|null");

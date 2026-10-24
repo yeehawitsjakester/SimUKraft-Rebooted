@@ -214,8 +214,8 @@ public class CourierTask implements Serializable
     {
         String names = "";
 
-        Side side = cpw.mods.fml.common.FMLCommonHandler.instance().getEffectiveSide();
-    	if (side==Side.SERVER) { 
+        // any thread but the client's own, including the one that saves while the game closes
+    	if (!SimukraftReloaded.isClientThread()) { 
     		
     		
 	        for (int mofo = 0; mofo < SimukraftReloaded.courierPoints().size(); mofo++)

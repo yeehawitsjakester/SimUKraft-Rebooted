@@ -887,8 +887,8 @@ public class Relationship implements Serializable
     /** saves all relationships of all folks out to disk */
     public static void saveRelationships()
     {
-    	Side side = cpw.mods.fml.common.FMLCommonHandler.instance().getEffectiveSide();
-    	if (side==Side.SERVER) { 
+    	// any thread but the client's own, including the one that saves while the game closes
+    	if (!SimukraftReloaded.isClientThread()) { 
     		ArrayList<String> strings=new ArrayList<String>();
     		
 	    	for (int b = 0; b < SimukraftReloaded.relationships().size(); b++)
