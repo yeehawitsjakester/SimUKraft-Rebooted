@@ -47,7 +47,7 @@ import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 
 public class SimukraftReloaded 
 {
-	public static Logger log = Logger.getLogger("Sim-U-Kraft Reloaded");
+	public static Logger log = Logger.getLogger("Sim-U-Kraft Rebooted");
 	static
 	{
 		// java.util.logging goes nowhere in this pack, so hand our messages to the game's log (fml-client-latest.log)
@@ -212,7 +212,7 @@ public class SimukraftReloaded
     /** load this world's buildings, boxes and folks once a game mode has been chosen */
     public static void finishStartup()
     {
-        sendChat("Welcome to Sim-U-Kraft Reloaded " + ModSimukraft.version);
+        sendChat("Welcome to Sim-U-Kraft Rebooted " + ModSimukraft.version);
         folks().clear();
         Building.initialiseAllBuildings(); //load ALL buildings off disk and init them
         Building.loadAllBuildings();	   //load buildings in this world

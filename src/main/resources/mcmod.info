@@ -1,18 +1,20 @@
 [
 {
   "modid" : "ashjacksimukraftreloaded",
-  "name" : "Sim-U-Kraft Reloaded",
-  "version" : "1.0.1e",
-  "url" : "http://satscape.wordpress.com/sim-u-kraft",
-  "credits" : "Original Programming and graphics by Scott Hather, Documentation by Subrina Gass, Update by AshJack",
+  "name" : "Sim-U-Kraft Rebooted",
+  "version" : "${modVersion}",
+  "mcversion" : "1.7.10",
+  "url" : "https://github.com/yeehawitsjakester/SimUKraft-Rebooted",
+  "credits" : "Original Sim-U-Kraft by Satscape (Scott Hather), with documentation by Subrina Gass. Sim-U-Kraft Reloaded (the 1.7.10 port this is built on) by AshJack. Sim-U-Kraft Rebooted by yeehawitsjake. Skins from Minecraft skin sites and sound effects from Soundsnap, as credited by Satscape.",
   "authors": [
-    "Satscape (Scott Hather), AshJack"
+    "yeehawitsjake (Rebooted)",
+    "AshJack (Reloaded)",
+    "Satscape (original Sim-U-Kraft)"
   ],
-  "description": "Spawns Sim-U-Folks (NPCs) into your world, you can employ them to Build, mine, farm, bake, terraform and much more! Contains over 200 houses and buildings for them to build and live in, get them to build your own designs and share them with other players. The mod has aspects of Sim city and the Sims, it's also a bit like Buildcraft/IndustrialCraft but with People-power instead of machine power.",
+  "description": "An unofficial continuation of AshJack's Sim-U-Kraft Reloaded 1.0.3, which is based on Satscape's original Sim-U-Kraft. It's neither of those mods and isn't supported by their authors: report problems on the Rebooted GitHub, not to them.\n\nSpawns Sim-U-Folks (NPCs) into your world. Employ them to build, mine, farm, bake, terraform, keep a warehouse and much more, house them, and watch them make friends and families. The mod has aspects of SimCity and The Sims, and it's a bit like BuildCraft/IndustrialCraft with people-power instead of machine power.",
   "logoFile" : "/assets/ashjacksimukraftreloaded/suklogo.png",
   "updateUrl" : "",
   "parent" : "",
-  "screenshots": [
-  ]
+  "screenshots": []
 }
 ]

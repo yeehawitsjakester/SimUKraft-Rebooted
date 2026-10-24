@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.core;
 
+import ashjack.simukraftreloaded.Tags;
 import ashjack.simukraftreloaded.network.ActionHandlers;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -109,13 +110,14 @@ import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.common.registry.LanguageRegistry;
 import cpw.mods.fml.relauncher.*;
 
-@Mod(modid = "ashjacksimukraftreloaded", name = "Sim-U-Kraft Reloaded", version = "1.0.2b", dependencies = "required-after:Forge@[9.10,)")
+// the mod id stays AshJack's: it names every block, item and entity in existing worlds, so changing it would wipe them
+@Mod(modid = "ashjacksimukraftreloaded", name = "Sim-U-Kraft Rebooted", version = Tags.VERSION, dependencies = "required-after:Forge@[9.10,)")
 
 
 public class ModSimukraft
 {
 	
-    public static final String version = "1.0.3";
+    public static final String version = Tags.VERSION;
     public static final String modid = "ashjacksimukraftreloaded";
     
     @Mod.Instance(modid)
