@@ -38,7 +38,8 @@ public class EntityConBox extends Entity
         this.noClip = true;
         this.ignoreFrustumCheck = true;
 
-        if (!ModSimukraft.proxy.ranStartup)
+        // only the server runs startup: on a client joining a server the flag is never set, and this killed every box
+        if (par1World != null && !par1World.isRemote && !ModSimukraft.proxy.ranStartup)
         {
             SimukraftReloaded.log.info("EntityConBox: Killed system spawned ConBox");
             this.setDead();

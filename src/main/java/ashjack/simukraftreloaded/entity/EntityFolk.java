@@ -147,7 +147,8 @@ public class EntityFolk extends EntityCreature implements INpc {
 		this.tasks.addTask(9, new EntityAIOpenDoor(this, true));
 		this.tasks.addTask(4, new EntityAISwimming(this));
 
-		if (!ModSimukraft.proxy.ranStartup) {
+		// only the server runs startup: on a client joining a server the flag is never set, and this killed every folk
+		if (par1World != null && !par1World.isRemote && !ModSimukraft.proxy.ranStartup) {
 			SimukraftReloaded.log.info("EntityFolk: Killed system spawned folk");
 			this.setDead();
 		}
