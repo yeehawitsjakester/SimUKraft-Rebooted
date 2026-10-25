@@ -52,8 +52,8 @@ public class BlockCityBox extends Block
 	    }
 	    
 	    
+	    // the server has to run this too, or it doesn't know the click was handled and uses the held item on the box
 	    @Override
-	    @SideOnly(Side.CLIENT)
 	    public boolean onBlockActivated(World world, int i, int j, int k, EntityPlayer entityplayer,
 	                                    int par6, float par7, float par8, float par9)
 	    {

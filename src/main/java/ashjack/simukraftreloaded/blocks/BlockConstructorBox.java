@@ -95,8 +95,8 @@ public class BlockConstructorBox extends Block
         super.onBlockAdded(par1World, par2, par3, par4);
     }
 
+    // the server has to run this too, or it doesn't know the click was handled and uses the held item on the box
     @Override
-    @SideOnly(Side.CLIENT)
     public boolean onBlockActivated(World par1World, int par2, int par3,
                                     int par4, EntityPlayer thePlayer, int par6, float par7,
                                     float par8, float par9)

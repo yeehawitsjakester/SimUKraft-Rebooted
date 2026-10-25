@@ -24,6 +24,7 @@ import ashjack.simukraftreloaded.client.Gui.folk.GuiEmployFolk;
 import ashjack.simukraftreloaded.client.Gui.folk.GuiMerchant;
 import ashjack.simukraftreloaded.client.Gui.folk.GuiShowEmployees;
 import ashjack.simukraftreloaded.client.Gui.other.GuiBeamPlayerTo;
+import ashjack.simukraftreloaded.common.ClientMirror;
 import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
 import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
@@ -73,8 +74,19 @@ public class GuiControlBox extends GuiScreen
     @Override
     public void updateScreen()
     {
-        //theGuiTextField1.updateCursorCounter();
+        // opened before the server's sync brought this building over (a box placed a moment ago): pick it up when it does
+        if (theBuilding == null && ClientMirror.syncCount != seenSync)
+        {
+            seenSync = ClientMirror.syncCount;
+            theBuilding = Building.getBuilding(location);
+            if (theBuilding != null)
+            {
+                initGui();
+            }
+        }
     }
+
+    private int seenSync = ClientMirror.syncCount;
 
     @Override
     public void initGui()

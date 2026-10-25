@@ -706,11 +706,14 @@ public class EntityFolk extends EntityCreature implements INpc {
 	}
 
 	// // Right clicked this folk, bring up their GUI
+	// the server has to run this too, or it doesn't know the click was handled and uses the held item on the folk
 	@Override
-	@SideOnly(Side.CLIENT)
 	public boolean interact(final EntityPlayer entityplayer) {
 		if (this.theData == null) {
 			return false;
+		}
+		if (!this.worldObj.isRemote) {
+			return true;
 		}
 		final String folkName = this.theData.name;
 		final FolkData view = this.theData;

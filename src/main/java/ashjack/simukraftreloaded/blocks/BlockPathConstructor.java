@@ -2,6 +2,8 @@ package ashjack.simukraftreloaded.blocks;
 
 import java.util.ArrayList;
 
+import ashjack.simukraftreloaded.client.ClientGuiOpener;
+
 import ashjack.simukraftreloaded.client.Gui.blocks.GuiBuildingConstructor;
 import ashjack.simukraftreloaded.client.Gui.blocks.GuiMining;
 import ashjack.simukraftreloaded.client.Gui.blocks.GuiPathBox;
@@ -10,7 +12,7 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.IIcon;
@@ -74,26 +76,28 @@ public class BlockPathConstructor extends Block
     }
 
     @Override
-    @SideOnly(Side.CLIENT)
+    // the server has to run this too, or it doesn't know the click was handled and uses the held item on the box
     public boolean onBlockActivated(World world, int i, int j, int k,
     		EntityPlayer entityplayer, int par6, float par7,float par8, float par9) {
+    	if (!world.isRemote) {
     		world.playSoundEffect(i,j,k,"ashjacksimukraftreloaded:computer",1f,1f);
-    		PathBox miningBlock  =PathBox.getPathBlockByBoxXYZ(new V3((double)i,(double)j,(double)k,entityplayer.dimension));
-    		try {
-    			miningBlock.location.theDimension=entityplayer.dimension;
-
-    			ArrayList<FolkData> folks=FolkData.getFolksByEmployedAt(new V3((double)i,(double)j,(double)k,entityplayer.dimension));
-
-    			GuiPathBox ui=new GuiPathBox(miningBlock,folks);
-
-    	    	Minecraft mc=ModLoader.getMinecraftInstance();
-    	       	mc.displayGuiScreen(ui);
-    		} catch(Exception e) {
-    			e.printStackTrace();
-    			if (world.isRemote) {
+    		return true;
+    	}
+    	final V3 box = new V3((double)i,(double)j,(double)k,entityplayer.dimension);
+    	ClientGuiOpener.open(new ClientGuiOpener.Factory()
+    	{
+    		public GuiScreen create()
+    		{
+    			PathBox pathBlock = PathBox.getPathBlockByBoxXYZ(box);
+    			if (pathBlock == null)
+    			{
     				SimukraftReloaded.sendChat("Sorry, there was a problem with this Path box, try place it again");
+    				return null;
     			}
+    			pathBlock.location.theDimension = box.theDimension;
+    			return new GuiPathBox(pathBlock, FolkData.getFolksByEmployedAt(box));
     		}
+    	});
         return true;
     }
     */

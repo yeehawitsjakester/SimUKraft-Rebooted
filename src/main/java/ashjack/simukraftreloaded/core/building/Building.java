@@ -827,7 +827,8 @@ public class Building implements Serializable
     {
         Building b = null;
 
-        if (SimukraftReloaded.buildings().size() == 0)
+        // the server's list, loaded from the save; the client's is synced from the server and can't be loaded from disk
+        if (!SimukraftReloaded.isClientThread() && SimukraftReloaded.buildings().size() == 0)
         {
             Building.loadAllBuildings();
         }
@@ -856,7 +857,8 @@ public class Building implements Serializable
         Building b = null;
         Building nearestBuilding = null;
 
-        if (SimukraftReloaded.buildings().size() == 0)
+        // the server's list, loaded from the save; the client's is synced from the server and can't be loaded from disk
+        if (!SimukraftReloaded.isClientThread() && SimukraftReloaded.buildings().size() == 0)
         {
             Building.loadAllBuildings();
         }
