@@ -472,6 +472,7 @@ public class JobBuilder extends Job implements Serializable
                     {
                         theBuilding.primaryXYZ = new V3((double)(bx + xo), (double)(by + l),
                                                         (double)(bz + zo), theFolk.employedAt.theDimension);
+                        Building.register(theBuilding);
                         theBuilding.saveThisBuilding();
                     }
                     catch (Exception e)
@@ -839,6 +840,7 @@ public class JobBuilder extends Job implements Serializable
                                       + " has completed building a "
                                       + theBuilding.displayNameWithoutPK);
                 Effects.soundToAllPlayers("ashjacksimukraftreloaded:cash");
+                Building.register(theBuilding);
                 theBuilding.saveThisBuilding();
                 theFolk.theBuilding=null;
             }

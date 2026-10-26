@@ -1207,6 +1207,50 @@ public class Building implements Serializable
         }
     }
 
+    /**
+     * Puts a building a builder is working on into the list, in place of an older copy of it. Builders only ever saved
+     * their building to disk, so one finished since the last restart wasn't in the list at all (its control box had
+     * nothing to show, the warehouse never saw its chests), and one resumed after a restart sat there as the stale copy
+     * loaded from the save while the builder worked on a fresh one from the blueprint.
+     */
+    public static void register(Building b)
+    {
+        if (b == null || b.primaryXYZ == null || SimukraftReloaded.isClientThread())
+        {
+            return;
+        }
+        ArrayList<Building> list = SimukraftReloaded.buildings();
+        for (int i = 0; i < list.size(); i++)
+        {
+            Building old = list.get(i);
+            if (old == b)
+            {
+                return;
+            }
+            if (old != null && b.primaryXYZ.isSameCoordsAs(old.primaryXYZ, false, true))
+            {
+                // keep what the old copy knew that this one doesn't
+                if (b.conBoxLocation == null)
+                {
+                    b.conBoxLocation = old.conBoxLocation;
+                }
+                ArrayList<V3> blocks = new ArrayList<V3>(old.blockLocations);
+                blocks.addAll(b.blockLocations);
+                b.blockLocations = blocks;
+                for (String t : old.tennants)
+                {
+                    if (!b.tennants.contains(t))
+                    {
+                        b.tennants.add(t);
+                    }
+                }
+                list.set(i, b);
+                return;
+            }
+        }
+        list.add(b);
+    }
+
     public static void saveAllBuildings()
     {
         ArrayList<Building> gone = new ArrayList<Building>();

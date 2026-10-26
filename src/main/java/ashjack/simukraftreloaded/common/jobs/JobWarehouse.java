@@ -383,8 +383,9 @@ public class JobWarehouse extends Job
     }
 
     /**
-     * nothing for the builders: the closest mine or finished building with anything in its chests, to bring back.
-     * Only while the warehouse has room for it.
+     * nothing for the builders: the mine or finished building with the most in its chests (the closest of equals), to
+     * bring back. Only while the warehouse has room for it. Fullest first, or a mine that's being worked, refilling
+     * a few blocks at a time, keeps the keeper going back and forth to it and the other leftovers never get fetched.
      */
     private Delivery planHaul()
     {
@@ -393,17 +394,23 @@ public class JobWarehouse extends Job
             return null;
         }
         Source best = null;
-        int bestDist = Integer.MAX_VALUE;
+        int bestItems = 0, bestDist = Integer.MAX_VALUE;
         for (Source s : stock.sources)
         {
             if (s.isLocal() || s.counts.isEmpty() || hauling(s))
             {
                 continue;
             }
+            int items = 0;
+            for (int n : s.counts.values())
+            {
+                items += n;
+            }
             int dist = theFolk.employedAt.getDistanceTo(s.at);
-            if (dist < bestDist)
+            if (items > bestItems || items == bestItems && dist < bestDist)
             {
                 best = s;
+                bestItems = items;
                 bestDist = dist;
             }
         }
