@@ -50,7 +50,9 @@ public class EntityConBox extends Entity
     public void onUpdate()
     {
         //check to see if the constructor box is still there
-        if (System.currentTimeMillis() - lastCheck > 10000)
+        // server only: the check reads the server's world, which a client on a dedicated server can't see, so every
+        // client removed its copy of the box on its first tick (and the server says when it's gone anyway)
+        if (!worldObj.isRemote && System.currentTimeMillis() - lastCheck > 10000)
         {
             if (theFolk != null)
             {
@@ -78,7 +80,6 @@ public class EntityConBox extends Entity
     //** used by the custom render to find the folk that is the builder - very bodgy */
     public static FolkData getFolk(V3 where)
     {
-        V3 con = Job.findClosestBlockType(where, SimukraftReloadedBlocks.buildingConstructor, 6, false);
         FolkData ret = null;
 
         for (int f = 0; f < SimukraftReloaded.folks().size(); f++)
