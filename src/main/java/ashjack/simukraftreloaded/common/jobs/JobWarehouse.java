@@ -21,7 +21,8 @@ import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 /**
  * Keeps a warehouse: knows what's in its chests, the mines' chests, the chests left by finished buildings' constructor
  * boxes and a connected ME network, and carries what builders still need to the chests by their constructor boxes,
- * starting with whatever a builder is stuck waiting for.
+ * starting with whatever a builder is stuck waiting for. With nothing to deliver, they bring the leftovers and the
+ * mines' output back to the warehouse.
  *
  * Deliveries are reserved while under way (shared by every keeper), so two trips never count on the same items. The
  * stock itself is read fresh on each scan rather than tallied. What the keeper carries is in FolkData.inventory, which
@@ -38,7 +39,7 @@ public class JobWarehouse extends Job
         IDLE, FETCHING, DELIVERING, RETURNING;
     }
 
-    /** a trip under way */
+    /** a trip under way; a haul back to the warehouse has no item (anything) and no builder */
     static class Delivery
     {
         String keeper;
@@ -185,8 +186,22 @@ public class JobWarehouse extends Job
         Delivery d = plan();
         if (d == null)
         {
+            d = planHaul();
+        }
+        if (d == null)
+        {
             theFolk.statusText = stock.chestCount + " chests" + (stock.meTypes >= 0 ? " and an ME network" : "")
                     + " in stock, nothing to deliver";
+            return;
+        }
+        if (d.item == null)
+        {
+            current = d;
+            underWay.add(d);
+            theFolk.statusText = "Fetching " + d.from.kind.label + " back to the warehouse";
+            theFolk.isWorking = true;
+            theFolk.gotoXYZ(d.from.at, null);
+            theStage = Stage.FETCHING;
             return;
         }
 
@@ -237,6 +252,14 @@ public class JobWarehouse extends Job
             // someone emptied it since the last scan
             cancelTrip();
             lastScan = 0;
+            goBack();
+            return;
+        }
+        if (current.item == null)
+        {
+            // a haul: carry it home, where stageIdle puts it away
+            theFolk.statusText = "Bringing " + carried(null) + " items back to the warehouse";
+            cancelTrip();
             goBack();
             return;
         }
@@ -359,6 +382,83 @@ public class JobWarehouse extends Job
         return best;
     }
 
+    /**
+     * nothing for the builders: the closest mine or finished building with anything in its chests, to bring back.
+     * Only while the warehouse has room for it.
+     */
+    private Delivery planHaul()
+    {
+        if (!roomAtWarehouse())
+        {
+            return null;
+        }
+        Source best = null;
+        int bestDist = Integer.MAX_VALUE;
+        for (Source s : stock.sources)
+        {
+            if (s.isLocal() || s.counts.isEmpty() || hauling(s))
+            {
+                continue;
+            }
+            int dist = theFolk.employedAt.getDistanceTo(s.at);
+            if (dist < bestDist)
+            {
+                best = s;
+                bestDist = dist;
+            }
+        }
+        if (best == null)
+        {
+            return null;
+        }
+        Delivery d = new Delivery();
+        d.keeper = theFolk.name;
+        d.builder = "the warehouse";
+        d.to = theFolk.employedAt.clone();
+        d.from = best;
+        d.qty = TRIP_MAX;
+        return d;
+    }
+
+    /** another keeper is already on their way to empty it */
+    private static boolean hauling(Source s)
+    {
+        for (Delivery d : underWay)
+        {
+            if (d.item == null && d.from.kind == s.kind && d.from.at.isSameCoordsAs(s.at, true, true))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** an empty slot in a warehouse chest, or an ME network to put things in */
+    private boolean roomAtWarehouse()
+    {
+        for (Source s : stock.sources)
+        {
+            if (s.kind == Kind.ME)
+            {
+                return true;
+            }
+            if (s.kind == Kind.WAREHOUSE)
+            {
+                for (IInventory inv : s.chests)
+                {
+                    for (int i = 0; i < inv.getSizeInventory(); i++)
+                    {
+                        if (inv.getStackInSlot(i) == null)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     /** where to pick an item up: the warehouse (or ME) if it has any spare, else the closest place that does */
     private Source bestSource(Item item)
     {
@@ -420,7 +520,8 @@ public class JobWarehouse extends Job
             // re-read the chests now: the scan may be a few seconds old
             ArrayList<IInventory> chests = current.from.kind == Kind.WAREHOUSE ? current.from.chests
                     : WarehouseStock.storageNear(jobWorld, current.from.at, 4);
-            got = WarehouseStock.take(chests, current.item, current.qty);
+            got = current.item == null ? WarehouseStock.takeAny(chests, current.qty)
+                    : WarehouseStock.take(chests, current.item, current.qty);
         }
         theFolk.inventory.addAll(got);
     }
@@ -471,7 +572,7 @@ public class JobWarehouse extends Job
         int n = 0;
         for (ItemStack is : theFolk.inventory)
         {
-            if (is != null && is.getItem() == item)
+            if (is != null && (item == null || is.getItem() == item))
             {
                 n += is.stackSize;
             }
@@ -532,7 +633,10 @@ public class JobWarehouse extends Job
         ArrayList<String> trips = new ArrayList<String>();
         for (Delivery d : underWay)
         {
-            trips.add(d.keeper + "|" + d.qty + "|" + Item.itemRegistry.getNameForObject(d.item) + "|" + d.builder + "|" + d.from.kind.label);
+            if (d.item != null)
+            {
+                trips.add(d.keeper + "|" + d.qty + "|" + Item.itemRegistry.getNameForObject(d.item) + "|" + d.builder + "|" + d.from.kind.label);
+            }
         }
         theFolk.warehouseTrips = trips;
     }

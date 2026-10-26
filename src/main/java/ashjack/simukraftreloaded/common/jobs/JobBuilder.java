@@ -395,6 +395,12 @@ public class JobBuilder extends Job implements Serializable
             acount = 0;
             step = 2;
             theBuilding.blockLocations.clear();
+            // a build resumed after a restart gets a fresh Building from its blueprint: keep where its box is, the
+            // warehouse works out the building's footprint from it and takes leftovers from the chests by it
+            if (theBuilding.conBoxLocation == null)
+            {
+                theBuilding.conBoxLocation = theFolk.employedAt.clone();
+            }
             
         }
         else if (step == 2)     // ///////////////// STEP 2
@@ -520,9 +526,12 @@ public class JobBuilder extends Job implements Serializable
                     try
                     {
                         want = wantIS.getDisplayName();
-                        if (blockId != null)
+                        // once per block: a builder waiting for materials comes back to the same block every few seconds
+                        V3 here = new V3(bx + xo, by + l, bz + zo, theFolk.location.theDimension);
+                        int last = theBuilding.blockLocations.size() - 1;
+                        if (blockId != null && (last < 0 || !theBuilding.blockLocations.get(last).isSameCoordsAs(here, true, true)))
                         {
-                            theBuilding.blockLocations.add(new V3(bx + xo, by + l, bz + zo,theFolk.location.theDimension));
+                            theBuilding.blockLocations.add(here);
                         }
                         
                     }

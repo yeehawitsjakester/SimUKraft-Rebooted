@@ -170,9 +170,10 @@ public class WarehouseStock
 
         for (Building other : new ArrayList<Building>(SimukraftReloaded.serverBuildings))
         {
-            if (other.buildingComplete && other.conBoxLocation != null && other.conBoxLocation.theDimension == dim)
+            V3 conBox = conBoxOf(other);
+            if (other.buildingComplete && other != warehouse && conBox != null && conBox.theDimension == dim)
             {
-                stock.add(chestSource(Kind.LEFTOVERS, other.conBoxLocation, world, seen));
+                stock.add(chestSource(Kind.LEFTOVERS, conBox, world, seen));
             }
         }
         return stock;
@@ -236,26 +237,84 @@ public class WarehouseStock
         return n;
     }
 
-    /** min/max x,y,z of the building's blocks, or a 13x13 area around the box if it has none recorded */
+    /**
+     * min/max x,y,z of the building: its blueprint's footprint laid out from its constructor box the way JobBuilder
+     * lays it out, or a 13x13 area around the box if that can't be worked out. (Its recorded block list can't be
+     * trusted for this: builds resumed after a restart only hold the blocks placed since.)
+     */
     private static int[] bounds(Building warehouse, V3 box)
     {
         int bx = box.x.intValue(), by = box.y.intValue(), bz = box.z.intValue();
         int[] r = {bx - 6, by - 1, bz - 6, bx + 6, by + 5, bz + 6};
-        if (warehouse != null && warehouse.blockLocations != null && !warehouse.blockLocations.isEmpty())
+        int[] f = warehouse == null ? null : footprint(warehouse, conBoxOf(warehouse));
+        if (f != null && f[0] <= bx && bx <= f[3] && f[1] <= by && by <= f[4] && f[2] <= bz && bz <= f[5])
         {
-            r = new int[] {bx, by, bz, bx, by, bz};
-            for (V3 v : new ArrayList<V3>(warehouse.blockLocations))
-            {
-                if (v == null)
-                {
-                    continue;
-                }
-                r[0] = Math.min(r[0], v.x.intValue()); r[3] = Math.max(r[3], v.x.intValue());
-                r[1] = Math.min(r[1], v.y.intValue()); r[4] = Math.max(r[4], v.y.intValue());
-                r[2] = Math.min(r[2], v.z.intValue()); r[5] = Math.max(r[5], v.z.intValue());
-            }
+            r = f; // sanity: the control box is part of the building
         }
         return r;
+    }
+
+    /** the blueprint laid out from a constructor box, as JobBuilder places it, or null */
+    private static int[] footprint(Building b, V3 con)
+    {
+        if (con == null || b.ltrCount <= 0 || b.ftbCount <= 0 || b.layerCount <= 0 || b.buildDirection == null)
+        {
+            return null;
+        }
+        int cx = con.x.intValue(), cy = con.y.intValue(), cz = con.z.intValue();
+        int ltr = b.ltrCount - 1, ftb = b.ftbCount, top = cy + b.layerCount - 1;
+        String d = b.buildDirection;
+        if (d.contentEquals("-x"))
+        {
+            return new int[] {cx + 1, cy, cz, cx + ftb, top, cz + ltr};
+        }
+        if (d.contentEquals("+x"))
+        {
+            return new int[] {cx - ftb, cy, cz - ltr, cx - 1, top, cz};
+        }
+        if (d.contentEquals("-z"))
+        {
+            return new int[] {cx - ltr, cy, cz + 1, cx, top, cz + ftb};
+        }
+        if (d.contentEquals("+z"))
+        {
+            return new int[] {cx, cy, cz - ftb, cx + ltr, top, cz - 1};
+        }
+        return null;
+    }
+
+    /**
+     * where a building's constructor box was. Buildings finished after a restart mid-build never saved it, but the
+     * first block a builder records is the corner next to the box, so it can be worked back from that.
+     */
+    public static V3 conBoxOf(Building b)
+    {
+        if (b.conBoxLocation != null)
+        {
+            return b.conBoxLocation;
+        }
+        if (b.blockLocations == null || b.blockLocations.isEmpty() || b.blockLocations.get(0) == null
+                || b.buildDirection == null || b.primaryXYZ == null)
+        {
+            return null;
+        }
+        V3 first = b.blockLocations.get(0);
+        V3 con = first.clone();
+        String d = b.buildDirection;
+        if (d.contentEquals("-x")) con.x = con.x - 1;
+        else if (d.contentEquals("+x")) con.x = con.x + 1;
+        else if (d.contentEquals("-z")) con.z = con.z - 1;
+        else if (d.contentEquals("+z")) con.z = con.z + 1;
+        else return null;
+        // only if the building then really covers its control box
+        int[] f = footprint(b, con);
+        int px = b.primaryXYZ.x.intValue(), py = b.primaryXYZ.y.intValue(), pz = b.primaryXYZ.z.intValue();
+        if (f == null || px < f[0] || px > f[3] || py < f[1] || py > f[4] || pz < f[2] || pz > f[5])
+        {
+            return null;
+        }
+        b.conBoxLocation = con; // saved with the building from now on
+        return con;
     }
 
     // ---------------------------------------------------------------- chests
@@ -329,6 +388,29 @@ public class WarehouseStock
             {
                 ItemStack is = inv.getStackInSlot(i);
                 if (is != null && is.getItem() == item && is.stackSize > 0)
+                {
+                    ItemStack got = inv.decrStackSize(i, Math.min(qty, is.stackSize));
+                    if (got != null && got.stackSize > 0)
+                    {
+                        qty -= got.stackSize;
+                        out.add(got);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    /** take up to qty items of any kind out of the chests, whole stacks at a time where they fit */
+    public static List<ItemStack> takeAny(List<IInventory> chests, int qty)
+    {
+        List<ItemStack> out = new ArrayList<ItemStack>();
+        for (IInventory inv : chests)
+        {
+            for (int i = 0; i < inv.getSizeInventory() && qty > 0; i++)
+            {
+                ItemStack is = inv.getStackInSlot(i);
+                if (is != null && is.getItem() != null && is.stackSize > 0)
                 {
                     ItemStack got = inv.decrStackSize(i, Math.min(qty, is.stackSize));
                     if (got != null && got.stackSize > 0)
