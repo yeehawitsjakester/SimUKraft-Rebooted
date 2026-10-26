@@ -66,7 +66,11 @@ public final class FolkPathfinder
         mines = isMiner(entity) ? new ArrayList<int[]>() : MineSafety.areas();
         dim = entity.dimension;
         int sx = MathHelper.floor_double(entity.posX);
-        int sy = MathHelper.floor_double(entity.posY + 0.1);
+        // start at the height PathNavigate measures them at (half a block above their feet), or on top of a chest
+        // (7/8 high) the path starts inside the chest, the first point is a level below where they stand, the
+        // navigator never counts it reached, and they turn on the spot. Swimmers start in the water, see toPath
+        int sy = entity.isInWater() ? MathHelper.floor_double(entity.posY + 0.1)
+                : MathHelper.floor_double(entity.boundingBox.minY + 0.5);
         int sz = MathHelper.floor_double(entity.posZ);
 
         HashMap<Long, Node> nodes = new HashMap<Long, Node>();
