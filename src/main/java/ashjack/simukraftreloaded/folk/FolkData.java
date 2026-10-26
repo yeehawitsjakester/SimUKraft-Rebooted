@@ -1626,6 +1626,10 @@ public class FolkData implements Serializable
         }
 
         this.vocation = null;
+        if (this.theirJob != null)
+        {
+            this.theirJob.closeChests();
+        }
         this.theirJob = null;
         this.action = FolkAction.WANDER;
         this.statusText = "Wandering";

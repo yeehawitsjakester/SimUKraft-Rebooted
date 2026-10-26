@@ -151,13 +151,12 @@ public class JobTerraformer extends Job
                 else
                 {
                     step = 2;
-                    constructorChests.get(0).openInventory();
+                    openCloseChest(constructorChests.get(0), 2500);
                 }
             }
         }
         else if (step == 2)
         {
-            constructorChests.get(0).closeInventory();
             theStage = Stage.INPROGRESS;
             step = 1; //first start of inprogress
         }

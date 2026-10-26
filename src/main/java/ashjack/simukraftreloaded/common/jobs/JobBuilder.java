@@ -268,7 +268,7 @@ public class JobBuilder extends Job implements Serializable
             {
                 try
                 {
-                    constructorChests.get(0).openInventory();
+                    openCloseChest(constructorChests.get(0), 2500);
                 }
                 catch (Exception e)
                 {
@@ -287,7 +287,6 @@ public class JobBuilder extends Job implements Serializable
         }
         else if (step == 2)
         {
-            constructorChests.get(0).closeInventory();
             theStage = Stage.INPROGRESS;
             step = 1;
         }

@@ -3,7 +3,10 @@ package ashjack.simukraftreloaded.common.jobs;
 import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import ashjack.simukraftreloaded.core.ModSimukraft;
@@ -32,9 +35,8 @@ public abstract class Job
     public Vocation vocation = null;
     public World jobWorld = null;
 
-    // chest has been opened, this is to close the chest later
-    private transient IInventory chestToClose = null;
-    private transient Long chestToCloseWhen = 0l;
+    // chests that have been opened, and when to close each: one open per chest, or its lid stays up for good
+    private transient Map<IInventory, Long> chestsToClose = new IdentityHashMap<IInventory, Long>();
 
     public Job()
     {
@@ -49,12 +51,20 @@ public abstract class Job
     /** called repeatedly throughout working period, overridden in sub-classes of jobs */
     public void onUpdate()
     {
-        if (chestToClose != null)
+        if (chestsToClose != null && !chestsToClose.isEmpty())
         {
-            if (System.currentTimeMillis() > chestToCloseWhen)
+            long now = System.currentTimeMillis();
+            Iterator<Map.Entry<IInventory, Long>> it = chestsToClose.entrySet().iterator();
+
+            while (it.hasNext())
             {
-                chestToClose.closeInventory();
-                chestToClose = null;
+                Map.Entry<IInventory, Long> e = it.next();
+
+                if (now > e.getValue())
+                {
+                    e.getKey().closeInventory();
+                    it.remove();
+                }
             }
         }
     }
@@ -698,10 +708,35 @@ public abstract class Job
     /** open and close a chest to simulate folk putting stuff into or out of it */
     public void openCloseChest(IInventory chest, int msDelay)
     {
-        chest.openInventory();
-        chestToClose = chest;
-        chestToCloseWhen = System.currentTimeMillis() + msDelay;
+        if (chestsToClose == null)
+        {
+            chestsToClose = new IdentityHashMap<IInventory, Long>();
+        }
+
+        // every open needs its own close (a chest counts its users): one that's already open just stays open longer.
+        // This used to remember only the last chest, so a builder putting away a block a second left its chest
+        // open forever
+        if (!chestsToClose.containsKey(chest))
+        {
+            chest.openInventory();
+        }
+
+        chestsToClose.put(chest, System.currentTimeMillis() + msDelay);
         //chest is closed by Job's update() after msDelay
+    }
+
+    /** closes any chest still open now: a folk who leaves a job never gets back to close it */
+    public void closeChests()
+    {
+        if (chestsToClose != null)
+        {
+            for (IInventory chest : chestsToClose.keySet())
+            {
+                chest.closeInventory();
+            }
+
+            chestsToClose.clear();
+        }
     }
 
     /** sets the closestBlocks arraylist with V3 locations in world where the passed in Block types are found */

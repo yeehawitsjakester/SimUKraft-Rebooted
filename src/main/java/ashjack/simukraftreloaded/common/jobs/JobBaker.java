@@ -212,7 +212,7 @@ public class JobBaker extends Job implements Serializable
 
             if (farmChests.size() > 0)
             {
-                farmChests.get(0).openInventory();
+                openCloseChest(farmChests.get(0), 2500);
                 step = 2;
             }
         }
@@ -224,7 +224,6 @@ public class JobBaker extends Job implements Serializable
         }
         else if (step == 3)
         {
-            farmChests.get(0).closeInventory();
             theStage = Stage.GOINGTOWHEATFARM;
             step = 1;
         }
@@ -293,7 +292,7 @@ public class JobBaker extends Job implements Serializable
 
             try
             {
-                bakeryChests.get(0).openInventory();
+                openCloseChest(bakeryChests.get(0), 2500);
             }
             catch (Exception e) {}
 
@@ -303,7 +302,6 @@ public class JobBaker extends Job implements Serializable
         }
         else if (step == 3)
         {
-            bakeryChests.get(0).closeInventory();
             theFolk.statusText = "Selling bread to customers";
             theFolk.stayPut = true;
 

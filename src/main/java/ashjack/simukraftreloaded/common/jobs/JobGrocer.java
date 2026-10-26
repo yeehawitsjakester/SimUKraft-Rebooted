@@ -218,7 +218,7 @@ public class JobGrocer extends Job implements Serializable
             if (farmChests.size() > 0)
             {
                 theFolk.stayPut = true;
-                farmChests.get(0).openInventory();
+                openCloseChest(farmChests.get(0), 2500);
                 step = 2;
             }
         }
@@ -232,7 +232,6 @@ public class JobGrocer extends Job implements Serializable
         }
         else if (step == 3)
         {
-            farmChests.get(0).closeInventory();
             theStage = Stage.GOINGTOFOODFARM;
         }
     }
