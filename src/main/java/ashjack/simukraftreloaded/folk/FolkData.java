@@ -181,6 +181,8 @@ public class FolkData implements Serializable
     /////// TRANSIENT VARIABLES NOT STORED WHEN SAVING THIS FOLK
     /** the folk's own inventory for carrying stuff around the world and dropping off stuff (saved as "inventory|") */
     public transient ArrayList<ItemStack> inventory = new ArrayList<ItemStack>();
+    /** what a soldier has in hand right now (shown on their model); null for their job's usual tool */
+    public transient ItemStack heldItem = null;
     /** a reference to the entity so we can check it's isDead() and mess with it etc */
     public transient EntityFolk theEntity = null;
     /** set when they are GOTO'ing and walking/beaming, used to beam them if they can't get there within 40 seconds */

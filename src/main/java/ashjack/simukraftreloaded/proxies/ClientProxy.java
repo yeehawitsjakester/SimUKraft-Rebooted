@@ -52,6 +52,7 @@ public class ClientProxy extends CommonProxy
         RenderingRegistry.registerEntityRenderingHandler(EntityAlignBeam.class, new RenderAlignBeam(new ModelAlignBeam()));
         RenderingRegistry.registerEntityRenderingHandler(EntityFolk.class, new RenderFolk(new ModelFolkFemale()));
         RenderingRegistry.registerEntityRenderingHandler(EntityConBox.class, new RenderConBox(new ModelConBox()));
+        RenderingRegistry.registerEntityRenderingHandler(ashjack.simukraftreloaded.entity.EntityBandit.class, new ashjack.simukraftreloaded.client.RenderBandit());
     }
 
     @Override

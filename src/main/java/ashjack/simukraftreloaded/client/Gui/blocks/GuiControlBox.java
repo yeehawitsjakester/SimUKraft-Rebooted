@@ -1,6 +1,7 @@
 package ashjack.simukraftreloaded.client.Gui.blocks;
 
 import ashjack.simukraftreloaded.core.building.MotelPlan;
+import ashjack.simukraftreloaded.common.military.Armory;
 import ashjack.simukraftreloaded.core.building.ApartmentConversion;
 import net.minecraft.nbt.NBTTagCompound;
 import ashjack.simukraftreloaded.network.ServerActions;
@@ -297,7 +298,7 @@ public class GuiControlBox extends GuiScreen
                 GuiButton b;
                 buttonList.add(b = new GuiButton(1, 10, height - 30, 100, 20, "Train Soldier"));
 
-                if (employeeCount > 9)
+                if (employeeCount >= theBuilding.soldierCapacity())
                 {
                     b.enabled = false;
                 }
@@ -550,7 +551,9 @@ public class GuiControlBox extends GuiScreen
                 }
                 else if (theBuilding.type.contentEquals("industrial") || theBuilding.type.contentEquals("commercial") || theBuilding.type.contentEquals("special"))
                 {
-                    fontRendererObj.drawString("Employees :", 5, 57, 0xffff80);
+                    fontRendererObj.drawString(theBuilding.displayName.contains("Barracks")
+                            ? "Soldiers : " + employeeCount + " of " + theBuilding.soldierCapacity()
+                              + "   (armory: chests in the barracks)" : "Employees :", 5, 57, 0xffff80);
                     int down = 70;
 
                     for (int fc = 0; fc < SimukraftReloaded.folks().size(); fc++)
@@ -560,7 +563,8 @@ public class GuiControlBox extends GuiScreen
                         if (theBuilding.primaryXYZ.isSameCoordsAs(folk.employedAt, true, true))
                         {
                             fontRendererObj.drawString(folk.name + " (" + folk.age + ") - "
-                                                    + folk.vocation.toString() , 20, down, 0xffffa0);
+                                                    + (folk.vocation == Vocation.SOLDIER ? Armory.Rank.of(folk.levelSoldier).title
+                                                       + ", level " + (int) folk.levelSoldier : folk.vocation.toString()), 20, down, 0xffffa0);
                             down += 20;
                         }
                     }

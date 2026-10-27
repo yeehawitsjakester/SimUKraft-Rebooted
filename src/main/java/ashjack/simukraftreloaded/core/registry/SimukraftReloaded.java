@@ -729,14 +729,17 @@ public class SimukraftReloaded
                     if (folk.vocation == Vocation.SOLDIER)
                     {
                         JobSoldier job = (JobSoldier)folk.theirJob;
-                        float pay = job.kills * 0.20f;
+                        float pay = job.kills * 0.20f + job.bounty;
 
-                        if (job.kills > 0)
+                        if (pay > 0)
                         {
-                            sendChat("Paid " + folk.name + " " + displayMoney(pay) +
-                                                  " Sim-u-credits for killing " + job.kills + " hostile mobs yesterday.");
+                            sendChat("Paid " + folk.name + " " + displayMoney(pay) + " Sim-u-credits for "
+                                    + (job.kills > 0 ? "killing " + job.kills + " hostile mobs" : "")
+                                    + (job.kills > 0 && job.bounty > 0 ? " and " : "")
+                                    + (job.bounty > 0 ? "bounties on bandits and arrests" : "") + " yesterday.");
                             states().credits -= pay;
                             job.kills = 0;
+                            job.bounty = 0;
                         }
                     }
                 }

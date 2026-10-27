@@ -1654,6 +1654,12 @@ public class Building implements Serializable
         return MotelPlan.isGenerated(name) || ApartmentConversion.isGenerated(name);
     }
 
+    /** how many soldiers a barracks can train: one per so much floor (config BarracksAreaPerSoldier) */
+    public int soldierCapacity()
+    {
+        return Math.max(1, Math.min(60, ltrCount * ftbCount / SimukraftReloadedConfig.configBarracksAreaPerSoldier));
+    }
+
     /** a made-to-order motel, ready to preview or build */
     public static Building fromMotelPlan(MotelPlan plan)
     {

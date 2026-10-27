@@ -175,6 +175,7 @@ public class ModSimukraft
         EntityRegistry.registerGlobalEntityID(EntityConBox.class,
                 "ConBox", EntityRegistry.findGlobalUniqueEntityId());
         EntityRegistry.registerModEntity(EntityConBox.class, "ConBox", 2, this, 250, 2, true);
+        EntityRegistry.registerModEntity(ashjack.simukraftreloaded.entity.EntityBandit.class, "Bandit", 3, this, 80, 3, true);
         
         //Traits
         Traits.loadTraits();

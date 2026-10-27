@@ -124,11 +124,28 @@ public final class ActionHandlers
                     tell(player, "Builder's merchant cannot be hired in creative mode");
                     return;
                 }
+                // a barracks trains as many soldiers as it has room for
+                int room = Integer.MAX_VALUE;
+                if (vocation == Vocation.SOLDIER)
+                {
+                    Building barracks = Building.getBuilding(box);
+                    room = (barracks == null ? 10 : barracks.soldierCapacity()) - FolkData.getFolksByEmployedAt(box).size();
+                    if (room <= 0)
+                    {
+                        tell(player, "This barracks has no room for more soldiers - build a bigger one, or another");
+                        return;
+                    }
+                }
                 for (String name : getNames(data, "folks"))
                 {
                     FolkData folk = FolkData.getFolkByName(name);
                     if (folk == null || folk.employedAt != null || folk.isVisitor || folk.age < 18)
                     {
+                        continue;
+                    }
+                    if (room-- <= 0)
+                    {
+                        tell(player, "The barracks is full - " + folk.name + " wasn't trained");
                         continue;
                     }
                     folk.statusText = "Going to my new job...";

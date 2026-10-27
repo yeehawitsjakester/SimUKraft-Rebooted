@@ -280,6 +280,9 @@ public class CommonProxy
     	CommonTickHandler tickHandler = new CommonTickHandler();
     	FMLCommonHandler.instance().bus().register(tickHandler);
     	MinecraftForge.EVENT_BUS.register(tickHandler); // WorldEvent.Save
+    	ashjack.simukraftreloaded.common.military.Crime crime = new ashjack.simukraftreloaded.common.military.Crime();
+    	FMLCommonHandler.instance().bus().register(crime);  // bandits, nightly
+    	MinecraftForge.EVENT_BUS.register(crime);           // players hurting Sims
     	// ClientTickHandler is client-only; it is registered by ClientProxy
     }
 

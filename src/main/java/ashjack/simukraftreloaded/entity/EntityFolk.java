@@ -71,7 +71,7 @@ public class EntityFolk extends EntityCreature implements INpc {
 	//public RenderOnEntityHelper hatHelper;
 
 	// data watcher slots: what clients need to draw a folk (name tag, status lines, skin, work animation)
-	private static final int DW_NAME = 16, DW_STATUS = 17, DW_STATUS_LINES = 18, DW_AGE = 19, DW_LOOK = 20, DW_WORKING = 21, DW_VOCATION = 22;
+	private static final int DW_NAME = 16, DW_STATUS = 17, DW_STATUS_LINES = 18, DW_AGE = 19, DW_LOOK = 20, DW_WORKING = 21, DW_VOCATION = 22, DW_HELD = 23;
 
 	/** on the client, theData is this: a small FolkData filled from the data watcher, not the real one */
 	private FolkData clientView = null;
@@ -86,6 +86,7 @@ public class EntityFolk extends EntityCreature implements INpc {
 		this.dataWatcher.addObject(DW_LOOK, Integer.valueOf(1));
 		this.dataWatcher.addObject(DW_WORKING, Byte.valueOf((byte) 0));
 		this.dataWatcher.addObject(DW_VOCATION, "");
+		this.dataWatcher.addObject(DW_HELD, "");
 	}
 
 	/** server: copy the display fields into the data watcher (it only sends what changed) */
@@ -98,6 +99,31 @@ public class EntityFolk extends EntityCreature implements INpc {
 		this.dataWatcher.updateObject(DW_LOOK, Integer.valueOf(theData.gender * 1000 + theData.skinnumber));
 		this.dataWatcher.updateObject(DW_WORKING, Byte.valueOf((byte) (theData.isWorking ? 1 : 0)));
 		this.dataWatcher.updateObject(DW_VOCATION, theData.vocation == null ? "" : theData.vocation.name());
+		ItemStack held = theData.heldItem;
+		this.dataWatcher.updateObject(DW_HELD, held == null || held.getItem() == null ? ""
+				: Item.itemRegistry.getNameForObject(held.getItem()) + "|" + held.getItemDamage());
+	}
+
+	/** what a soldier has in hand, as the server last said (their actual weapon, not a stand-in) */
+	private ItemStack shownHeld;
+	private String shownHeldName = "";
+
+	private ItemStack syncedHeld() {
+		String s = this.dataWatcher.getWatchableObjectString(DW_HELD);
+		if (!s.equals(shownHeldName)) {
+			shownHeldName = s;
+			shownHeld = null;
+			int bar = s.lastIndexOf('|');
+			if (bar > 0) {
+				Item item = (Item) Item.itemRegistry.getObject(s.substring(0, bar));
+				try {
+					shownHeld = item == null ? null : new ItemStack(item, 1, Integer.parseInt(s.substring(bar + 1)));
+				} catch (NumberFormatException e) {
+					shownHeld = null;
+				}
+			}
+		}
+		return shownHeld;
 	}
 
 	/** client: rebuild the display copy from the data watcher */
@@ -658,7 +684,8 @@ public class EntityFolk extends EntityCreature implements INpc {
 		} else if (this.theData.vocation == Vocation.BAKER) {
 			return new ItemStack(Items.wooden_shovel, 1);
 		} else if (this.theData.vocation == Vocation.SOLDIER) {
-			return new ItemStack(Items.stone_sword, 1);
+			ItemStack held = this.worldObj.isRemote ? syncedHeld() : this.theData.heldItem;
+			return held != null ? held : new ItemStack(Items.stone_sword, 1);
 		} else if (this.theData.vocation == Vocation.BUILDER) {
 			return new ItemStack(Blocks.cobblestone, 1);
 		} else if (this.theData.vocation == Vocation.SHEPHERD) {

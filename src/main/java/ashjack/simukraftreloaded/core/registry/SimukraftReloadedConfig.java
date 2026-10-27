@@ -20,6 +20,12 @@ public class SimukraftReloadedConfig
     public static int configHUDoffset = 0;
     public static boolean configStopRain = false;
     public static int configHotelVisitorChance = 40;
+    public static int configBarracksAreaPerSoldier = 6;
+    public static int configSoldierPatrolRadius = 96;
+    public static int configBanditNightChance = 20;
+    public static int configBanditGroupSize = 3;
+    public static int configWantedMinutes = 3;
+    public static boolean configSoldiersUseModdedWeapons = true;
     public static boolean configFolkTalkingEnglish = true;
     public static String[] configMaleNames;
     public static String[] configFemaleNames;
@@ -99,6 +105,25 @@ public class SimukraftReloadedConfig
             p = config.get("Settings", "HotelVisitorChance", 40);
             configHotelVisitorChance = Math.max(0, Math.min(100, p.getInt(40)));
             p.comment = "Chance (0-100) each morning that an empty hotel room gets a visitor from out of town for 1-4 nights. 0 turns visitors off.";
+
+            p = config.get("Soldiers", "BarracksAreaPerSoldier", 6);
+            configBarracksAreaPerSoldier = Math.max(1, p.getInt(6));
+            p.comment = "How much floor (blocks wide x deep) a barracks needs per soldier it can train. The standard 9x6 Barracks holds 9 at 6; bigger barracks hold more.";
+            p = config.get("Soldiers", "PatrolRadius", 96);
+            configSoldierPatrolRadius = Math.max(16, p.getInt(96));
+            p.comment = "How far from their barracks soldiers patrol, and go after hostile mobs, bandits and wanted players.";
+            p = config.get("Soldiers", "UseModdedWeapons", true);
+            configSoldiersUseModdedWeapons = p.getBoolean(true);
+            p.comment = "Whether Veteran soldiers (level 9+) take modded swords, bows and crossbows from the barracks armory.";
+            p = config.get("Crime", "BanditNightChance", 20);
+            configBanditNightChance = Math.max(0, Math.min(100, p.getInt(20)));
+            p.comment = "Chance (0-100) each night that bandits turn up and try to rob the town. Needs a town of a few buildings and a player nearby. 0 turns bandits off.";
+            p = config.get("Crime", "BanditGroupSize", 3);
+            configBanditGroupSize = Math.max(1, Math.min(8, p.getInt(3)));
+            p.comment = "The most bandits that turn up together.";
+            p = config.get("Crime", "WantedMinutes", 3);
+            configWantedMinutes = Math.max(0, p.getInt(3));
+            p.comment = "How long a player who hurts a Sim is wanted for: soldiers chase them and arrest them (never kill them). 0 turns this off.";
 
             ///////////// Random name generator stuff
             p= config.get("Names", "MaleNames", "Aaron, Adam, Alan, Albatrude, Alexander, Amaranth, Andrew, Angelo, Baldric, Bartholomew, Basher, Beau, Ben, Benie, Bennie, Bill, Blaize, Bob, Boots, Brad, Bradley, Breaker, Brian, Bruce, Butler, Cable, Caeser, Carlos, Carrington, Cassius, Clarence, CrazyDave, Dan, Darren, Darth, David, Derek, Dorian, Dougal, Drake, Drakkar, Draven, Earl, Ed, Edward, Fane, Fark, Fernando, Frank, Frankie, Fred, Gabe, Gary, Ged, Gerry, Glynne, Godfrey, Grendel, Grunter, Happy, Harry, Hercules, Horatio, Howard, Ike, Isaac, Jack, James, Jay, Jean-Luc, Jens, Jeremy, Jerry, Jessie, Jesus, Jim, Jimmy, Joe, John, Jose, Jose, Joseph, Juan, Justin, Justin, Kellam, Ken, Kevin, Knuckles, Lars, Lazarus, Lewis, Loki, Lorenzo, Louis,Lumpy, Lynk, Malcolm, Markus, Martin, Maximus, Michael,Mozart, Noire, Norman, Notch, Obsidian, Olaf, Oswaldo, Oxnard, Ozzy, Perkin, Pete, Philip, Pumpkin, Ralph, Randy, Red, Reks, Rick, Rogue, Romeo, Roy,Samuel, Schmitty, Scott, Sean, Seifer, Seth, Seymour, Sheldon, Sid, Simon, Slash, Spud, Steele, Stephen, Steve, Steven, Storm, Stryker, Tazer, Thunder, Tidus, Todd, Tom, Uther, Valen, Vance, Velderveer, Victor, Virion, Wayne, Wendle, William, Willie, Wolfgang, Wyatt, Xensor, Yoda, Zac, Zander, Zelroth, Zero, Zorro");

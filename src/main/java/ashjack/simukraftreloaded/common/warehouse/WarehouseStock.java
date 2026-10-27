@@ -238,6 +238,29 @@ public class WarehouseStock
         return n;
     }
 
+    /** every chest inside a building (and a block around it): a warehouse's stock, a barracks' armory */
+    public static ArrayList<IInventory> chestsInside(Building building, V3 box, World world)
+    {
+        ArrayList<IInventory> out = new ArrayList<IInventory>();
+        IdentityHashMap<IInventory, Boolean> seen = new IdentityHashMap<IInventory, Boolean>();
+        int[] b = bounds(building, box);
+        for (int x = b[0] - 1; x <= b[3] + 1; x++)
+        {
+            for (int y = b[1] - 1; y <= b[4] + 1; y++)
+            {
+                for (int z = b[2] - 1; z <= b[5] + 1; z++)
+                {
+                    IInventory inv = storageAt(world, x, y, z);
+                    if (inv != null && seen.put(inv, true) == null)
+                    {
+                        out.add(inv);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
     /**
      * min/max x,y,z of the building: its blueprint's footprint laid out from its constructor box the way JobBuilder
      * lays it out, or a 13x13 area around the box if that can't be worked out. (Its recorded block list can't be
