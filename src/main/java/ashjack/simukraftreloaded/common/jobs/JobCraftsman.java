@@ -21,6 +21,10 @@ import ashjack.simukraftreloaded.folk.FolkData.FolkAction;
  * Workshop.orders): swords at the forge - diamond ones too once the smithy's been upgraded - and bows and arrows at the
  * fletcher's bench. They work from the chests by the smithy's control box; a warehouse keeper brings the iron, string,
  * feathers, flint and logs they ask for and takes what they make to the barracks.
+ *
+ * Or a stonemason at a masonry, making the stone the builders are short of: smelting cobblestone into stone, clay
+ * into bricks and netherrack into nether bricks over coal, and cutting stone bricks, brick blocks, slabs, stairs and
+ * walls from them.
  */
 public class JobCraftsman extends Job implements Serializable
 {
@@ -31,6 +35,8 @@ public class JobCraftsman extends Job implements Serializable
     public transient Workshop.Shop shop;
 
     private transient long lastRun, lastOrders;
+    /** how many more things the coal burning in the masonry's furnace will smelt */
+    private transient int[] fuel = {0};
     private transient LinkedHashMap<Item, Integer> orders = new LinkedHashMap<Item, Integer>();
     /** what they're stuck for, and how many: a keeper brings it */
     private transient LinkedHashMap<Item, Integer> missing = new LinkedHashMap<Item, Integer>();
@@ -54,7 +60,7 @@ public class JobCraftsman extends Job implements Serializable
         if (shop == null)
         {
             Vocation v = theFolk != null && theFolk.vocation != null ? theFolk.vocation : vocation;
-            shop = v == Vocation.FLETCHER ? Workshop.Shop.FLETCHER : Workshop.Shop.SMITHY;
+            shop = v == Vocation.FLETCHER ? Workshop.Shop.FLETCHER : v == Vocation.STONEMASON ? Workshop.Shop.MASON : Workshop.Shop.SMITHY;
         }
         return shop;
     }
@@ -90,7 +96,8 @@ public class JobCraftsman extends Job implements Serializable
     {
         theFolk.stayPut = true;
         theFolk.action = FolkAction.ATWORK;
-        theFolk.statusText = shop() == Workshop.Shop.SMITHY ? "Lighting the forge" : "Setting out the bench";
+        theFolk.statusText = shop() == Workshop.Shop.SMITHY ? "Lighting the forge"
+                : shop() == Workshop.Shop.MASON ? "Sharpening the chisels" : "Setting out the bench";
     }
 
     @Override
@@ -144,7 +151,8 @@ public class JobCraftsman extends Job implements Serializable
         {
             missing.clear();
             theFolk.isWorking = false;
-            theFolk.statusText = shop() == Workshop.Shop.SMITHY ? "No swords wanted" : "No bows or arrows wanted";
+            theFolk.statusText = shop() == Workshop.Shop.SMITHY ? "No swords wanted"
+                    : shop() == Workshop.Shop.MASON ? "No stone wanted" : "No bows or arrows wanted";
             return;
         }
 
@@ -152,7 +160,11 @@ public class JobCraftsman extends Job implements Serializable
         LinkedHashMap<Item, Integer> stuck = new LinkedHashMap<Item, Integer>();
         for (Map.Entry<Item, Integer> o : new ArrayList<Map.Entry<Item, Integer>>(orders.entrySet()))
         {
-            Workshop.Step s = Workshop.step(shop(), chests, o.getKey());
+            if (fuel == null)
+            {
+                fuel = new int[] {0};
+            }
+            Workshop.Step s = Workshop.step(shop(), chests, o.getKey(), fuel);
             if (s.made != null)
             {
                 missing = stuck;
@@ -160,7 +172,7 @@ public class JobCraftsman extends Job implements Serializable
                 theFolk.statusText = "Made " + s.made.stackSize + " " + s.made.getDisplayName()
                         + (s.made.getItem() == o.getKey() ? "" : " for " + new ItemStack(o.getKey()).getDisplayName());
                 jobWorld.playSoundEffect(theFolk.employedAt.x, theFolk.employedAt.y, theFolk.employedAt.z,
-                        shop() == Workshop.Shop.SMITHY ? "random.anvil_use" : "dig.wood", 0.4f, 1f);
+                        shop() == Workshop.Shop.SMITHY ? "random.anvil_use" : shop() == Workshop.Shop.MASON ? "dig.stone" : "dig.wood", 0.4f, 1f);
                 if (s.made.getItem() == o.getKey())
                 {
                     int left = o.getValue() - s.made.stackSize;
@@ -217,6 +229,6 @@ public class JobCraftsman extends Job implements Serializable
     @Override
     public String workshopName()
     {
-        return "the smithy";
+        return shop() == Workshop.Shop.MASON ? "the masonry" : "the smithy";
     }
 }

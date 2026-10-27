@@ -219,6 +219,14 @@ public class GuiControlBox extends GuiScreen
             b.enabled = fletchers < 1;
         }
 
+        // a masonry: stonemasons
+        if (Workshop.isMasonry(theBuilding))
+        {
+            GuiButton b;
+            buttonList.add(b = new GuiButton(1, 10, height - 30, 110, 20, "Hire Stonemason"));
+            b.enabled = employeeCount < 2;
+        }
+
         ////commercial buildings
         if (theBuilding.type.contentEquals("commercial"))
         {
@@ -805,6 +813,11 @@ public class GuiControlBox extends GuiScreen
         {
             mc.currentScreen = null;
             mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.BLACKSMITH));
+        }
+        else if (guibutton.displayString.contentEquals("Hire Stonemason"))
+        {
+            mc.currentScreen = null;
+            mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.STONEMASON));
         }
         else if (guibutton.displayString.contentEquals("Hire Fletcher"))
         {

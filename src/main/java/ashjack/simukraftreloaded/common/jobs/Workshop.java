@@ -44,7 +44,7 @@ public final class Workshop
     /** what a shop works with, and what it's for */
     public enum Shop
     {
-        SAWMILL("sawmill"), SMITHY("smithy"), FLETCHER("fletcher's");
+        SAWMILL("sawmill"), SMITHY("smithy"), FLETCHER("fletcher's"), MASON("masonry");
 
         public final String title;
 
@@ -57,6 +57,10 @@ public final class Workshop
         boolean material(ItemStack is)
         {
             Item item = is.getItem();
+            if (this == MASON)
+            {
+                return isStonework(is) || item == Items.coal;
+            }
             if (isWood(is))
             {
                 return true;
@@ -84,14 +88,27 @@ public final class Workshop
                     return item instanceof ItemSword && item != Items.wooden_sword;
                 case FLETCHER:
                     return item == Items.bow || item == Items.arrow;
+                case MASON:
+                    return item != Items.coal && isStonework(new ItemStack(item));
                 default:
                     return false;
             }
         }
 
+        /** it has a furnace, and coal to burn in it */
+        boolean smelts()
+        {
+            return this == MASON;
+        }
+
         /** what's always fetched for it rather than made here */
         boolean raw(ItemStack is)
         {
+            if (this == MASON)
+            {
+                // cobblestone, clay, sand, netherrack, coal: whatever can't be made from the rest here
+                return is.getItem() == Items.coal || recipesFor(this, is.getItem()).isEmpty();
+            }
             // logs, and anything that isn't wood (ingots, string...): planks and sticks are made from the logs here
             return isLog(is) || material(is) && !isWood(is);
         }
@@ -104,6 +121,8 @@ public final class Workshop
         /** each ingredient: the stacks any one of which will do (meta 32767 for any), and how many */
         final List<ItemStack[]> ins = new ArrayList<ItemStack[]>();
         final List<Integer> counts = new ArrayList<Integer>();
+        /** made in a furnace (one in, burning an eighth of a coal), not at the bench */
+        boolean smelt;
 
         Recipe(ItemStack output)
         {
@@ -121,7 +140,7 @@ public final class Workshop
         public int missingCount;
     }
 
-    private static Map<Item, List<Recipe>> recipes;
+    private static Map<Item, List<Recipe>> recipes, smelting;
 
     // ---------------------------------------------------------------- materials
 
@@ -129,6 +148,24 @@ public final class Workshop
     {
         Block b = Block.getBlockFromItem(is.getItem());
         return b instanceof BlockLog || hasOre(is, "logWood");
+    }
+
+    /** stone, brick and sand blocks (anything made of rock, sand or clay), and clay balls and bricks */
+    public static boolean isStonework(ItemStack is)
+    {
+        Item item = is.getItem();
+        if (item == Items.clay_ball || item == Items.brick || item == Items.netherbrick)
+        {
+            return true;
+        }
+        Block b = Block.getBlockFromItem(item);
+        if (b == null || b == Blocks.air)
+        {
+            return false;
+        }
+        net.minecraft.block.material.Material m = b.getMaterial();
+        return m == net.minecraft.block.material.Material.rock || m == net.minecraft.block.material.Material.sand
+                || m == net.minecraft.block.material.Material.clay;
     }
 
     public static boolean isWood(ItemStack is)
@@ -164,10 +201,14 @@ public final class Workshop
     static List<Recipe> recipesFor(Shop shop, Item item)
     {
         List<Recipe> out = new ArrayList<Recipe>();
-        List<Recipe> all = recipes().get(item);
-        if (all == null)
+        List<Recipe> all = new ArrayList<Recipe>();
+        if (recipes().get(item) != null)
         {
-            return out;
+            all.addAll(recipes().get(item));
+        }
+        if (shop.smelts() && smelting.get(item) != null)
+        {
+            all.addAll(smelting.get(item));
         }
         for (Recipe r : all)
         {
@@ -211,6 +252,33 @@ public final class Workshop
             return recipes;
         }
         recipes = new IdentityHashMap<Item, List<Recipe>>();
+        smelting = new IdentityHashMap<Item, List<Recipe>>();
+        try
+        {
+            for (Map.Entry<ItemStack, ItemStack> e : ((Map<ItemStack, ItemStack>) net.minecraft.item.crafting.FurnaceRecipes.smelting()
+                    .getSmeltingList()).entrySet())
+            {
+                if (e.getKey() == null || e.getKey().getItem() == null || e.getValue() == null || e.getValue().getItem() == null)
+                {
+                    continue;
+                }
+                Recipe r = new Recipe(e.getValue().copy());
+                r.smelt = true;
+                r.ins.add(new ItemStack[] {e.getKey()});
+                r.counts.add(1);
+                List<Recipe> list = smelting.get(e.getValue().getItem());
+                if (list == null)
+                {
+                    list = new ArrayList<Recipe>();
+                    smelting.put(e.getValue().getItem(), list);
+                }
+                list.add(r);
+            }
+        }
+        catch (Exception e)
+        {
+            // no furnace recipes, then
+        }
         for (Object o : CraftingManager.getInstance().getRecipeList())
         {
             try
@@ -314,12 +382,20 @@ public final class Workshop
      */
     public static Step step(Shop shop, List<IInventory> chests, Item want)
     {
+        return step(shop, chests, want, null);
+    }
+
+    /** the same, for a shop with a furnace: fuel[0] is how many more things the coal already burning will smelt */
+    public static Step step(Shop shop, List<IInventory> chests, Item want, int[] fuel)
+    {
         Step s = new Step();
-        make(shop, chests, want, 0, s);
+        make(shop, chests, want, 0, s, fuel);
         return s;
     }
 
-    private static boolean make(Shop shop, List<IInventory> chests, Item want, int depth, Step s)
+    private static final ItemStack[] COAL = {new ItemStack(Items.coal, 1, OreDictionary.WILDCARD_VALUE)};
+
+    private static boolean make(Shop shop, List<IInventory> chests, Item want, int depth, Step s, int[] fuel)
     {
         List<Recipe> options = recipesFor(shop, want);
         if (options.isEmpty() || depth > 3)
@@ -329,8 +405,30 @@ public final class Workshop
         // one that can be made right now
         for (Recipe r : options)
         {
+            if (r.smelt && fuel == null)
+            {
+                continue;
+            }
             if (have(chests, r))
             {
+                if (r.smelt && fuel[0] <= 0)
+                {
+                    if (count(chests, COAL) <= 0)
+                    {
+                        if (s.missing == null)
+                        {
+                            s.missing = new ItemStack(Items.coal);
+                            s.missingCount = 8;
+                        }
+                        continue;
+                    }
+                    take(chests, COAL, 1);
+                    fuel[0] += 8; // a coal smelts eight
+                }
+                if (r.smelt)
+                {
+                    fuel[0]--;
+                }
                 for (int i = 0; i < r.ins.size(); i++)
                 {
                     take(chests, r.ins.get(i), r.counts.get(i));
@@ -358,7 +456,7 @@ public final class Workshop
                 }
                 for (ItemStack o : r.ins.get(i))
                 {
-                    if (o != null && o.getItem() != want && shop.material(o) && !shop.raw(o) && make(shop, chests, o.getItem(), depth + 1, s))
+                    if (o != null && o.getItem() != want && shop.material(o) && !shop.raw(o) && make(shop, chests, o.getItem(), depth + 1, s, fuel))
                     {
                         return true;
                     }
@@ -529,6 +627,13 @@ public final class Workshop
     {
         String n = b == null || b.displayName == null ? "" : b.displayName.toLowerCase();
         return (n.contains("blacksmith") || n.contains("smithy")) && !"residential".equals(b.type);
+    }
+
+        /** a masonry (or stonemason's yard), where stonemasons are hired */
+    public static boolean isMasonry(ashjack.simukraftreloaded.core.building.Building b)
+    {
+        String n = b == null || b.displayName == null ? "" : b.displayName.toLowerCase();
+        return (n.contains("masonry") || n.contains("stonemason")) && !"residential".equals(b.type);
     }
 
         /** the chests a shop works from: around its control box */

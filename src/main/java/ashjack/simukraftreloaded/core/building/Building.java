@@ -1663,7 +1663,7 @@ public class Building implements Serializable
 
     /* loads in all buildings files into an ArrayList for quicker access (slowly in a thread) */
     /** blueprints this rewrite adds, shipped in the jar and copied into mods/Simukraft/buildings when missing */
-    private static final String[] BUNDLED_BLUEPRINTS = {"industrial/Warehouse.txt", "commercial/Sim-U-Hospital.txt", "industrial/Sim-U-Blacksmith.txt"};
+    private static final String[] BUNDLED_BLUEPRINTS = {"industrial/Warehouse.txt", "commercial/Sim-U-Hospital.txt", "industrial/Sim-U-Blacksmith.txt", "industrial/Sim-U-Masonry.txt"};
 
     private static void installBundledBlueprints()
     {
