@@ -70,6 +70,20 @@ public class JobTerraformer extends Job
     {
         IDLE, WAITINGFORRESOURCES, INPROGRESS, COMPLETE;
     }
+
+    /**
+     * the player has just picked an option: start over with it. A terraformer hired while standing at the box starts
+     * at once, before the option screen is even used, with whatever option they had last time.
+     */
+    public void optionChosen()
+    {
+        if (theStage != null && theStage != Stage.IDLE)
+        {
+            theStage = Stage.WAITINGFORRESOURCES;
+            step = 1;
+            closestBlocks = new ArrayList<V3>();
+        }
+    }
     public enum TerraformerType
     {
         WATERTODIRT, NATURE, LAWNMOWER, FLATTENIZER, VALUEPACK, GLACIAL, MOISTURIZER, THERMALIZER, DEICER;
@@ -242,7 +256,7 @@ public class JobTerraformer extends Job
             {
                 ArrayList<Block> blockIDs = new ArrayList<Block>();
                 blockIDs.add(Blocks.water);
-                blockIDs.add(Blocks.water);
+                blockIDs.add(Blocks.flowing_water);
                 closestBlocks = null;
                 setClosestBlocksOfType(theFolk.employedAt, blockIDs, radius, false, true, false);
             }
@@ -293,7 +307,7 @@ public class JobTerraformer extends Job
                 blockIDs.add(Blocks.air);
                 blockIDs.add(Blocks.tallgrass);
                 blockIDs.add(Blocks.water);
-                blockIDs.add(Blocks.water);
+                blockIDs.add(Blocks.flowing_water);
                 V3 v = new V3(theFolk.employedAt.x, theFolk.employedAt.y, theFolk.employedAt.z, theFolk.employedAt.theDimension);
                 closestBlocks = null;
                 setClosestBlocksOfType(v, blockIDs, radius, true, true, false);
@@ -302,7 +316,7 @@ public class JobTerraformer extends Job
             {
                 ArrayList<Block> blockIDs = new ArrayList<Block>();
                 blockIDs.add(Blocks.lava);
-                blockIDs.add(Blocks.lava);
+                blockIDs.add(Blocks.flowing_lava);
                 //blockIDs.add(Block.waterStill.blockID);
                 V3 v = new V3(theFolk.employedAt.x, theFolk.employedAt.y, theFolk.employedAt.z, theFolk.employedAt.theDimension);
                 closestBlocks = null;
@@ -342,6 +356,7 @@ public class JobTerraformer extends Job
             {
                 theFolk.statusText = "Nothing to terraform!";
                 SimukraftReloaded.sendChat("There's nothing here that can be terraformed in that way");
+                theFolk.terraformerType = null; // or hiring them again goes straight back to the same option
                 theFolk.selfFire();
                 return;
             }

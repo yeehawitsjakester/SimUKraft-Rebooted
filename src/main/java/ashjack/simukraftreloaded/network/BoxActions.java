@@ -13,6 +13,7 @@ import ashjack.simukraftreloaded.common.CourierTask;
 import ashjack.simukraftreloaded.common.Effects;
 import ashjack.simukraftreloaded.common.jobs.Job;
 import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
+import ashjack.simukraftreloaded.common.jobs.JobTerraformer;
 import ashjack.simukraftreloaded.common.jobs.JobTerraformer.TerraformerType;
 import ashjack.simukraftreloaded.core.game.GameMode;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
@@ -118,6 +119,10 @@ final class BoxActions
                 }
                 folk.terraformerRadius = Math.max(1, Math.min(60, data.getInteger("radius")));
                 folk.saveThisFolk();
+                if (folk.theirJob instanceof JobTerraformer)
+                {
+                    ((JobTerraformer) folk.theirJob).optionChosen();
+                }
             }
         });
 
