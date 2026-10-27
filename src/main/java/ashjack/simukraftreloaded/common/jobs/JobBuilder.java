@@ -18,6 +18,7 @@ import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.folk.FolkData.FolkAction;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockDoor;
 import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
@@ -691,6 +692,16 @@ public class JobBuilder extends Job implements Serializable
                                 if(!alreadyPlaced)
                                 {
                                 	theFolk.stayPut = true;
+                                	// a door's top half first: the bottom half on its own breaks into an item the
+                                	// moment the next block goes down beside it. The top half's own turn, a layer
+                                	// up, then finds it already there
+                                	if (blockId instanceof BlockDoor && (subtype & 8) == 0)
+                                	{
+                                		int up = acount + theBuilding.ftbCount * theBuilding.ltrCount;
+                                		int topMeta = up < theBuilding.structure.length && theBuilding.structure[up] == blockId
+                                				? theBuilding.structureSub[up] : 8;
+                                		jobWorld.setBlock(bx + xo, by + l + 1, bz + zo, blockId, topMeta | 8, 0x02);
+                                	}
                                 	jobWorld.setBlock(bx + xo, by + l,
                                 			bz + zo, blockId, subtype, 0x03);
                                 	jobWorld.markBlockForUpdate(bx + xo, by + l, bz + zo);
