@@ -30,6 +30,7 @@ import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.building.BuildingCategory;
 import ashjack.simukraftreloaded.core.building.MotelPlan;
+import ashjack.simukraftreloaded.core.building.ApartmentConversion;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
@@ -59,6 +60,9 @@ public class GuiBuildingConstructor extends GuiScreen
     private char motelShape = 'S';
     private int motelFloors = 1, motelRoomsA = 4, motelRoomsB = 2;
     private String motelSpace = "";
+    /** on page 10 with "As apartments" on: the building as it is without */
+    private Building withoutFlats = null;
+    private String flatsNote = "";
     private GuiTextField tfSearch;
     private String search = "";
     private Building selectedBuilding = null;
@@ -240,6 +244,14 @@ public class GuiBuildingConstructor extends GuiScreen
             	y = detail("Blocks", String.valueOf(selectedBuilding.blocksInBuilding), y, colW);
             	y = detail("Constructor box", selectedBuilding.elevationLevel == 0 ? "at ground level"
             			: selectedBuilding.elevationLevel + " block(s) underground", y, colW);
+            	if (withoutFlats != null)
+            	{
+            		y = detail("Flats", ApartmentConversion.flats(selectedBuilding) + ", for singles, couples and families (the ground floor is the lobby)", y, colW);
+            	}
+            	if (!flatsNote.isEmpty())
+            	{
+            		y = detail("Flats", flatsNote, y, colW);
+            	}
             	if (selectedBuilding.description != null && !selectedBuilding.description.trim().isEmpty()
             			&& !selectedBuilding.description.trim().equalsIgnoreCase("none"))
             	{
@@ -435,6 +447,14 @@ public class GuiBuildingConstructor extends GuiScreen
         	buttonList.add(bgroundlevel = new GuiButton(29, (width / 2)-200, 170, 400, 20, "Best Constructor Box Elevation: " + selectedBuilding.elevationLevel));*/
         	buttonList.add(new GuiButton(1001, (width / 2) - 100, height - 25, 100, 20, "Go Back"));
             buttonList.add(new GuiButton(969, (width / 2), height - 25, 100, 20, "Requirements"));
+            // decorative buildings can be built as flats (with floors added if they're only a shell)
+            if (withoutFlats != null || ApartmentConversion.eligible(selectedBuilding))
+            {
+                GuiButton flats = new GuiButton(970, 20, height - 50, 180, 20, withoutFlats == null ? "As apartments: no"
+                        : "As apartments: yes (" + ApartmentConversion.flats(selectedBuilding) + " flats)");
+                flats.enabled = buildDirection != null && !buildDirection.isEmpty();
+                buttonList.add(flats);
+            }
         }
         else if (currentPage == 4)    //fire worker
         {
@@ -676,6 +696,8 @@ public class GuiBuildingConstructor extends GuiScreen
                 return;
             }
             previousPage = currentPage;
+            withoutFlats = null;
+            flatsNote = "";
             selectedBuilding = Building.getFromAllBuildings(clicked.displayName, clicked.type);
             try {
             	selectedBuilding.buildDirection = this.buildDirection;
@@ -770,6 +792,33 @@ public class GuiBuildingConstructor extends GuiScreen
         	if(guibutton.id == 969)
         	{
         		currentPage = 8;
+        		showPage();
+        	}
+        	else if (guibutton.id == 970)
+        	{
+        		if (withoutFlats == null)
+        		{
+        			Building flats = Building.fromGenerated(ApartmentConversion.name(buildDirection, selectedBuilding.type,
+        					selectedBuilding.displayName, false), selectedBuilding.type);
+        			if (ApartmentConversion.flats(flats) == 0)
+        			{
+        				flatsNote = "\u00a7cThere's nowhere in it to live";
+        			}
+        			else
+        			{
+        				withoutFlats = selectedBuilding;
+        				selectedBuilding = flats;
+        				flatsNote = "";
+        			}
+        		}
+        		else
+        		{
+        			selectedBuilding = withoutFlats;
+        			withoutFlats = null;
+        			flatsNote = "";
+        		}
+        		preview = new BuildingPreview(selectedBuilding);
+        		lastFrame = 0;
         		showPage();
         	}
         	else if (guibutton.id == 1001)    //go back

@@ -227,6 +227,12 @@ public class Building implements Serializable
             }
 
             blocksInBuilding = 0;
+            ApartmentConversion.Name flats = ApartmentConversion.parse(displayName);
+            if (flats != null)
+            {
+                loadAsFlats(flats);
+                return;
+            }
             BufferedReader br;
             MotelPlan motel = MotelPlan.parse(displayName);
             if (motel != null)
@@ -1582,6 +1588,72 @@ public class Building implements Serializable
     
     /** used when loading folks, to get the building they are currently building
      * partialFile name should be just "PK123-buildingname.txt" */
+    /**
+     * a building turned into flats (see ApartmentConversion): its own blueprint, fitted out. A conversion of one
+     * already standing leaves all of its own blocks alone and only asks for what's added.
+     */
+    private void loadAsFlats(ApartmentConversion.Name n)
+    {
+        Building orig = new Building(n.original, n.type);
+        orig.loadStructure();
+        if (orig.structure == null || orig.layerCount == 0)
+        {
+            return;
+        }
+        ltrCount = orig.ltrCount;
+        ftbCount = orig.ftbCount;
+        layerCount = orig.layerCount;
+        dimensions = orig.dimensions;
+        author = orig.author;
+        description = orig.description;
+        elevationLevel = orig.elevationLevel;
+        pk = orig.pk;
+        category = BuildingCategory.HOUSING;
+        displayNameWithoutPK = orig.displayNameWithoutPK + " (apartments)";
+        structure = orig.structure.clone();
+        structureSub = orig.structureSub.clone();
+        if (!n.convert)
+        {
+            requirements.putAll(orig.requirements);
+            blocksInBuilding = orig.blocksInBuilding;
+        }
+        java.util.List<Integer> added = ApartmentConversion.fitOut(this, n.dir);
+        for (int i : added)
+        {
+            addToRequirements(structure[i], structureSub[i], 1);
+            blocksInBuilding++;
+        }
+        if (n.convert)
+        {
+            java.util.HashSet<Integer> keepThese = new java.util.HashSet<Integer>(added);
+            for (int i = 0; i < structure.length; i++)
+            {
+                if (!keepThese.contains(i))
+                {
+                    structure[i] = null;
+                    structureSub[i] = KEEP;
+                }
+            }
+        }
+        rent = blocksInBuilding * 0.01f;
+    }
+
+    /** a generated building (a motel, or a building as flats) by its name */
+    public static Building fromGenerated(String name, String type)
+    {
+        Building b = new Building(name, type);
+        MotelPlan motel = MotelPlan.parse(name);
+        ApartmentConversion.Name flats = ApartmentConversion.parse(name);
+        b.buildDirection = motel != null ? motel.dir : flats != null ? flats.dir : null;
+        b.loadStructure();
+        return b;
+    }
+
+    public static boolean isGenerated(String name)
+    {
+        return MotelPlan.isGenerated(name) || ApartmentConversion.isGenerated(name);
+    }
+
     /** a made-to-order motel, ready to preview or build */
     public static Building fromMotelPlan(MotelPlan plan)
     {
@@ -1593,10 +1665,8 @@ public class Building implements Serializable
 
     public static Building getBuildingForFolk(String partialFilename, String type) {
     	String generated = partialFilename.endsWith(".txt") ? partialFilename.substring(0, partialFilename.length() - 4) : partialFilename;
-    	if (MotelPlan.isGenerated(generated)) {
-    		Building build = new Building(generated, type);
-    		build.loadStructure();
-    		return build;
+    	if (isGenerated(generated)) {
+    		return fromGenerated(generated, type);
     	}
     	File f = new File(SimukraftReloaded.getSimukraftFolder() + "/buildings/" + type+"/"+partialFilename);
     	if (f.exists()) {

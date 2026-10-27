@@ -511,6 +511,13 @@ public class MotelPlan
         return new int[] {dl * L[0] + df * Fw[0], dl * L[1] + df * Fw[1]};
     }
 
+    /** a step in the blueprint (along ltr, along ftb) as a world x, z step, for a build direction */
+    public static int[] stepToWorld(String dir, int dl, int df)
+    {
+        int[] o = toWorld(dir, 0, 0, 0, 0), s = toWorld(dir, 0, 0, dl, df);
+        return new int[] {s[0] - o[0], s[1] - o[1]};
+    }
+
     /** a door's bottom half: inwards for the walkway doors, outwards (towards the street) for the office's back one */
     private char doorChar(int w, boolean inwards)
     {
@@ -575,8 +582,13 @@ public class MotelPlan
         return null;
     }
 
-    /** a blueprint ltr, ftb to world x, z, the way JobBuilder lays it out */
     public int[] toWorld(int cx, int cz, int ltr, int ftb)
+    {
+        return toWorld(dir, cx, cz, ltr, ftb);
+    }
+
+    /** a blueprint ltr, ftb to world x, z for a build direction, the way JobBuilder lays it out */
+    public static int[] toWorld(String dir, int cx, int cz, int ltr, int ftb)
     {
         if (dir.equals("+x"))
         {

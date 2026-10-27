@@ -1,6 +1,7 @@
 package ashjack.simukraftreloaded.client.Gui.blocks;
 
 import ashjack.simukraftreloaded.core.building.MotelPlan;
+import ashjack.simukraftreloaded.core.building.ApartmentConversion;
 import net.minecraft.nbt.NBTTagCompound;
 import ashjack.simukraftreloaded.network.ServerActions;
 import ashjack.simukraftreloaded.network.ActionHandlers;
@@ -88,6 +89,8 @@ public class GuiControlBox extends GuiScreen
     }
 
     private int seenSync = ClientMirror.syncCount;
+    /** how many flats this building would make, worked out once (-1 not yet) */
+    private int flatsHere = -1;
 
     @Override
     public void initGui()
@@ -110,6 +113,20 @@ public class GuiControlBox extends GuiScreen
 
         buttonList.add(new GuiButton(21, width - 110, height - 30, 100, 20, "Show Employees"));
         buttonList.add(new GuiButton(30, width - 110, height - 50, 100, 20, "Beam me to.."));
+
+        // a decorative building can be turned into flats
+        if (ApartmentConversion.eligible(theBuilding) && theBuilding.buildingComplete && theBuilding.buildDirection != null && !theBuilding.buildDirection.isEmpty())
+        {
+            if (flatsHere < 0)
+            {
+                flatsHere = ApartmentConversion.flats(Building.fromGenerated(ApartmentConversion.name(theBuilding.buildDirection,
+                        theBuilding.type, theBuilding.displayName, true), theBuilding.type));
+            }
+            GuiButton b = new GuiButton(1102, 10, height - 30, 200, 20, flatsHere > 0
+                    ? "Convert to apartments (" + flatsHere + " flats)" : "Nowhere in it to live");
+            b.enabled = flatsHere > 0;
+            buttonList.add(b);
+        }
 
         // a motel grows away from its constructor box: the main wing longer, the side wings deeper
         MotelPlan motel = MotelPlan.parse(theBuilding.displayName);
@@ -577,6 +594,15 @@ public class GuiControlBox extends GuiScreen
         if (guibutton.id == 0) // /cancel button
         {
             mc.currentScreen = null;
+            mc.setIngameFocus();
+            return;
+        }
+        else if (guibutton.id == 1102)
+        {
+            NBTTagCompound data = new NBTTagCompound();
+            ActionHandlers.putV3(data, "box", location);
+            ServerActions.send("convertApartments", data);
+            mc.displayGuiScreen(null);
             mc.setIngameFocus();
             return;
         }

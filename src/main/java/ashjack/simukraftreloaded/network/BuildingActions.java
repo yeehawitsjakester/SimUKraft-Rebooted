@@ -15,6 +15,7 @@ import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
 import ashjack.simukraftreloaded.common.jobs.JobBuilder;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.building.MotelPlan;
+import ashjack.simukraftreloaded.core.building.ApartmentConversion;
 import ashjack.simukraftreloaded.common.warehouse.WarehouseStock;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloadedBlocks;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
@@ -30,6 +31,23 @@ final class BuildingActions
     {
         V3 box = ActionHandlers.getV3(data, "box");
         return box == null ? null : Building.getBuilding(box);
+    }
+
+    /** the builders work from the constructor box: put it back if it's gone; false if something's in its place */
+    private static boolean putBackConstructor(EntityPlayerMP player, World world, V3 con)
+    {
+        int cx = con.x.intValue(), cy = con.y.intValue(), cz = con.z.intValue();
+        Block there = world.getBlock(cx, cy, cz);
+        if (there != SimukraftReloadedBlocks.buildingConstructor)
+        {
+            if (!there.isAir(world, cx, cy, cz) && !there.isReplaceable(world, cx, cy, cz))
+            {
+                ActionHandlers.tell(player, "Clear the spot where its constructor box was (" + con + ") first");
+                return false;
+            }
+            world.setBlock(cx, cy, cz, SimukraftReloadedBlocks.buildingConstructor);
+        }
+        return true;
     }
 
     /**
@@ -74,7 +92,9 @@ final class BuildingActions
             public void run(EntityPlayerMP player, NBTTagCompound data)
             {
                 V3 box = ActionHandlers.getV3(data, "box");
-                Building chosen = Building.getFromAllBuildings(data.getString("name"), data.getString("type"));
+                String name = data.getString("name");
+                Building chosen = ApartmentConversion.isGenerated(name) ? Building.fromGenerated(name, data.getString("type"))
+                        : Building.getFromAllBuildings(name, data.getString("type"));
                 if (box == null || chosen == null)
                 {
                     ActionHandlers.tell(player, "Couldn't find that building - try choosing it again");
@@ -105,6 +125,44 @@ final class BuildingActions
                     return;
                 }
                 startBuilding(player, box, Building.fromMotelPlan(plan));
+            }
+        });
+
+        // a decorative building's control box "Convert to apartments": the builders at its constructor box add floors
+        // (if it's hollow), a ladder and the flats' Room Boxes, leaving the rest of it as it is
+        ServerActions.register("convertApartments", new ServerActions.Action()
+        {
+            public void run(EntityPlayerMP player, NBTTagCompound data)
+            {
+                Building b = buildingAt(data);
+                if (!ApartmentConversion.eligible(b) || !b.buildingComplete || b.buildDirection == null || b.buildDirection.isEmpty())
+                {
+                    ActionHandlers.tell(player, "Only a finished decorative building can be turned into flats");
+                    return;
+                }
+                V3 con = WarehouseStock.conBoxOf(b);
+                World world = con == null ? null : MinecraftServer.getServer().worldServerForDimension(con.theDimension);
+                if (world == null)
+                {
+                    ActionHandlers.tell(player, "Couldn't work out where this building's constructor box was");
+                    return;
+                }
+                Building flats = Building.fromGenerated(ApartmentConversion.name(b.buildDirection, b.type, b.displayName, true), b.type);
+                if (ApartmentConversion.flats(flats) == 0)
+                {
+                    ActionHandlers.tell(player, "There's nowhere in it to live");
+                    return;
+                }
+                if (!putBackConstructor(player, world, con))
+                {
+                    return;
+                }
+                flats.primaryXYZ = b.primaryXYZ.clone();
+                flats.livingXYZ = b.livingXYZ;
+                flats.tennants = b.tennants;
+                flats.buildingComplete = false;
+                Building.register(flats); // in place of the building as it was, by its control box
+                startBuilding(player, con, flats);
             }
         });
 
@@ -142,16 +200,9 @@ final class BuildingActions
                     ActionHandlers.tell(player, "There isn't room to add those rooms: " + blocked);
                     return;
                 }
-                // the builders work from the constructor box: put it back if it's gone
-                Block there = world.getBlock(cx, cy, cz);
-                if (there != SimukraftReloadedBlocks.buildingConstructor)
+                if (!putBackConstructor(player, world, con))
                 {
-                    if (!there.isAir(world, cx, cy, cz) && !there.isReplaceable(world, cx, cy, cz))
-                    {
-                        ActionHandlers.tell(player, "Clear the spot where the motel's constructor box was (" + con + ") first");
-                        return;
-                    }
-                    world.setBlock(cx, cy, cz, SimukraftReloadedBlocks.buildingConstructor);
+                    return;
                 }
 
                 Building upgrade = Building.fromMotelPlan(bigger);

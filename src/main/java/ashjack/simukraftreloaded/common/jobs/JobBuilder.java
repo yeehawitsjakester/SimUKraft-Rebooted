@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.building.MotelPlan;
+import ashjack.simukraftreloaded.core.building.ApartmentConversion;
 import ashjack.simukraftreloaded.core.game.GameMode;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloadedBlocks;
@@ -888,6 +889,16 @@ public class JobBuilder extends Job implements Serializable
                 if (motel != null && motel.fromA >= 0)
                 {
                     theBuilding.displayName = motel.finished().name(); // an upgrade, done: just the motel now
+                }
+                ApartmentConversion.Name flats = ApartmentConversion.parse(theBuilding.displayName);
+                if (flats != null)
+                {
+                    if (flats.convert)
+                    {
+                        theBuilding.displayName = ApartmentConversion.name(flats.dir, flats.type, flats.original, false);
+                    }
+                    ApartmentConversion.settleFlats(theBuilding, jobWorld,
+                            theBuilding.conBoxLocation != null ? theBuilding.conBoxLocation : theFolk.employedAt);
                 }
                 if (motel != null)
                 {
