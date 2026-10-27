@@ -5,6 +5,7 @@ import java.util.ArrayList;
 
 import net.minecraft.entity.player.EntityPlayer;
 import ashjack.simukraftreloaded.common.ClientMirror;
+import ashjack.simukraftreloaded.common.warehouse.WarehouseStock;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.folk.FolkData;
@@ -105,6 +106,69 @@ public final class Towns
         return null;
     }
 
+    /** how far outside a border a new building can be and still be taken into that town, and the room left around it */
+    public static final int REACH = 48, MARGIN = 12;
+
+    /**
+     * a building going up in a town, or just outside one its builder belongs to: the border moves out, free, to take it
+     * in with some room to spare - as far as it can without running into another town. Says which town grew, or null.
+     */
+    public static Town takeIn(int dim, int[] f, String player)
+    {
+        if (f == null || f.length < 6)
+        {
+            return null;
+        }
+        Town best = null;
+        int bestNeed = Integer.MAX_VALUE;
+        for (Town t : serverTowns)
+        {
+            if (t.centre == null || t.dimension() != dim)
+            {
+                continue;
+            }
+            int need = need(t, f);
+            boolean inside = t.contains(dim, (f[0] + f[3]) / 2.0, (f[2] + f[5]) / 2.0);
+            if (need - MARGIN - t.radius > REACH || !(inside || player == null || !t.isClaimed() || t.isMember(player)))
+            {
+                continue;
+            }
+            if (inside || need < bestNeed)
+            {
+                best = t;
+                bestNeed = need;
+                if (inside)
+                {
+                    break;
+                }
+            }
+        }
+        if (best == null || bestNeed <= best.radius)
+        {
+            return null;
+        }
+        int to = Math.min(Town.MAX_RADIUS, bestNeed);
+        while (to > best.radius && overlapping(best.centre, to, best) != null)
+        {
+            to--;
+        }
+        if (to <= best.radius)
+        {
+            return null;
+        }
+        best.radius = to;
+        best.save();
+        return best;
+    }
+
+    /** the radius that would cover this footprint with room around it */
+    private static int need(Town t, int[] f)
+    {
+        int cx = t.centre.x.intValue(), cz = t.centre.z.intValue();
+        int r = Math.max(Math.max(Math.abs(f[0] - cx), Math.abs(f[3] - cx)), Math.max(Math.abs(f[2] - cz), Math.abs(f[5] - cz)));
+        return r + MARGIN;
+    }
+
     public static Town found(String name, String owner, V3 centre, int radius)
     {
         Town t = new Town();
@@ -159,6 +223,7 @@ public final class Towns
         {
             migrate();
         }
+        takeInAll();
         SimukraftReloaded.log.info("Towns: " + serverTowns.size() + " loaded");
     }
 
@@ -167,6 +232,29 @@ public final class Towns
         for (Town t : new ArrayList<Town>(serverTowns))
         {
             t.save();
+        }
+    }
+
+    /** buildings put up before borders grew by themselves (or past them): their towns take them in now */
+    private static void takeInAll()
+    {
+        for (Building b : new ArrayList<Building>(SimukraftReloaded.serverBuildings))
+        {
+            try
+            {
+                V3 con = b.isRoom() ? null : WarehouseStock.conBoxOf(b);
+                int[] f = con == null ? null : WarehouseStock.footprint(b, b.layoutBox(con));
+                Town t = takeIn(con == null ? 0 : con.theDimension, f, null);
+                if (t != null)
+                {
+                    SimukraftReloaded.log.info("Towns: " + t.name + "'s border moved out to " + (2 * t.radius + 1)
+                            + " across to take in the " + b.displayNameWithoutPK);
+                }
+            }
+            catch (Exception e)
+            {
+                // a building that can't say where it is stays where the border puts it
+            }
         }
     }
 

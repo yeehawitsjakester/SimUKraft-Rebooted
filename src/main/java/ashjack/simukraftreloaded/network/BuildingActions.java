@@ -19,6 +19,8 @@ import ashjack.simukraftreloaded.core.building.ApartmentConversion;
 import ashjack.simukraftreloaded.common.warehouse.WarehouseStock;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloadedBlocks;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
+import ashjack.simukraftreloaded.core.town.Town;
+import ashjack.simukraftreloaded.core.town.Towns;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 
@@ -87,6 +89,13 @@ final class BuildingActions
     {
         chosen.awaitingAt = null;
         chosen.saveThisBuilding();
+
+        Town grew = Towns.takeIn(box.theDimension, WarehouseStock.footprint(chosen, chosen.layoutBox(box)), player.getCommandSenderName());
+        if (grew != null)
+        {
+            ActionHandlers.tell(player, grew.name + "'s border moves out to " + (2 * grew.radius + 1) + " blocks across to take in the "
+                    + chosen.displayNameWithoutPK);
+        }
 
         ArrayList<String> builders = new ArrayList<String>();
         for (FolkData worker : SimukraftReloaded.serverFolks)

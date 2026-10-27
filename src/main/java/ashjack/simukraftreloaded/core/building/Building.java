@@ -366,6 +366,7 @@ public class Building implements Serializable
             }
 
             int acount = 0, bcount = 0;
+            java.util.List<Integer> unknownAt = new ArrayList<Integer>();
             
             for (int i = 0; i < this.layerCount; i++)
             {
@@ -540,6 +541,16 @@ public class Building implements Serializable
                             	String value = (String)thekey.get(ch);
                             	//String[] v = value.split(",");
                             	String[] blockInfo = value.split(":");
+                                if (Integer.parseInt(blockInfo[0]) == UNKNOWN)
+                                {
+                                    structure[acount] = Blocks.air;
+                                    structureSub[acount] = 0;
+                                    unknownAt.add(acount);
+                                    acount++;
+                                    bcount++;
+                                    blocksInBuilding++;
+                                    continue;
+                                }
                                 structure[acount] = Block.getBlockById(Integer.parseInt(blockInfo[0]));
                                 structureSub[acount] = Integer.parseInt(blockInfo[1]);
                                 //SimukraftReloaded.log.info(ch);
@@ -574,6 +585,7 @@ public class Building implements Serializable
             }
 
             br.close();
+            fillUnknown(unknownAt);
             if (motel != null)
             {
                 displayNameWithoutPK = motel.title();
@@ -590,7 +602,9 @@ public class Building implements Serializable
 
     /**
      * one blueprint key entry as "id:meta". Copied structures write "minecraft:stone,0"; the blueprints that ship
-     * with the mod are older and write the numeric "1:0" (vanilla block ids never change in 1.7.10).
+     * with the mod are older and write the numeric "1:0". Vanilla block ids never change in 1.7.10, but any other number
+     * was some block in the author's own game: Sim-U-Kraft's from its old fixed ids (3210 up), or another mod's that
+     * could be anything here, which comes back as UNKNOWN to be filled in with the building's own walls.
      */
     private String parseKeyBlock(String value)
     {
@@ -609,11 +623,18 @@ public class Building implements Serializable
             {
                 String[] p = v.split(":");
                 int id = Integer.parseInt(p[0]);
-                b = Block.getBlockById(id);
                 meta = Integer.parseInt(p[1]);
-                if (id != 0 && b == Blocks.air)
+                b = id == 0 ? Blocks.air : legacySimukraftBlock(id);
+                if (b == null)
                 {
-                    b = null;
+                    b = Block.getBlockById(id);
+                    Object name = Block.blockRegistry.getNameForObject(b);
+                    if (b == Blocks.air || name == null || !name.toString().startsWith("minecraft:"))
+                    {
+                        SimukraftReloaded.log.info("Building: " + displayName + " uses block " + v
+                                + " from another mod in its author's game - building it from its walls' block instead");
+                        return UNKNOWN + ":" + meta;
+                    }
                 }
             }
             else
@@ -631,6 +652,60 @@ public class Building implements Serializable
             return "0:0";
         }
         return Block.getIdFromBlock(b) + ":" + meta;
+    }
+
+    /** a block id key marking a block from a mod we can't know; see fillUnknown */
+    private static final int UNKNOWN = -2;
+
+    /** Sim-U-Kraft's own blocks by the fixed ids it had before Forge handed them out (its old config defaults) */
+    private static Block legacySimukraftBlock(int id)
+    {
+        switch (id)
+        {
+            case 3210: return SimukraftReloadedBlocks.buildingConstructor;
+            case 3211: return SimukraftReloadedBlocks.controlBox;
+            case 3212: return SimukraftReloadedBlocks.marker;
+            case 3213: return SimukraftReloadedBlocks.miningBox;
+            case 3214: return SimukraftReloadedBlocks.farmingBox;
+            case 3215: return SimukraftReloadedBlocks.lightBox;
+            default: return null;
+        }
+    }
+
+    /** the blocks from unknown mods become the building's commonest solid block, so they're not holes */
+    private void fillUnknown(java.util.List<Integer> at)
+    {
+        if (at.isEmpty())
+        {
+            return;
+        }
+        HashMap<String, Integer> counts = new HashMap<String, Integer>();
+        String best = null;
+        for (int i = 0; i < structure.length; i++)
+        {
+            Block b = structure[i];
+            if (b == null || b == Blocks.air || structureSub[i] < 0 || !b.isOpaqueCube() || b.hasTileEntity(structureSub[i])
+                    || Block.getIdFromBlock(b) == 2 || Block.getIdFromBlock(b) == 3)
+            {
+                continue; // walls, not grass, dirt or machines
+            }
+            String k = Block.getIdFromBlock(b) + ":" + structureSub[i];
+            Integer n = counts.get(k);
+            counts.put(k, n == null ? 1 : n + 1);
+            if (best == null || counts.get(k) > counts.get(best))
+            {
+                best = k;
+            }
+        }
+        String[] p = (best == null ? "4:0" : best).split(":");
+        Block fill = Block.getBlockById(Integer.parseInt(p[0]));
+        int meta = Integer.parseInt(p[1]);
+        for (int i : at)
+        {
+            structure[i] = fill;
+            structureSub[i] = meta;
+            addToRequirements(fill, meta, 1);
+        }
     }
 
     private void addToRequirements(Block block, int meta, int amount)
