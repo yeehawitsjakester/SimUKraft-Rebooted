@@ -100,6 +100,8 @@ public class Building implements Serializable
     public int capacity = -1; // single person or mixed couple by default (-1)
     public String buildDirection = "";
     public V3 lumbermillMarker = null; // Lumbermill only used as starting point
+    /** how far it's been upgraded (see Upgrades); 1 as built */
+    public int level = 1;
     // to search for trees, blank means use
     // primaryXYZ
     public int blocksInBuilding = 0; // calculated when loadBuilding called
@@ -1059,6 +1061,7 @@ public class Building implements Serializable
         strings.add("capacity|" + this.capacity);
         strings.add("builddir|" + this.buildDirection);
         strings.add("lmarker|" + (this.lumbermillMarker == null ? "null" : this.lumbermillMarker.toString()));
+        strings.add("level|" + this.level);
         strings.add("blocksinbuilding|" + this.blocksInBuilding);
         if (this.conBoxLocation != null)
         {
@@ -1505,6 +1508,8 @@ public class Building implements Serializable
 	        					build.capacity=Integer.parseInt(value);
 	        				} else if (name.contentEquals("builddir")) {
 	        					build.buildDirection=value;
+	        				} else if (name.contentEquals("level")) {
+	        					build.level = Integer.parseInt(value.trim());
 	        				} else if (name.contentEquals("lmarker")) {
 	        					if (!value.contentEquals("null")) {
 	        						build.lumbermillMarker=new V3(value);
@@ -1652,7 +1657,7 @@ public class Building implements Serializable
 
     /* loads in all buildings files into an ArrayList for quicker access (slowly in a thread) */
     /** blueprints this rewrite adds, shipped in the jar and copied into mods/Simukraft/buildings when missing */
-    private static final String[] BUNDLED_BLUEPRINTS = {"industrial/Warehouse.txt", "commercial/Sim-U-Hospital.txt"};
+    private static final String[] BUNDLED_BLUEPRINTS = {"industrial/Warehouse.txt", "commercial/Sim-U-Hospital.txt", "industrial/Sim-U-Blacksmith.txt"};
 
     private static void installBundledBlueprints()
     {

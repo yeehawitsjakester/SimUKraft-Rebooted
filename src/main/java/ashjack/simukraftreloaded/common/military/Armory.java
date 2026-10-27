@@ -314,6 +314,101 @@ public final class Armory
         return String.join(", ", changes);
     }
 
+    // ---------------------------------------------------------------- what the armory's short of
+
+    /**
+     * what a barracks wants made for its soldiers, less what its armory already holds: an iron sword for each soldier
+     * with nothing as good (a diamond one for archers and up, if a smithy good enough to forge them is about), a bow
+     * for each archer without one, and arrows to fill every archer's quiver with a quiver's worth to spare.
+     */
+    public static java.util.Map<Item, Integer> wanted(Building barracks, World world, ashjack.simukraftreloaded.proxies.CommonProxy.V3 box,
+            boolean diamonds)
+    {
+        java.util.Map<Item, Integer> out = new java.util.LinkedHashMap<Item, Integer>();
+        if (world == null || box == null)
+        {
+            return out;
+        }
+        List<IInventory> chests = WarehouseStock.chestsInside(barracks, box, world);
+        if (chests.isEmpty())
+        {
+            return out; // nowhere to put anything
+        }
+        float iron = meleeScore(new ItemStack(Items.iron_sword)), diamond = meleeScore(new ItemStack(Items.diamond_sword));
+        int ironSwords = 0, diamondSwords = 0, bows = 0, arrows = 0, archers = 0;
+        for (FolkData f : new ArrayList<FolkData>(SimukraftReloaded.serverFolks))
+        {
+            if (f.vocation != ashjack.simukraftreloaded.common.jobs.Job.Vocation.SOLDIER || !box.isSameCoordsAs(f.employedAt, true, true))
+            {
+                continue;
+            }
+            Rank rank = Rank.of(f.levelSoldier);
+            ItemStack w = carriedWeapon(f);
+            float have = w == null ? meleeScore(standardIssue()) : meleeScore(w);
+            if (diamonds && rank.atLeast(Rank.ARCHER) && have < diamond)
+            {
+                diamondSwords++;
+            }
+            else if (have < iron)
+            {
+                ironSwords++;
+            }
+            if (rank.atLeast(Rank.ARCHER))
+            {
+                archers++;
+                if (carriedBow(f) == null)
+                {
+                    bows++;
+                }
+                arrows += ARROWS_CARRIED - carriedArrows(f);
+            }
+        }
+        if (archers > 0)
+        {
+            arrows += ARROWS_CARRIED; // spare
+        }
+        for (IInventory inv : chests)
+        {
+            for (int i = 0; i < inv.getSizeInventory(); i++)
+            {
+                ItemStack is = inv.getStackInSlot(i);
+                if (is == null || is.getItem() == null)
+                {
+                    continue;
+                }
+                if (is.getItem() == Items.arrow)
+                {
+                    arrows -= is.stackSize;
+                }
+                else if (isBow(is) && allowed(Rank.ARCHER, is))
+                {
+                    bows -= is.stackSize;
+                }
+                else if (meleeScore(is) >= diamond)
+                {
+                    diamondSwords -= is.stackSize;
+                }
+                else if (meleeScore(is) >= iron && allowed(Rank.RECRUIT, is))
+                {
+                    ironSwords -= is.stackSize;
+                }
+            }
+        }
+        put(out, Items.iron_sword, ironSwords);
+        put(out, Items.diamond_sword, diamondSwords);
+        put(out, Items.bow, bows);
+        put(out, Items.arrow, arrows);
+        return out;
+    }
+
+    private static void put(java.util.Map<Item, Integer> m, Item item, int n)
+    {
+        if (n > 0)
+        {
+            m.put(item, n);
+        }
+    }
+
     /** chest index and slot of the best weapon (or bow) for this rank, or null */
     private static int[] find(List<IInventory> chests, Rank rank, boolean bows)
     {

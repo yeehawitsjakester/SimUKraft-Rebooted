@@ -30,6 +30,7 @@ import ashjack.simukraftreloaded.client.Gui.other.GuiBeamPlayerTo;
 import ashjack.simukraftreloaded.common.ClientMirror;
 import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
 import ashjack.simukraftreloaded.common.Care;
+import ashjack.simukraftreloaded.common.jobs.Workshop;
 import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
@@ -187,6 +188,31 @@ public class GuiControlBox extends GuiScreen
             {
                 b.enabled = false;
             }
+        }
+
+        // a smithy: blacksmiths at the forge, and a fletcher
+        if (Workshop.isSmithy(theBuilding))
+        {
+            int smiths = 0, fletchers = 0;
+            for (FolkData folk : SimukraftReloaded.folks())
+            {
+                if (theBuilding.primaryXYZ.isSameCoordsAs(folk.employedAt, true, true))
+                {
+                    if (folk.vocation == Vocation.FLETCHER)
+                    {
+                        fletchers++;
+                    }
+                    else if (folk.vocation == Vocation.BLACKSMITH)
+                    {
+                        smiths++;
+                    }
+                }
+            }
+            GuiButton b;
+            buttonList.add(b = new GuiButton(1, 10, height - 30, 100, 20, "Hire Blacksmith"));
+            b.enabled = smiths < 2;
+            buttonList.add(b = new GuiButton(1, 115, height - 30, 100, 20, "Hire Fletcher"));
+            b.enabled = fletchers < 1;
         }
 
         ////commercial buildings
@@ -748,6 +774,16 @@ public class GuiControlBox extends GuiScreen
             mc.currentScreen = null;
             GuiEmployFolk ui = new GuiEmployFolk(this.location, "", Vocation.DAIRYFARMER);
             mc.displayGuiScreen(ui);
+        }
+        else if (guibutton.displayString.contentEquals("Hire Blacksmith"))
+        {
+            mc.currentScreen = null;
+            mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.BLACKSMITH));
+        }
+        else if (guibutton.displayString.contentEquals("Hire Fletcher"))
+        {
+            mc.currentScreen = null;
+            mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.FLETCHER));
         }
         else if (guibutton.displayString.contentEquals("Hire Medic"))
         {

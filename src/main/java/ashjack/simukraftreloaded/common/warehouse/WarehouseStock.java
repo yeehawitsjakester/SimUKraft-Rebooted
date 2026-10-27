@@ -51,6 +51,12 @@ public class WarehouseStock
         public Object network;
         /** only this item counts as available here (a factory's output, not its supplies); null for anything */
         public Item only;
+        /** or only these (a workshop's goods); null for anything */
+        public java.util.Set<Item> onlyOf;
+        /** what to call it */
+        public String label;
+        /** working on orders from what's in it: nothing's hauled away from it meanwhile */
+        public boolean busy;
         /** any-meta counts, for planning */
         public final Map<Item, Integer> counts = new IdentityHashMap<Item, Integer>();
 
@@ -58,6 +64,13 @@ public class WarehouseStock
         {
             this.kind = kind;
             this.at = at;
+            this.label = kind.label;
+        }
+
+        /** whether this item here can be taken */
+        public boolean offers(Item item)
+        {
+            return (only == null || item == only) && (onlyOf == null || onlyOf.contains(item));
         }
 
         /** at the warehouse itself, so no walking to pick up */
@@ -121,6 +134,46 @@ public class WarehouseStock
                 Source factory = chestSource(Kind.FACTORY, f.employedAt, world, seen);
                 factory.only = Item.getItemFromBlock(Blocks.glass);
                 stock.add(factory);
+            }
+            else if (f.employedAt != null && f.employedAt.theDimension == dim && f.theirJob != null && f.theirJob.isWorkshop())
+            {
+                // a lumbermill (logs and what's sawn from them) or a smithy (what its blacksmiths and fletchers made,
+                // never what they were brought to make it from)
+                Source shop = chestSource(Kind.FACTORY, f.employedAt, world, seen);
+                if (shop.chests.isEmpty())
+                {
+                    continue; // another of its workers already counted it
+                }
+                ArrayList<ashjack.simukraftreloaded.common.jobs.Job> crew = new ArrayList<ashjack.simukraftreloaded.common.jobs.Job>();
+                for (FolkData o : new ArrayList<FolkData>(SimukraftReloaded.serverFolks))
+                {
+                    if (o.theirJob != null && o.theirJob.isWorkshop() && f.employedAt.isSameCoordsAs(o.employedAt, true, true))
+                    {
+                        crew.add(o.theirJob);
+                        shop.busy |= o.theirJob.workshopBusy();
+                    }
+                }
+                shop.onlyOf = new java.util.HashSet<Item>();
+                for (IInventory inv : shop.chests)
+                {
+                    for (int i = 0; i < inv.getSizeInventory(); i++)
+                    {
+                        ItemStack is = inv.getStackInSlot(i);
+                        if (is != null && is.getItem() != null)
+                        {
+                            for (ashjack.simukraftreloaded.common.jobs.Job j : crew)
+                            {
+                                if (j.workshopOffers(is.getItem()))
+                                {
+                                    shop.onlyOf.add(is.getItem());
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                shop.label = f.theirJob.workshopName();
+                stock.add(shop);
             }
         }
 
@@ -215,7 +268,7 @@ public class WarehouseStock
             for (int i = 0; i < inv.getSizeInventory(); i++)
             {
                 ItemStack is = inv.getStackInSlot(i);
-                if (is == null || is.getItem() == null || is.stackSize <= 0 || s.only != null && is.getItem() != s.only)
+                if (is == null || is.getItem() == null || is.stackSize <= 0 || !s.offers(is.getItem()))
                 {
                     continue;
                 }

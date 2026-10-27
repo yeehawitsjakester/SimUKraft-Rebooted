@@ -52,6 +52,25 @@ public class JobWarehouse extends Job
         boolean haul;
     }
 
+    /** each warehouse's last scan (by its control box), for the workshops working out what's short */
+    private static final Map<String, WarehouseStock> latest = new java.util.concurrent.ConcurrentHashMap<String, WarehouseStock>();
+
+    /** the latest stock of every warehouse in this dimension that a keeper is working */
+    static List<WarehouseStock> latestStocks(int dim)
+    {
+        List<WarehouseStock> out = new ArrayList<WarehouseStock>();
+        for (FolkData f : new ArrayList<FolkData>(SimukraftReloaded.serverFolks))
+        {
+            WarehouseStock st = f.theirJob instanceof JobWarehouse && f.employedAt != null && f.employedAt.theDimension == dim
+                    ? latest.get(f.employedAt.toString()) : null;
+            if (st != null && !out.contains(st))
+            {
+                out.add(st);
+            }
+        }
+        return out;
+    }
+
     /** every keeper's trips, so they don't promise the same items twice */
     static final ArrayList<Delivery> underWay = new ArrayList<Delivery>();
 
@@ -163,6 +182,7 @@ public class JobWarehouse extends Job
         {
             stock = WarehouseStock.scan(warehouse, theFolk.employedAt, jobWorld);
             lastScan = now;
+            latest.put(theFolk.employedAt.toString(), stock);
             publish();
         }
 
@@ -200,8 +220,8 @@ public class JobWarehouse extends Job
         {
             current = d;
             underWay.add(d);
-            theFolk.statusText = "Fetching " + (d.item == null ? d.from.kind.label : new ItemStack(d.item).getDisplayName()
-                    + " from " + d.from.kind.label) + " back to the warehouse";
+            theFolk.statusText = "Fetching " + (d.item == null ? d.from.label : new ItemStack(d.item).getDisplayName()
+                    + " from " + d.from.label) + " back to the warehouse";
             theFolk.isWorking = true;
             theFolk.gotoXYZ(d.from.at, null);
             theStage = Stage.FETCHING;
@@ -227,7 +247,7 @@ public class JobWarehouse extends Job
         }
         else
         {
-            theFolk.statusText = "Fetching " + what + " from " + d.from.kind.label + " for " + d.builder;
+            theFolk.statusText = "Fetching " + what + " from " + d.from.label + " for " + d.builder;
             theFolk.isWorking = true;
             theFolk.gotoXYZ(d.from.at, null);
             theStage = Stage.FETCHING;
@@ -400,7 +420,7 @@ public class JobWarehouse extends Job
         int bestItems = 0, bestDist = Integer.MAX_VALUE;
         for (Source s : stock.sources)
         {
-            if (s.isLocal() || s.counts.isEmpty() || hauling(s))
+            if (s.isLocal() || s.counts.isEmpty() || hauling(s) || s.busy)
             {
                 continue;
             }
@@ -427,6 +447,19 @@ public class JobWarehouse extends Job
         d.to = theFolk.employedAt.clone();
         d.from = best;
         d.item = best.only; // from a factory, only what it makes
+        if (d.item == null && best.onlyOf != null)
+        {
+            // a workshop: the thing it has most of that it made (never what it was brought to make it from)
+            int most = 0;
+            for (Map.Entry<Item, Integer> e : best.counts.entrySet())
+            {
+                if (e.getValue() > most)
+                {
+                    most = e.getValue();
+                    d.item = e.getKey();
+                }
+            }
+        }
         d.haul = true;
         d.qty = TRIP_MAX;
         return d;
@@ -505,7 +538,7 @@ public class JobWarehouse extends Job
         return n;
     }
 
-    private static int onTheWay(V3 to, Item item)
+    static int onTheWay(V3 to, Item item)
     {
         int n = 0;
         for (Delivery d : underWay)
@@ -663,7 +696,7 @@ public class JobWarehouse extends Job
         {
             if (!d.haul)
             {
-                trips.add(d.keeper + "|" + d.qty + "|" + Item.itemRegistry.getNameForObject(d.item) + "|" + d.builder + "|" + d.from.kind.label);
+                trips.add(d.keeper + "|" + d.qty + "|" + Item.itemRegistry.getNameForObject(d.item) + "|" + d.builder + "|" + d.from.label);
             }
         }
         theFolk.warehouseTrips = trips;

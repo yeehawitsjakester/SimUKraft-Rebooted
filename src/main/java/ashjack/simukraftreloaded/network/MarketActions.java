@@ -74,7 +74,7 @@ public final class MarketActions
                 int got = 0;
                 for (Source s : order)
                 {
-                    if (got >= qty || (s.only != null && s.only != item))
+                    if (got >= qty || !s.offers(item))
                     {
                         continue;
                     }

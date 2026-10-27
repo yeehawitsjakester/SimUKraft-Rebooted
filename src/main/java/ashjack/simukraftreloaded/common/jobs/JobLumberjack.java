@@ -4,7 +4,9 @@ import ashjack.simukraftreloaded.core.town.Economy;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
 import ashjack.simukraftreloaded.common.jobs.JobMiner.Stage;
@@ -57,6 +59,11 @@ public class JobLumberjack extends Job implements Serializable
     /** columns of the area looked over each second, logs carried before taking them back, and the time a log takes */
     private static final int COLUMNS_PER_LOOK = 1500, LOAD = 64;
     private static final long CHOP_MS = 700;
+    private static final long ORDERS_MS = 10000;
+    private transient LinkedHashMap<Item, Integer> sawOrders, sawMissing = new LinkedHashMap<Item, Integer>();
+    private transient long lastOrders;
+    /** sawing stopped for want of logs: try again once some come in (a delivery, or their own) */
+    private transient boolean sawStuck;
 
     public JobLumberjack() {}
     public JobLumberjack(FolkData folk)
@@ -81,7 +88,7 @@ public class JobLumberjack extends Job implements Serializable
 
     public enum Stage
     {
-        IDLE, ARRIVEDATMILL, SCANFORTREE, GOTOTREE, CHOPPINGTREE, RETURNWOOD;
+        IDLE, ARRIVEDATMILL, SCANFORTREE, GOTOTREE, CHOPPINGTREE, RETURNWOOD, SAWING;
     }
 
     public void resetJob()
@@ -141,17 +148,27 @@ public class JobLumberjack extends Job implements Serializable
             stageReturnWood();
             pickUpSaplings();
         }
+        else if (theStage == Stage.SAWING)
+        {
+            stageSawing();
+        }
     }
 
     private void stageScanForTree()
     {
         theFolk.action = FolkAction.ATWORK;
         theFolk.isWorking = false;
+        lumbermill = Building.getBuilding(theFolk.employedAt);
+        if (lumbermill != null && jobWorld != null && sawingWanted())
+        {
+            theStage = Stage.SAWING;
+            step = 1;
+            return;
+        }
         if (System.currentTimeMillis() < idleUntil)
         {
             return;
         }
-        lumbermill = Building.getBuilding(theFolk.employedAt);
         if (lumbermill == null || jobWorld == null)
         {
             return;
@@ -338,15 +355,171 @@ public class JobLumberjack extends Job implements Serializable
         {
             theFolk.stayPut = true;
             int count = woodCount();
-            millChests = inventoriesFindClosest(theFolk.employedAt, 6);
+            millChests = millChests();
             // the logs, and the saplings, apples and cocoa beans that came with them
             inventoriesTransferFromFolk(theFolk.inventory, millChests, null);
             pay = (float)count * 0.03f;
             Economy.pay(theFolk, pay);
             SimukraftReloaded.sendChat(theFolk.name + " has delivered " + count + " logs at the lumbermill");
-            theStage = Stage.SCANFORTREE;
+            sawStuck = false;
+            theStage = sawingWanted() ? Stage.SAWING : Stage.SCANFORTREE;
             step = 1;
         }
+    }
+
+    // ---------------------------------------------------------------- the sawmill
+
+    /** the mill's chests: by its control box (where the warehouse collects), or failing that anywhere close */
+    private ArrayList<IInventory> millChests()
+    {
+        ArrayList<IInventory> c = Workshop.chests(jobWorld, theFolk.employedAt);
+        return c.isEmpty() ? inventoriesFindClosest(theFolk.employedAt, 6) : c;
+    }
+
+    /** builders (or a smithy) short of planks, fences, doors or anything else that's only wood, which the mill could saw */
+    private boolean sawingWanted()
+    {
+        long now = System.currentTimeMillis();
+        if (now - lastOrders > ORDERS_MS || sawOrders == null)
+        {
+            lastOrders = now;
+            ArrayList<IInventory> chests = millChests();
+            sawOrders = Workshop.orders(Workshop.Shop.SAWMILL, theFolk, chests, jobWorld);
+            if (sawStuck && hasLogs(chests))
+            {
+                sawStuck = false; // a keeper's brought some
+            }
+            if (sawOrders.isEmpty())
+            {
+                sawMissing.clear();
+            }
+        }
+        return !sawOrders.isEmpty() && !sawStuck;
+    }
+
+    /** at the mill, one cut at a time from the logs in its chests (their own first); back to the trees when it's done */
+    private void stageSawing()
+    {
+        theFolk.action = FolkAction.ATWORK;
+        if (step == 1)
+        {
+            theFolk.statusText = "Back to the mill to saw";
+            theFolk.gotoXYZ(theFolk.employedAt, null);
+            step = 2;
+            return;
+        }
+        theFolk.updateLocationFromEntity();
+        if (theFolk.isSpawned() && theFolk.location.getDistanceTo(theFolk.employedAt) > 3)
+        {
+            if (theFolk.destination == null)
+            {
+                step = 1;
+            }
+            return;
+        }
+        theFolk.stayPut = true;
+        ArrayList<IInventory> chests = millChests();
+        if (chests.isEmpty())
+        {
+            theFolk.statusText = "The mill needs a chest by its control box";
+            theStage = Stage.SCANFORTREE;
+            return;
+        }
+        if (!theFolk.inventory.isEmpty())
+        {
+            int logs = woodCount();
+            inventoriesTransferFromFolk(theFolk.inventory, chests, null);
+            Economy.pay(theFolk, logs * 0.03f);
+        }
+        if (sawOrders == null || sawOrders.isEmpty())
+        {
+            theStage = Stage.SCANFORTREE;
+            return;
+        }
+        LinkedHashMap<Item, Integer> stuck = new LinkedHashMap<Item, Integer>();
+        for (Map.Entry<Item, Integer> o : new ArrayList<Map.Entry<Item, Integer>>(sawOrders.entrySet()))
+        {
+            Workshop.Step s = Workshop.step(Workshop.Shop.SAWMILL, chests, o.getKey());
+            if (s.made != null)
+            {
+                sawMissing = stuck;
+                theFolk.isWorking = true;
+                theFolk.statusText = "Sawing " + new ItemStack(o.getKey()).getDisplayName() + " (" + o.getValue() + " wanted)";
+                jobWorld.playSoundEffect(theFolk.employedAt.x, theFolk.employedAt.y, theFolk.employedAt.z, "dig.wood", 0.5f, 0.8f);
+                if (s.made.getItem() == o.getKey())
+                {
+                    int left = o.getValue() - s.made.stackSize;
+                    if (left > 0)
+                    {
+                        sawOrders.put(o.getKey(), left);
+                    }
+                    else
+                    {
+                        sawOrders.remove(o.getKey());
+                    }
+                    Economy.pay(theFolk, 0.01f);
+                }
+                return;
+            }
+            if (s.missing != null)
+            {
+                Integer n = stuck.get(s.missing.getItem());
+                stuck.put(s.missing.getItem(), Math.min(256, (n == null ? 0 : n) + Math.max(s.missingCount, o.getValue() / 4 + 1)));
+            }
+        }
+        // out of logs: ask the warehouse, and go and cut some meanwhile
+        sawMissing = stuck;
+        sawStuck = true;
+        theFolk.isWorking = false;
+        theFolk.stayPut = false;
+        theFolk.statusText = "Out of logs to saw";
+        theStage = Stage.SCANFORTREE;
+    }
+
+    @Override
+    public Map<Item, Integer> remainingNeeds()
+    {
+        return sawMissing == null ? new LinkedHashMap<Item, Integer>() : new LinkedHashMap<Item, Integer>(sawMissing);
+    }
+
+    @Override
+    public boolean isWorkshop()
+    {
+        return true;
+    }
+
+    @Override
+    public boolean workshopOffers(Item item)
+    {
+        return true; // its logs, and what's sawn from them
+    }
+
+    @Override
+    public String workshopName()
+    {
+        return "the lumbermill";
+    }
+
+    @Override
+    public boolean workshopBusy()
+    {
+        return theStage == Stage.SAWING || sawOrders != null && !sawOrders.isEmpty();
+    }
+
+    private static boolean hasLogs(ArrayList<IInventory> chests)
+    {
+        for (IInventory inv : chests)
+        {
+            for (int i = 0; i < inv.getSizeInventory(); i++)
+            {
+                ItemStack is = inv.getStackInSlot(i);
+                if (is != null && is.getItem() != null && isLog(is))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** logs of any kind carried */

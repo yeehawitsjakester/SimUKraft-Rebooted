@@ -748,6 +748,30 @@ public abstract class Job
         return new LinkedHashMap<Item, Integer>();
     }
 
+    /** a workplace whose chests hold goods it made, for the warehouse to collect */
+    public boolean isWorkshop()
+    {
+        return false;
+    }
+
+    /** of what's in a workshop's chests, whether this can be taken away (it made it) */
+    public boolean workshopOffers(Item item)
+    {
+        return false;
+    }
+
+    /** what the warehouse calls it */
+    public String workshopName()
+    {
+        return "a workshop";
+    }
+
+    /** working from its chests on orders right now, so nothing's to be hauled off */
+    public boolean workshopBusy()
+    {
+        return false;
+    }
+
     /** the item this job has stopped and is waiting for right now, if any: a keeper brings that first */
     public Item waitingFor()
     {
@@ -1112,7 +1136,7 @@ public abstract class Job
         BUILDER, LUMBERJACK, MINER, CROPFARMER, BAKER, SOLDIER, SHEPHERD, GROCER, COURIER,
         MERCHANT, BUTCHER, PIGFARMER, CATTLEFARMER, CHICKENFARMER, TERRAFORMER, GLASSMAKER,
         FISHERMAN, PATHBUILDER, DAIRYFARMER, CHEESEMAKER,BURGERSMANAGER,BURGERSFRYCOOK,BURGERSWAITER, EGGFARMER
-        ,BRICKMAKER, WAREHOUSE, MEDIC;
+        ,BRICKMAKER, WAREHOUSE, MEDIC, BLACKSMITH, FLETCHER;
 
         public static Vocation getVocation(String s)
         {
@@ -1121,6 +1145,14 @@ public abstract class Job
                 if (s.contentEquals("Builder"))
                 {
                     return Vocation.BUILDER;
+                }
+                else if (s.contentEquals("Blacksmith"))
+                {
+                    return Vocation.BLACKSMITH;
+                }
+                else if (s.contentEquals("Fletcher"))
+                {
+                    return Vocation.FLETCHER;
                 }
                 else if (s.contentEquals("Medic"))
                 {
@@ -1290,6 +1322,16 @@ public abstract class Job
             if (this == Vocation.MEDIC)
             {
                 return "Medic";
+            }
+
+            if (this == Vocation.BLACKSMITH)
+            {
+                return "Blacksmith";
+            }
+
+            if (this == Vocation.FLETCHER)
+            {
+                return "Fletcher";
             }
 
             if (this == Vocation.MERCHANT)

@@ -87,6 +87,33 @@ public class JobSoldier extends Job implements Serializable
     private static final Set<String> unusable = new HashSet<String>();
     private static final GameProfile SOLDIER_PROFILE = new GameProfile(UUID.nameUUIDFromBytes("SimUKraftSoldier".getBytes()), "[Sim-U-Soldier]");
 
+    /**
+     * what the armory wants made: said by one soldier for the whole barracks (the first on its books), so a keeper
+     * delivers it once. A smithy makes the swords, a fletcher the bows and arrows.
+     */
+    @Override
+    public java.util.Map<net.minecraft.item.Item, Integer> remainingNeeds()
+    {
+        if (theFolk == null || theFolk.employedAt == null)
+        {
+            return super.remainingNeeds();
+        }
+        for (FolkData f : new java.util.ArrayList<FolkData>(SimukraftReloaded.serverFolks))
+        {
+            if (f.vocation == Vocation.SOLDIER && theFolk.employedAt.isSameCoordsAs(f.employedAt, true, true))
+            {
+                if (f != theFolk)
+                {
+                    return super.remainingNeeds();
+                }
+                break;
+            }
+        }
+        net.minecraft.world.World world = jobWorld != null ? jobWorld : MinecraftServer.getServer().worldServerForDimension(theFolk.employedAt.theDimension);
+        return Armory.wanted(Building.getBuilding(theFolk.employedAt), world, theFolk.employedAt,
+                JobCraftsman.forgesDiamond(theFolk.employedAt.theDimension));
+    }
+
     public JobSoldier()
     {
     }
