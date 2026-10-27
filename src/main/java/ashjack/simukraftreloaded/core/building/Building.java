@@ -1753,7 +1753,7 @@ public class Building implements Serializable
         displayNameWithoutPK = orig.displayNameWithoutPK;
         structure = new Block[ltrCount * ftbCount * layerCount];
         structureSub = new int[structure.length];
-        java.util.List<Integer> built = Basement.lay(this, orig, n.count);
+        java.util.List<Integer> built = Basement.lay(this, orig, n.count, n.dir);
         if (built == null)
         {
             structure = null; // nowhere for a ladder down

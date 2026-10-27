@@ -183,6 +183,7 @@ public class JobWarehouse extends Job
             stock = WarehouseStock.scan(warehouse, theFolk.employedAt, jobWorld);
             lastScan = now;
             latest.put(theFolk.employedAt.toString(), stock);
+            ashjack.simukraftreloaded.core.building.Basement.repairLadders(jobWorld, warehouse);
             publish();
         }
 

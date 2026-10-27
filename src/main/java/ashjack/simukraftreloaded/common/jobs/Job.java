@@ -109,10 +109,12 @@ public abstract class Job
             }
             else if (dist > 1 && dist < 3)
             {
-                V3 work = theFolk.employedAt.clone();
-                work.y++;
-                theFolk.gotoXYZ(work, GotoMethod.SHIFT);
-                theFolk.location = work;
+                // close enough: they work from their box. Hopping them onto it could be undone by where they really
+                // stood (a fence, a slab, the box's own chest in the way), and they'd go round that for ever
+                theFolk.location = theFolk.employedAt.clone();
+                theFolk.destination = null;
+                theFolk.action = FolkAction.ATWORK;
+                onArrivedAtWork();
             }
             else if (theFolk.destination == null || !theFolk.destination.isSameCoordsAs(theFolk.employedAt, true, false))
             {

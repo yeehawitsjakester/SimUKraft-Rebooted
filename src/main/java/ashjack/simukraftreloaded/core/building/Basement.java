@@ -84,7 +84,7 @@ public final class Basement
      * fills b (already sized) from the original blueprint with the basements under it, the new deepest one to be built
      * and everything else kept; returns the cells that are to be built, or null if there's nowhere for the ladder
      */
-    static List<Integer> lay(Building b, Building orig, int count)
+    static List<Integer> lay(Building b, Building orig, int count, String dir)
     {
         int L = orig.ltrCount, F = orig.ftbCount, H = orig.layerCount, below = HEIGHT * count;
         List<Integer> build = new ArrayList<Integer>();
@@ -101,6 +101,7 @@ public final class Basement
             return null;
         }
         int lx = spot[0], lz = spot[1];
+        int ladderMeta = ladderMeta(dir, spot);
 
         // the new basement, at the bottom
         for (int y = 0; y < HEIGHT; y++)
@@ -118,6 +119,7 @@ public final class Basement
                     if (ladder && y > 0)
                     {
                         block = Blocks.ladder;
+                        meta = ladderMeta;
                     }
                     else if (y == 0 || wall)
                     {
@@ -142,7 +144,7 @@ public final class Basement
         }
         // the ladder on up through the floor of the basement above, or the warehouse's own floor
         int above = HEIGHT;
-        set(b, L, F, lx, above, lz, Blocks.ladder, 0, build);
+        set(b, L, F, lx, above, lz, Blocks.ladder, ladderMeta, build);
         return build;
     }
 
@@ -152,6 +154,75 @@ public final class Basement
         b.structure[i] = block;
         b.structureSub[i] = meta;
         build.add(i);
+    }
+
+    /**
+     * which way the ladder faces in the world, so it hangs on its wall as soon as it's placed (a ladder facing nothing
+     * drops off at the next block update, before the builder's done): 2 hangs on the block to the south (z+1), 3 north,
+     * 4 east, 5 west
+     */
+    static int ladderMeta(String dir, int[] spot)
+    {
+        if (dir == null || dir.isEmpty())
+        {
+            return 0;
+        }
+        int[] at = MotelPlan.toWorld(dir, 0, 0, spot[0], spot[1]), wall = MotelPlan.toWorld(dir, 0, 0, spot[2], spot[3]);
+        int dx = wall[0] - at[0], dz = wall[1] - at[1];
+        return dz > 0 ? 2 : dz < 0 ? 3 : dx > 0 ? 4 : 5;
+    }
+
+    /** buildings whose ladders have been looked over since the server started */
+    private static final java.util.Set<String> ladderChecked = java.util.Collections.synchronizedSet(new java.util.HashSet<String>());
+
+    /**
+     * the ladder down through every basement, rung by rung, putting back any that are missing (basements dug before
+     * ladders had their facing in the blueprint lost them). Once a session per warehouse, while its keeper's there.
+     */
+    public static void repairLadders(World world, Building b)
+    {
+        Name n = b == null ? null : parse(b.displayName);
+        if (n == null || world == null || !ladderChecked.add(b.displayName + "@" + b.primaryXYZ))
+        {
+            return;
+        }
+        ashjack.simukraftreloaded.proxies.CommonProxy.V3 con = ashjack.simukraftreloaded.common.warehouse.WarehouseStock.conBoxOf(b);
+        Building orig = Building.fromGenerated(n.original, n.type); // loads the blueprint
+        int[] spot = orig.structure == null ? null : ladderSpot(orig);
+        if (con == null || spot == null)
+        {
+            return;
+        }
+        ashjack.simukraftreloaded.proxies.CommonProxy.V3 o = b.layoutBox(con);
+        int[] w = MotelPlan.toWorld(n.dir, o.x.intValue(), o.z.intValue(), spot[0], spot[1]);
+        int meta = ladderMeta(n.dir, spot), fixed = 0;
+        for (int y = o.y.intValue() + 1; y <= o.y.intValue() + HEIGHT * n.count; y++)
+        {
+            if (!world.blockExists(w[0], y, w[1]))
+            {
+                ladderChecked.remove(b.displayName + "@" + b.primaryXYZ);
+                return; // not all loaded: another time
+            }
+            Block there = world.getBlock(w[0], y, w[1]);
+            if (there == Blocks.ladder)
+            {
+                if (world.getBlockMetadata(w[0], y, w[1]) != meta)
+                {
+                    world.setBlockMetadataWithNotify(w[0], y, w[1], meta, 3);
+                }
+                continue;
+            }
+            if (there.isAir(world, w[0], y, w[1]) || there.isReplaceable(world, w[0], y, w[1]))
+            {
+                world.setBlock(w[0], y, w[1], Blocks.ladder, meta, 3);
+                fixed++;
+            }
+        }
+        if (fixed > 0)
+        {
+            ashjack.simukraftreloaded.core.registry.SimukraftReloaded.log.info("Basement: put back " + fixed
+                    + " missing rungs of the ladder in " + b.displayName + " at " + b.primaryXYZ);
+        }
     }
 
     /** the ladder's column: one in from a wall, where the floor's solid with two of air above, against solid wall */
@@ -179,7 +250,7 @@ public final class Basement
             int[] s = tries[t];
             if (solid(orig, s[0], 0, s[1]) && solid(orig, s[2], 0, s[3]) && !solid(orig, s[0], 1, s[1]) && !solid(orig, s[0], 2, s[1]))
             {
-                return new int[] {s[0], s[1]};
+                return s; // ladder x, z, then the wall it hangs on
             }
         }
         return null;
@@ -205,9 +276,9 @@ public final class Basement
             {
                 for (int z = f[2]; z <= f[5]; z++)
                 {
-                    if (world.getBlock(x, y, z) != Blocks.ladder)
+                    if (world.getBlock(x, y, z) != Blocks.ladder || Blocks.ladder.canBlockStay(world, x, y, z))
                     {
-                        continue;
+                        continue; // not a ladder, or one already hanging on something
                     }
                     // ladder meta: 2 hangs on the block to the south (z+1), 3 north, 4 east, 5 west
                     int meta = world.isSideSolid(x, y, z + 1, net.minecraftforge.common.util.ForgeDirection.NORTH) ? 2
