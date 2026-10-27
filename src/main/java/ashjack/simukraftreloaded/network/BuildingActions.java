@@ -18,6 +18,8 @@ import ashjack.simukraftreloaded.common.jobs.JobBuilder;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.building.MotelPlan;
 import ashjack.simukraftreloaded.core.building.ApartmentConversion;
+import ashjack.simukraftreloaded.core.building.Basement;
+import ashjack.simukraftreloaded.core.building.Upgrades;
 import ashjack.simukraftreloaded.common.warehouse.WarehouseStock;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloadedBlocks;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
@@ -250,6 +252,82 @@ final class BuildingActions
                 upgrade.buildingComplete = false;
                 Building.register(upgrade); // in place of the finished motel, by its control box
                 startBuilding(player, con, upgrade, false);
+            }
+        });
+
+        // a warehouse's control box "Add a basement": the builders at its constructor box dig a storage basement under it
+        ServerActions.register("addBasement", new ServerActions.Action()
+        {
+            public void run(EntityPlayerMP player, NBTTagCompound data)
+            {
+                Building wh = buildingAt(data);
+                if (!Upgrades.isWarehouse(wh) || !wh.buildingComplete || wh.buildDirection == null || wh.buildDirection.isEmpty()
+                        || MotelPlan.isGenerated(wh.displayName) || ApartmentConversion.isGenerated(wh.displayName))
+                {
+                    ActionHandlers.tell(player, "Only a finished warehouse can have a basement dug");
+                    return;
+                }
+                int n = Basement.count(wh);
+                if (n >= Basement.MAX)
+                {
+                    ActionHandlers.tell(player, "It has as many basements as it can (" + Basement.MAX + ")");
+                    return;
+                }
+                V3 con = WarehouseStock.conBoxOf(wh);
+                World world = con == null ? null : MinecraftServer.getServer().worldServerForDimension(con.theDimension);
+                if (world == null)
+                {
+                    ActionHandlers.tell(player, "Couldn't work out where this warehouse's constructor box was");
+                    return;
+                }
+                Building deeper = Building.fromGenerated(Basement.name(n + 1, wh.buildDirection, wh.type, Basement.original(wh)), wh.type);
+                if (deeper.structure == null)
+                {
+                    ActionHandlers.tell(player, "There's nowhere inside it, against a wall, for a ladder down");
+                    return;
+                }
+                if (!putBackConstructor(player, world, con))
+                {
+                    return;
+                }
+                deeper.primaryXYZ = wh.primaryXYZ.clone();
+                deeper.offsetLtr = wh.offsetLtr;
+                deeper.offsetFtb = wh.offsetFtb;
+                deeper.offsetUp = wh.offsetUp - Basement.HEIGHT; // laid out from a basement further down
+                deeper.livingXYZ = wh.livingXYZ;
+                deeper.tennants = wh.tennants;
+                deeper.level = wh.level;
+                deeper.buildingComplete = false;
+                Building.register(deeper); // in place of the warehouse as it was, by its control box
+                startBuilding(player, con, deeper, false);
+                ActionHandlers.tell(player, "The builders at the constructor box will dig basement " + (n + 1)
+                        + ": " + wh.ltrCount + "x" + wh.ftbCount + ", lined with chests, with a ladder down from the warehouse floor");
+            }
+        });
+
+        ServerActions.register("upgradeChests", new ServerActions.Action()
+        {
+            public void run(EntityPlayerMP player, NBTTagCompound data)
+            {
+                Building wh = buildingAt(data);
+                if (!Upgrades.isWarehouse(wh) || wh.primaryXYZ == null)
+                {
+                    return;
+                }
+                ActionHandlers.tell(player, Upgrades.upgradeChests(wh,
+                        MinecraftServer.getServer().worldServerForDimension(wh.primaryXYZ.theDimension)));
+            }
+        });
+
+        ServerActions.register("upgradeSmithy", new ServerActions.Action()
+        {
+            public void run(EntityPlayerMP player, NBTTagCompound data)
+            {
+                Building smithy = buildingAt(data);
+                if (smithy != null)
+                {
+                    ActionHandlers.tell(player, Upgrades.upgradeSmithy(smithy));
+                }
             }
         });
 

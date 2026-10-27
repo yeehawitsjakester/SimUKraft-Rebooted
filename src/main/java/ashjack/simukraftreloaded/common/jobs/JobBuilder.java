@@ -931,6 +931,12 @@ public class JobBuilder extends Job implements Serializable
                 {
                     theBuilding.displayName = motel.finished().name(); // an upgrade, done: just the motel now
                 }
+                if (ashjack.simukraftreloaded.core.building.Basement.isGenerated(theBuilding.displayName))
+                {
+                    V3 con = theBuilding.conBoxLocation != null ? theBuilding.conBoxLocation : theFolk.employedAt;
+                    ashjack.simukraftreloaded.core.building.Basement.fixLadders(jobWorld,
+                            ashjack.simukraftreloaded.common.warehouse.WarehouseStock.footprint(theBuilding, theBuilding.layoutBox(con)));
+                }
                 ApartmentConversion.Name flats = ApartmentConversion.parse(theBuilding.displayName);
                 if (flats != null)
                 {

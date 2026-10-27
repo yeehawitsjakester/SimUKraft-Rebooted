@@ -269,6 +269,12 @@ public class Building implements Serializable
                 loadAsFlats(flats);
                 return;
             }
+            Basement.Name basements = Basement.parse(displayName);
+            if (basements != null)
+            {
+                loadAsBasement(basements);
+                return;
+            }
             BufferedReader br;
             MotelPlan motel = MotelPlan.parse(displayName);
             if (motel != null)
@@ -1726,6 +1732,44 @@ public class Building implements Serializable
      * a building turned into flats (see ApartmentConversion): its own blueprint, fitted out. A conversion of one
      * already standing leaves all of its own blocks alone and only asks for what's added.
      */
+    /** a warehouse with storage basements dug under it (only the newest to build); see Basement */
+    private void loadAsBasement(Basement.Name n)
+    {
+        Building orig = new Building(n.original, n.type);
+        orig.loadStructure();
+        if (orig.structure == null || orig.layerCount == 0 || n.count < 1)
+        {
+            return;
+        }
+        ltrCount = orig.ltrCount;
+        ftbCount = orig.ftbCount;
+        layerCount = orig.layerCount + Basement.HEIGHT * n.count;
+        dimensions = ltrCount + "x" + ftbCount + "x" + layerCount;
+        author = orig.author;
+        description = orig.description;
+        elevationLevel = orig.elevationLevel;
+        pk = orig.pk;
+        category = orig.category;
+        displayNameWithoutPK = orig.displayNameWithoutPK;
+        structure = new Block[ltrCount * ftbCount * layerCount];
+        structureSub = new int[structure.length];
+        java.util.List<Integer> built = Basement.lay(this, orig, n.count);
+        if (built == null)
+        {
+            structure = null; // nowhere for a ladder down
+            return;
+        }
+        for (int i : built)
+        {
+            if (structure[i] != Blocks.air)
+            {
+                addToRequirements(structure[i], structureSub[i], 1);
+            }
+            blocksInBuilding++;
+        }
+        rent = orig.blocksInBuilding * 0.01f;
+    }
+
     private void loadAsFlats(ApartmentConversion.Name n)
     {
         Building orig = new Building(n.original, n.type);
@@ -1778,14 +1822,15 @@ public class Building implements Serializable
         Building b = new Building(name, type);
         MotelPlan motel = MotelPlan.parse(name);
         ApartmentConversion.Name flats = ApartmentConversion.parse(name);
-        b.buildDirection = motel != null ? motel.dir : flats != null ? flats.dir : null;
+        Basement.Name basements = Basement.parse(name);
+        b.buildDirection = motel != null ? motel.dir : flats != null ? flats.dir : basements != null ? basements.dir : null;
         b.loadStructure();
         return b;
     }
 
     public static boolean isGenerated(String name)
     {
-        return MotelPlan.isGenerated(name) || ApartmentConversion.isGenerated(name);
+        return MotelPlan.isGenerated(name) || ApartmentConversion.isGenerated(name) || Basement.isGenerated(name);
     }
 
     /** how many soldiers a barracks can train: one per so much floor (config BarracksAreaPerSoldier) */

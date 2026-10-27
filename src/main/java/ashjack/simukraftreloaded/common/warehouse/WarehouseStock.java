@@ -329,7 +329,7 @@ public class WarehouseStock
      * lays it out, or a 13x13 area around the box if that can't be worked out. (Its recorded block list can't be
      * trusted for this: builds resumed after a restart only hold the blocks placed since.)
      */
-    private static int[] bounds(Building warehouse, V3 box)
+    public static int[] bounds(Building warehouse, V3 box)
     {
         int bx = box.x.intValue(), by = box.y.intValue(), bz = box.z.intValue();
         int[] r = {bx - 6, by - 1, bz - 6, bx + 6, by + 5, bz + 6};

@@ -209,6 +209,11 @@ public class GuiControlBox extends GuiScreen
                 }
             }
             GuiButton b;
+            if (theBuilding.buildingComplete && theBuilding.level < 2)
+            {
+                buttonList.add(new GuiButton(1043, 10, height - 52, 205, 20, "Upgrade forge for diamond ("
+                        + SimukraftReloaded.displayMoney(ashjack.simukraftreloaded.core.building.Upgrades.SMITHY_COST) + ")"));
+            }
             buttonList.add(b = new GuiButton(1, 10, height - 30, 100, 20, "Hire Blacksmith"));
             b.enabled = smiths < 2;
             buttonList.add(b = new GuiButton(1, 115, height - 30, 100, 20, "Hire Fletcher"));
@@ -472,6 +477,19 @@ public class GuiControlBox extends GuiScreen
                 }
 
                 buttonList.add(new GuiButton(1040, 145, height - 30, 60, 20, "Stock"));
+                if (theBuilding.buildingComplete)
+                {
+                    int dug = ashjack.simukraftreloaded.core.building.Basement.count(theBuilding);
+                    GuiButton dig = new GuiButton(1041, 10, height - 52, 130, 20, "Add a basement (" + dug + "/"
+                            + ashjack.simukraftreloaded.core.building.Basement.MAX + ")");
+                    dig.enabled = dug < ashjack.simukraftreloaded.core.building.Basement.MAX;
+                    buttonList.add(dig);
+                    String chests = ashjack.simukraftreloaded.core.building.Upgrades.nextChests(theBuilding);
+                    if (ashjack.simukraftreloaded.core.building.Upgrades.hasIronChests() && chests != null)
+                    {
+                        buttonList.add(new GuiButton(1042, 145, height - 52, 100, 20, chests));
+                    }
+                }
             }
 
             //Cheese Factory
@@ -663,6 +681,15 @@ public class GuiControlBox extends GuiScreen
             NBTTagCompound data = new NBTTagCompound();
             ActionHandlers.putV3(data, "box", location);
             ServerActions.send("convertApartments", data);
+            mc.displayGuiScreen(null);
+            mc.setIngameFocus();
+            return;
+        }
+        if (guibutton.id == 1041 || guibutton.id == 1042 || guibutton.id == 1043)
+        {
+            NBTTagCompound data = new NBTTagCompound();
+            ActionHandlers.putV3(data, "box", location);
+            ServerActions.send(guibutton.id == 1041 ? "addBasement" : guibutton.id == 1042 ? "upgradeChests" : "upgradeSmithy", data);
             mc.displayGuiScreen(null);
             mc.setIngameFocus();
             return;
