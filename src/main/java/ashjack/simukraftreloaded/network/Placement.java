@@ -23,8 +23,8 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 
 /**
- * Before a new building is built, it's shown where it'll go: its outline in particles - green, with red where it would
- * clear away someone's blocks and angry puffs on another building's boxes it would destroy - and the constructor box
+ * Before a new building is built, it's shown where it'll go: its outline (PlacementRenderer) - green, or red where it
+ * can't go, marking the blocks it would clear away and another building's boxes it would destroy - and the constructor box
  * screen moves it left, right, nearer, further, up or down. Shift-right-clicking the box (or Start building) gives the
  * go-ahead, unless it would destroy another building's box. Builders clear everything inside a building's outline, so
  * without this a building put down too close ate its neighbour's constructor box and its builder carried on.
@@ -50,7 +50,7 @@ public class Placement
     }
 
     private static final Map<Building, Result> results = new IdentityHashMap<Building, Result>();
-    private static final int MOVE_LIMIT = 32;
+    private static final int MOVE_LIMIT = 32, SHOWN = 256;
 
     private static String key(Building b)
     {
@@ -69,11 +69,15 @@ public class Placement
         r.bounds = box == null ? null : WarehouseStock.footprint(b, b.layoutBox(box));
         if (world == null || r.bounds == null)
         {
+            b.placementBounds = null;
             b.placementStatus = "Couldn't work out where it goes";
-            r.blocked = true;
+            r.blocked = b.placementBlocked = true;
             return false;
         }
         int[] f = r.bounds;
+        b.placementBounds = f;
+        b.placementCleared = new ArrayList<int[]>();
+        b.placementBoxes = new ArrayList<int[]>();
 
         // not across a border into another town
         ashjack.simukraftreloaded.core.town.Town home = ashjack.simukraftreloaded.core.town.Towns.at(box);
@@ -84,7 +88,7 @@ public class Placement
                     && f[2] <= other.centre.z + other.radius && f[5] >= other.centre.z - other.radius)
             {
                 b.placementStatus = "It would reach over into " + other.name + " - move it";
-                r.blocked = true;
+                r.blocked = b.placementBlocked = true;
                 return false;
             }
         }
@@ -112,7 +116,7 @@ public class Placement
                     if (!world.blockExists(x, y, z))
                     {
                         b.placementStatus = "Part of it is too far away to check - go closer";
-                        r.blocked = true;
+                        r.blocked = b.placementBlocked = true;
                         return false;
                     }
                     Block block = world.getBlock(x, y, z);
@@ -141,14 +145,18 @@ public class Placement
             }
         }
 
+        // what players are shown (a sample: a big building on a hillside can clear thousands)
+        b.placementCleared = new ArrayList<int[]>(r.cleared.subList(0, Math.min(SHOWN, r.cleared.size())));
+        b.placementBoxes = new ArrayList<int[]>(r.boxes);
+
         String moved = b.offsetLtr == 0 && b.offsetFtb == 0 && b.offsetUp == 0 ? "" : " (" + describeOffset(b) + ")";
         if (firstBox != null)
         {
-            r.blocked = true;
+            r.blocked = b.placementBlocked = true;
             b.placementStatus = "It would destroy " + firstBox + " - move it" + moved;
             return false;
         }
-        r.blocked = false;
+        r.blocked = b.placementBlocked = false;
         if (r.cleared.isEmpty())
         {
             b.placementStatus = "Nothing in the way" + moved;
@@ -259,13 +267,17 @@ public class Placement
         return Math.max(-limit, Math.min(limit, v));
     }
 
-    // ---------------------------------------------------------------- the outline
+    // ---------------------------------------------------------------- keeping the outline up to date
 
+    /**
+     * every few seconds, buildings waiting for the go-ahead are checked again (blocks get dug out or put in the way);
+     * when what's found changes, the players nearby are sent it for their outline (PlacementRenderer, client side)
+     */
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event)
     {
         MinecraftServer server = MinecraftServer.getServer();
-        if (event.phase != TickEvent.Phase.END || server == null || server.getTickCounter() % 15 != 0)
+        if (event.phase != TickEvent.Phase.END || server == null || server.getTickCounter() % 60 != 0)
         {
             return;
         }
@@ -282,47 +294,22 @@ public class Placement
                 continue;
             }
             Result r = results.get(b);
-            if (r == null || !r.key.equals(key(b)) || System.currentTimeMillis() - r.when > 10000)
-            {
-                check(b);
-                r = results.get(b);
-            }
-            if (r == null || r.bounds == null)
+            if (r != null && r.key.equals(key(b)) && System.currentTimeMillis() - r.when < 10000)
             {
                 continue;
             }
-            outline(world, r.bounds, r.blocked ? "reddust" : "happyVillager");
-            int shown = 0;
-            for (int[] p : r.cleared)
+            String before = b.placementStatus;
+            check(b);
+            if (r == null || before == null || !before.equals(b.placementStatus)) // first look since loading, or changed
             {
-                if (shown++ > 80)
+                for (Object o : world.playerEntities)
                 {
-                    break;
+                    EntityPlayerMP p = (EntityPlayerMP) o;
+                    if (p.getDistanceSq(c.x, c.y, c.z) < 96 * 96)
+                    {
+                        MirrorSync.sendTo(p);
+                    }
                 }
-                world.func_147487_a("reddust", p[0] + 0.5, p[1] + 0.5, p[2] + 0.5, 2, 0.2, 0.2, 0.2, 0);
-            }
-            for (int[] p : r.boxes)
-            {
-                world.func_147487_a("angryVillager", p[0] + 0.5, p[1] + 1.2, p[2] + 0.5, 1, 0.1, 0.1, 0.1, 0);
-            }
-        }
-    }
-
-    /** particles along the twelve edges of the box x0..x1, y0..y1, z0..z1 */
-    private static void outline(WorldServer world, int[] f, String particle)
-    {
-        double x0 = f[0], y0 = f[1], z0 = f[2], x1 = f[3] + 1, y1 = f[4] + 1, z1 = f[5] + 1;
-        double[][] corners = {{x0, y0, z0}, {x1, y0, z0}, {x1, y0, z1}, {x0, y0, z1}, {x0, y1, z0}, {x1, y1, z0}, {x1, y1, z1}, {x0, y1, z1}};
-        int[][] edges = {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
-        for (int[] e : edges)
-        {
-            double[] a = corners[e[0]], b = corners[e[1]];
-            double len = Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]) + Math.abs(b[2] - a[2]);
-            int steps = (int) Math.min(64, Math.max(1, len));
-            for (int i = 0; i <= steps; i++)
-            {
-                double t = i / (double) steps;
-                world.func_147487_a(particle, a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t, 1, 0, 0, 0, 0);
             }
         }
     }

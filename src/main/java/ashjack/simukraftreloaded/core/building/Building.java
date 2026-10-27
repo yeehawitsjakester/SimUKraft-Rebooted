@@ -60,6 +60,13 @@ public class Building implements Serializable
     public String awaitingAt = null;
     /** what the placement check last found, for the constructor box screen */
     public String placementStatus = "";
+    /**
+     * what the placement check last found, for the outline players see (PlacementRenderer): its bounds (x0,y0,z0,
+     * x1,y1,z1), whether it can't go there, and some of the blocks it would clear and the boxes it would destroy
+     */
+    public int[] placementBounds = null;
+    public boolean placementBlocked = false;
+    public ArrayList<int[]> placementCleared = null, placementBoxes = null;
 
     /**
      * where the building is laid out from: its constructor box, moved by the offset. Everything that works out where
