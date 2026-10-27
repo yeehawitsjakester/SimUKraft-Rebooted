@@ -577,7 +577,8 @@ public class JobBuilder extends Job implements Serializable
                 {
                     try
                     {
-                        want = wantIS.getDisplayName();
+                        // air (and blocks with no item) has no name: asking threw, and was logged, for every empty cell
+                        want = blockId == null || Item.getItemFromBlock(blockId) == null ? "nothing" : wantIS.getDisplayName();
                         // once per block: a builder waiting for materials comes back to the same block every few seconds
                         V3 here = new V3(bx + xo, by + l, bz + zo, theFolk.location.theDimension);
                         int last = theBuilding.blockLocations.size() - 1;
