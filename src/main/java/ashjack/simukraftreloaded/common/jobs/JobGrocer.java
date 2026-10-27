@@ -343,8 +343,7 @@ public class JobGrocer extends Job implements Serializable
                             FolkData folk = (FolkData) SimukraftReloaded.folks().get(f);
                             folk.levelFood = 10;
                             folk.lastMeal = "Bought food at the grocer";
-                            Economy.purchase(folk, theFolk.employedAt,
-                                    Market.price(Towns.at(theFolk.employedAt), new ItemStack(chestStack.getItem(), 1)) * count);
+                            Economy.purchase(folk, theFolk.employedAt, new ItemStack(chestStack.getItem(), count), 1f);
                             sell += count;
                             break gotFood;
                         }

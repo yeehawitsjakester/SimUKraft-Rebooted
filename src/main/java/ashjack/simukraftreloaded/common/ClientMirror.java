@@ -44,6 +44,8 @@ public final class ClientMirror
     public static float wallet = 0f;
     /** businesses' funds, by Accounts key */
     public static java.util.HashMap<String, Float> accounts = new java.util.HashMap<String, Float>();
+    /** each town's market (by town id), for the market screen */
+    public static java.util.HashMap<Integer, ashjack.simukraftreloaded.core.town.TownMarket> markets = new java.util.HashMap<Integer, ashjack.simukraftreloaded.core.town.TownMarket>();
     public static ArrayList<ashjack.simukraftreloaded.core.town.Town> towns = new ArrayList<ashjack.simukraftreloaded.core.town.Town>();
 
     public static void clear()

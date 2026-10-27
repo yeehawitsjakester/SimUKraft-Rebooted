@@ -349,7 +349,7 @@ public class JobButcher extends Job implements Serializable
                     folk = (FolkData) SimukraftReloaded.folks().get(f);
                     folk.levelFood = 10;
                     folk.lastMeal = "Bought meat at the butcher";
-                    Economy.purchase(folk, theFolk.employedAt, Market.price(Towns.at(theFolk.employedAt), piece) * piece.stackSize);
+                    Economy.purchase(folk, theFolk.employedAt, piece, 1f);
                     sell++;
                 }
             }

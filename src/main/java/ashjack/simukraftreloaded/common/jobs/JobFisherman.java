@@ -256,7 +256,7 @@ public class JobFisherman extends Job implements Serializable
                     {
                         folk.levelFood = 10;
                         folk.lastMeal = "Bought fish from the fisherman";
-                        Economy.purchase(folk, theFolk.employedAt, Market.price(Towns.at(theFolk.employedAt), new ItemStack(fishStack.getItem(), 1)));
+                        Economy.purchase(folk, theFolk.employedAt, new ItemStack(fishStack.getItem(), 1), 1f);
                         fishStack.stackSize--;
                     }
                 }

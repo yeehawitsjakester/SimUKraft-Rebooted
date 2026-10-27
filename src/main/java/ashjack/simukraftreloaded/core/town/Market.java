@@ -101,6 +101,17 @@ public final class Market
     /** the price of one of these in a town (null for the wilds) */
     public static float price(Town town, ItemStack is)
     {
-        return basePrice(is);
+        TownMarket m = TownMarket.of(town);
+        return m == null ? basePrice(is) : m.price(is);
+    }
+
+    /** someone in this town wanted this many (raises the price if there aren't many about) */
+    public static void want(Town town, ItemStack is, double qty)
+    {
+        TownMarket m = TownMarket.of(town);
+        if (m != null && is != null)
+        {
+            m.want(is.getItem(), qty);
+        }
     }
 }

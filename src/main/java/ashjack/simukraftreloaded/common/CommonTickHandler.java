@@ -79,6 +79,7 @@ public class CommonTickHandler
         Building.saveAllBuildings();
         Towns.saveAll();
         ashjack.simukraftreloaded.core.town.Accounts.save();
+        ashjack.simukraftreloaded.core.town.TownMarket.saveAll();
         CourierTask.saveCourierTasksAndPoints();
         MiningBox.saveMiningBoxes();
         FarmingBox.saveFarmingBoxes();
@@ -93,6 +94,28 @@ public class CommonTickHandler
     }
 
     private int syncTicks = 0;
+    private long lastCount = 0;
+
+    /** each town's stock, counted once a minute (prices follow it) */
+    private void countMarkets()
+    {
+        if (System.currentTimeMillis() - lastCount < 60000)
+        {
+            return;
+        }
+        lastCount = System.currentTimeMillis();
+        for (Town town : new java.util.ArrayList<Town>(Towns.serverTowns))
+        {
+            try
+            {
+                ashjack.simukraftreloaded.core.town.TownMarket.of(town).count(town);
+            }
+            catch (Exception e)
+            {
+                SimukraftReloaded.log.warning("Market: couldn't count " + town.name + "'s stock: " + e);
+            }
+        }
+    }
 
     private void sendHud()
     {
@@ -137,6 +160,7 @@ public class CommonTickHandler
     	if (syncTicks % 20 == 0)
     	{
     		sendHud();
+    		countMarkets();
     	}
     	if (syncTicks % 100 == 0)
     	{

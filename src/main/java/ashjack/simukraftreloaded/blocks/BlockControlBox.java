@@ -117,7 +117,7 @@ public class BlockControlBox extends Block
     	{
     		public GuiScreen create()
     		{
-    			return isBank ? new GuiBankATM(loc, player) : new GuiControlBox(loc, player);
+    			return isBank ? new ashjack.simukraftreloaded.client.Gui.blocks.GuiMarket(loc) : new GuiControlBox(loc, player); // the bank is the town's market
     		}
     	});
         return true;

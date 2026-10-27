@@ -148,6 +148,7 @@ public class SimukraftReloaded
     	buildings().clear();
     	Towns.all().clear();
     	ashjack.simukraftreloaded.core.town.Accounts.clear();
+    	ashjack.simukraftreloaded.core.town.TownMarket.clear();
         courierPoints().clear();
         courierTasks().clear();
         miningBoxes().clear();
@@ -659,6 +660,26 @@ public class SimukraftReloaded
                 {
                     sendChat("No rent collected today, you should hire a folk to build a residential house.");
                 }
+        }
+
+        // each town's market: what its workers still need counts as demand, then today's prices are kept
+        for (FolkData worker : new ArrayList<FolkData>(folks()))
+        {
+            Town town = Towns.of(worker);
+            if (town != null && worker.theirJob != null)
+            {
+                for (java.util.Map.Entry<net.minecraft.item.Item, Integer> need : worker.theirJob.remainingNeeds().entrySet())
+                {
+                    ashjack.simukraftreloaded.core.town.Market.want(town, new net.minecraft.item.ItemStack(need.getKey()),
+                            Math.min(256, need.getValue()) * 0.25);
+                }
+            }
+        }
+        for (Town town : new ArrayList<Town>(Towns.serverTowns))
+        {
+            ashjack.simukraftreloaded.core.town.TownMarket market = ashjack.simukraftreloaded.core.town.TownMarket.of(town);
+            market.count(town);
+            market.endOfDay(town);
         }
 
         // hotel stays end and new visitors arrive (after rent, so last night is paid for)

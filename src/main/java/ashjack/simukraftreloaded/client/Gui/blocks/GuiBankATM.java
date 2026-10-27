@@ -321,10 +321,10 @@ public class GuiBankATM extends GuiScreen
                 cost += cartItem.quantity * cartItem.priceEach;
             }
 
-            if (cost > SimukraftReloaded.states().credits)
+            if (cost > ashjack.simukraftreloaded.common.ClientMirror.wallet)
             {
                 errorText = "The cost is " + SimukraftReloaded.displayMoney(cost) + ", but you only have " +
-                		SimukraftReloaded.displayMoney(SimukraftReloaded.states().credits);
+                		SimukraftReloaded.displayMoney(ashjack.simukraftreloaded.common.ClientMirror.wallet);
                 return;
             }
             else

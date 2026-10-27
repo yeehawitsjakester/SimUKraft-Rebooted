@@ -243,7 +243,7 @@ public class GuiMerchant extends GuiScreen
             }
             else if (guibutton.id == 2)    /// BUY!
             {
-                if (SimukraftReloaded.states().credits < totalCost)
+                if (ashjack.simukraftreloaded.common.ClientMirror.wallet < totalCost)
                 {
                     mc.thePlayer.addChatComponentMessage(new ChatComponentText("Merchant: 'Sorry, your card has been declined, you could try buying less.'"));
                     mc.currentScreen = null;

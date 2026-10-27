@@ -202,6 +202,7 @@ public final class ActionHandlers
         BuildingActions.register();
         Placement.register();
         TownActions.register();
+        MarketActions.register();
         BoxActions.register();
         ShopActions.register();
     }

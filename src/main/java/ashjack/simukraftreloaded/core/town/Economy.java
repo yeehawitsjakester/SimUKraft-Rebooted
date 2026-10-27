@@ -71,6 +71,14 @@ public final class Economy
         }
     }
 
+    /** a Sim buys goods from the business at this box, at the town's price; it counts towards demand */
+    public static void purchase(FolkData buyer, V3 seller, ItemStack goods, float markup)
+    {
+        Town town = Towns.at(seller);
+        Market.want(town, goods, goods.stackSize);
+        purchase(buyer, seller, Market.price(town, goods) * goods.stackSize * markup);
+    }
+
     /** rent from a tenant to their town: what they can manage; returns what they paid */
     public static float rent(FolkData tenant, Town town, double amount)
     {
@@ -162,13 +170,23 @@ public final class Economy
 
     // ---------------------------------------------------------------- players
 
+    /** a player's own money: their Vault balance on a server with one (VaultBridge), or Sim-U-Kraft's wallet */
     public static float wallet(String player)
     {
+        if (!SimukraftReloaded.isClientThread() && VaultBridge.available())
+        {
+            return VaultBridge.balance(player);
+        }
         return Accounts.get(Accounts.player(player));
     }
 
     public static void addToWallet(String player, double amount)
     {
+        if (VaultBridge.available())
+        {
+            VaultBridge.add(player, amount);
+            return;
+        }
         Accounts.add(Accounts.player(player), amount);
     }
 }

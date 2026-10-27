@@ -80,7 +80,7 @@ public final class ShopActions
                     return;
                 }
                 int count = data.getBoolean("all") ? is.stackSize : 1;
-                Economy.earn(atm, each * count);
+                Economy.addToWallet(player.getCommandSenderName(), each * count);
                 player.inventory.decrStackSize(slot, count);
                 player.inventoryContainer.detectAndSendChanges();
                 Effects.sound(player.worldObj, player.posX, player.posY, player.posZ, "ashjacksimukraftreloaded:cashshort");
@@ -118,10 +118,10 @@ public final class ShopActions
                 {
                     return;
                 }
-                if (cost > Economy.balance(atm))
+                if (cost > Economy.wallet(player.getCommandSenderName()))
                 {
                     ActionHandlers.tell(player, "The cost is " + SimukraftReloaded.displayMoney(cost) + ", but you only have "
-                            + SimukraftReloaded.displayMoney(Economy.balance(atm)));
+                            + SimukraftReloaded.displayMoney(Economy.wallet(player.getCommandSenderName())));
                     return;
                 }
                 for (int i = 0; i < bought.size(); i++)
@@ -136,7 +136,7 @@ public final class ShopActions
                     SimukraftReloaded.theCommodities.remove(comm);
                 }
                 player.inventoryContainer.detectAndSendChanges();
-                Economy.spend(atm, cost);
+                Economy.addToWallet(player.getCommandSenderName(), -(cost));
                 ActionHandlers.tell(player, "Bought commodities worth " + SimukraftReloaded.displayMoney(cost));
                 Effects.sound(player.worldObj, player.posX, player.posY, player.posZ, "ashjacksimukraftreloaded:cash");
             }
@@ -164,7 +164,7 @@ public final class ShopActions
                 {
                     return;
                 }
-                if (Economy.balance(here) < total)
+                if (Economy.wallet(player.getCommandSenderName()) < total)
                 {
                     ActionHandlers.tell(player, "Merchant: 'Sorry, your card has been declined, you could try buying less.'");
                     return;
@@ -174,7 +174,7 @@ public final class ShopActions
                     for (int c = 0; c < quantities[i]; c++)
                     {
                         placeIntoChest(chests.get(0), new ItemStack(MERCHANT_GOODS[i], 64), 0, 64);
-                        Economy.spend(here, PricesForBlocks.getPrice(MERCHANT_GOODS[i], true));
+                        Economy.addToWallet(player.getCommandSenderName(), -(PricesForBlocks.getPrice(MERCHANT_GOODS[i], true)));
                     }
                     if (quantities[i] > 0)
                     {
@@ -211,7 +211,7 @@ public final class ShopActions
                     float price = PricesForBlocks.getPrice(block, false);
                     if (price > 0)
                     {
-                        Economy.earn(here, price);
+                        Economy.addToWallet(player.getCommandSenderName(), price);
                         PricesForBlocks.adjustPrice(block, false); // the old code passed a null block here
                         total += price;
                         chest.setInventorySlotContents(g, null);
