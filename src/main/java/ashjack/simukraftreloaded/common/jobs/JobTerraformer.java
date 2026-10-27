@@ -4,6 +4,11 @@ import ashjack.simukraftreloaded.core.town.Economy;
 import net.minecraft.server.MinecraftServer;
 import ashjack.simukraftreloaded.common.Effects;
 import java.util.ArrayList;
+import java.util.List;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.util.AxisAlignedBB;
+import ashjack.simukraftreloaded.common.WorldUtil;
+import ashjack.simukraftreloaded.entity.EntityFolk;
 import java.util.Random;
 
 import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
@@ -691,11 +696,54 @@ public class JobTerraformer extends Job
             }
             
 
+            keepClear(v);
             closestBlocks.remove(0);
 
             if (closestBlocks.size() == 0)
             {
                 theStage = Stage.COMPLETE;
+            }
+        }
+    }
+
+    /**
+     * nobody gets buried or dropped by the block just changed: anyone it was filled in around climbs on top, and a Sim
+     * standing on ground that was taken away (the terraformer on their own platform, a child following them) is moved
+     * to firm ground by the constructor box
+     */
+    private void keepClear(V3 v)
+    {
+        int x = v.x.intValue(), y = v.y.intValue(), z = v.z.intValue();
+        boolean solid = jobWorld.getBlock(x, y, z).getMaterial().blocksMovement();
+        List<?> near = jobWorld.getEntitiesWithinAABB(EntityLivingBase.class, AxisAlignedBB.getBoundingBox(x - 0.3, y - 0.5, z - 0.3, x + 1.3, y + 2.5, z + 1.3));
+        for (Object o : near)
+        {
+            EntityLivingBase e = (EntityLivingBase) o;
+            boolean inside = e.boundingBox.minY < y + 1 && e.boundingBox.maxY > y;
+            boolean onTop = e.boundingBox.minY >= y + 0.9 && e.boundingBox.minY <= y + 1.6;
+            if (solid && inside)
+            {
+                e.setPositionAndUpdate(e.posX, y + 1, e.posZ);
+            }
+            else if (!solid && onTop && e instanceof EntityFolk)
+            {
+                V3 box = theFolk.employedAt;
+                for (int r = 1; r <= 3; r++)
+                {
+                    int gy = WorldUtil.findStandableY(jobWorld, box.x.intValue() + r, box.y.intValue() + 1, box.z.intValue(), 4);
+                    int gx = box.x.intValue() + r;
+                    if (gy < 0)
+                    {
+                        gx = box.x.intValue() - r;
+                        gy = WorldUtil.findStandableY(jobWorld, gx, box.y.intValue() + 1, box.z.intValue(), 4);
+                    }
+                    if (gy >= 0 && !(gx == x && gy == y + 1))
+                    {
+                        e.fallDistance = 0;
+                        e.setPositionAndUpdate(gx + 0.5, gy, box.z.intValue() + 0.5);
+                        break;
+                    }
+                }
             }
         }
     }

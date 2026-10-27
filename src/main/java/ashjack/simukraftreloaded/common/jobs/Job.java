@@ -1112,7 +1112,7 @@ public abstract class Job
         BUILDER, LUMBERJACK, MINER, CROPFARMER, BAKER, SOLDIER, SHEPHERD, GROCER, COURIER,
         MERCHANT, BUTCHER, PIGFARMER, CATTLEFARMER, CHICKENFARMER, TERRAFORMER, GLASSMAKER,
         FISHERMAN, PATHBUILDER, DAIRYFARMER, CHEESEMAKER,BURGERSMANAGER,BURGERSFRYCOOK,BURGERSWAITER, EGGFARMER
-        ,BRICKMAKER, WAREHOUSE;
+        ,BRICKMAKER, WAREHOUSE, MEDIC;
 
         public static Vocation getVocation(String s)
         {
@@ -1121,6 +1121,10 @@ public abstract class Job
                 if (s.contentEquals("Builder"))
                 {
                     return Vocation.BUILDER;
+                }
+                else if (s.contentEquals("Medic"))
+                {
+                    return Vocation.MEDIC;
                 }
                 else if (s.contentEquals("Lumberjack"))
                 {
@@ -1281,6 +1285,11 @@ public abstract class Job
             if (this == Vocation.WAREHOUSE)
             {
                 return "Warehouse Keeper";
+            }
+
+            if (this == Vocation.MEDIC)
+            {
+                return "Medic";
             }
 
             if (this == Vocation.MERCHANT)

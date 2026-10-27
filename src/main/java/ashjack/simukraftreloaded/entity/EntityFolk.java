@@ -218,6 +218,7 @@ public class EntityFolk extends EntityCreature implements INpc {
     {
         super.applyEntityAttributes();
         this.getEntityAttribute(SharedMonsterAttributes.movementSpeed).setBaseValue(1.0D);
+        this.getEntityAttribute(SharedMonsterAttributes.maxHealth).setBaseValue(SimukraftReloadedConfig.configSimMaxHealth);
     }
     
 	@Override
@@ -696,6 +697,8 @@ public class EntityFolk extends EntityCreature implements INpc {
 			return new ItemStack(Blocks.chest, 1);
 		} else if (this.theData.vocation == Vocation.WAREHOUSE) {
 			return new ItemStack(Items.book, 1);
+		} else if (this.theData.vocation == Vocation.MEDIC) {
+			return new ItemStack(Items.potionitem, 1, 8197); // healing potion
 		} else if (this.theData.vocation == Vocation.MERCHANT) {
 			return new ItemStack(Blocks.brick_block, 1);
 		} else if (this.theData.vocation == Vocation.BUTCHER) {
@@ -804,7 +807,26 @@ public class EntityFolk extends EntityCreature implements INpc {
 			fallDistance = 0;
 			return;
 		}
-		super.fall(distance);
+		// Sims land better than players: a short drop off a ledge or a platform doesn't hurt them
+		super.fall(Math.max(0, distance - 3));
+	}
+
+	/**
+	 * Stuck inside a block (one placed where they stood, or a cave-in): they climb out on top rather than suffocate.
+	 */
+	@Override
+	public boolean attackEntityFrom(DamageSource source, float amount) {
+		if (!worldObj.isRemote && source == DamageSource.inWall) {
+			int x = (int) Math.floor(posX), z = (int) Math.floor(posZ);
+			for (int y = (int) Math.floor(posY); y < (int) Math.floor(posY) + 8 && y < 255; y++) {
+				if (!worldObj.getBlock(x, y, z).getMaterial().blocksMovement()
+						&& !worldObj.getBlock(x, y + 1, z).getMaterial().blocksMovement()) {
+					setPositionAndUpdate(x + 0.5, y, z + 0.5);
+					return false;
+				}
+			}
+		}
+		return super.attackEntityFrom(source, amount);
 	}
 
 	@Override

@@ -137,6 +137,17 @@ public final class ActionHandlers
                         return;
                     }
                 }
+                else if (vocation == Vocation.MEDIC)
+                {
+                    Building clinic = Building.getBuilding(box);
+                    room = (clinic == null ? 2 : ashjack.simukraftreloaded.common.Care.medicCapacity(clinic))
+                            - FolkData.getFolksByEmployedAt(box).size();
+                    if (room <= 0)
+                    {
+                        tell(player, "There's no room for more medics here - a hospital takes more");
+                        return;
+                    }
+                }
                 for (String name : getNames(data, "folks"))
                 {
                     FolkData folk = FolkData.getFolkByName(name);
@@ -146,7 +157,8 @@ public final class ActionHandlers
                     }
                     if (room-- <= 0)
                     {
-                        tell(player, "The barracks is full - " + folk.name + " wasn't trained");
+                        tell(player, (vocation == Vocation.MEDIC ? "There's no room for " : "The barracks is full - ") + folk.name
+                                + (vocation == Vocation.MEDIC ? " here" : " wasn't trained"));
                         continue;
                     }
                     folk.statusText = "Going to my new job...";

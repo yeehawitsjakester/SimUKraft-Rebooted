@@ -6,6 +6,8 @@ import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import ashjack.simukraftreloaded.common.jobs.JobWarehouse;
+import ashjack.simukraftreloaded.common.jobs.JobMedic;
+import ashjack.simukraftreloaded.common.Care;
 import java.util.Collections;
 
 import java.util.Arrays;
@@ -185,6 +187,14 @@ public class FolkData implements Serializable
     public transient ItemStack heldItem = null;
     /** their own money: wages in, food and rent out (see Economy) */
     public float money = 0f;
+    /** their health, kept here so it isn't lost while they're out of the world; -1 for unknown (full) */
+    public float health = -1f;
+    /** how they're being looked after when hurt (see Care), the clinic or hospital they're going to or in (V3 text),
+     * and the world time their rest before going back to work ends */
+    public Care.Stage care = Care.Stage.NONE;
+    public String careAt = null;
+    public long careUntil = 0;
+    public transient long lastHealed = 0, careLooked = 0;
     /** a reference to the entity so we can check it's isDead() and mess with it etc */
     public transient EntityFolk theEntity = null;
     /** set when they are GOTO'ing and walking/beaming, used to beam them if they can't get there within 40 seconds */
@@ -542,6 +552,10 @@ public class FolkData implements Serializable
         {
             this.theEntity = new EntityFolk(world);
             this.theEntity.setLocationAndAngles(location.x, location.y, location.z, 0f, 0f);
+            if (this.health > 0)
+            {
+                this.theEntity.setHealth(Math.min(this.health, this.theEntity.getMaxHealth()));
+            }
 
             if (!world.isRemote)
             {
@@ -857,6 +871,13 @@ public class FolkData implements Serializable
             }
             updateStatusLines();
 
+            // hurt? being looked after comes before work, home and everything else (see Care)
+            if (Care.tick(this))
+            {
+                timeSinceLastStatusUpdate = now;
+                return;
+            }
+
             //if they were wandering to a folk house when you hire them, they get stuck on stayput once arrived
             if (this.statusText.contentEquals("Going to my new job..."))
             {
@@ -980,9 +1001,9 @@ public class FolkData implements Serializable
 
             if (this.vocation != null)
             {
-                if (this.vocation == Vocation.SOLDIER)
+                if (this.vocation == Vocation.SOLDIER || this.vocation == Vocation.MEDIC)
                 {
-                    isSoldier = true;
+                    isSoldier = true; // soldiers and medics are on duty day and night
                 }
             }
 
@@ -1175,7 +1196,7 @@ public class FolkData implements Serializable
         }
 
         ////////// FIRE OFF THE JOB'S ONUPDATE() all day and night
-        if (this.theirJob != null)
+        if (this.theirJob != null && !Care.underCare(this))
         {
             theirJob.onUpdate();
         }
@@ -2016,6 +2037,15 @@ public class FolkData implements Serializable
 	        	    			else if (name.contentEquals("money")) {
 	        	    				folkd.money=Float.parseFloat(value);
 	        	    			}
+	        	    			else if (name.contentEquals("health")) {
+	        	    				folkd.health=Float.parseFloat(value);
+	        	    			}
+	        	    			else if (name.contentEquals("care")) {
+	        	    				String[] c = value.split(";", -1);
+	        	    				try { folkd.care = Care.Stage.valueOf(c[0]); } catch (IllegalArgumentException e) { folkd.care = Care.Stage.NONE; }
+	        	    				folkd.careAt = c.length > 1 && !c[1].isEmpty() ? c[1] : null;
+	        	    				folkd.careUntil = c.length > 2 && !c[2].isEmpty() ? Long.parseLong(c[2]) : 0;
+	        	    			}
 	        	    			else if (name.contentEquals("levelfood")) {
 	        	    				folkd.levelFood=Integer.parseInt(value);
 	        	    			}
@@ -2155,6 +2185,12 @@ public class FolkData implements Serializable
     		strings.add("trait4|"+this.trait4);
     		strings.add("levelfood|"+this.levelFood);
     		strings.add("money|"+this.money);
+    		if (this.isSpawned())
+    		{
+    			this.health = this.theEntity.getHealth();
+    		}
+    		strings.add("health|"+this.health);
+    		strings.add("care|"+(this.care == null ? Care.Stage.NONE : this.care)+";"+(this.careAt == null ? "" : this.careAt)+";"+this.careUntil);
     		strings.add("levelfun|"+this.levelFun);
     		strings.add("levelsocial|"+this.levelSocial);
     		strings.add("levelenvironment|"+this.levelEnvironment);
@@ -2400,7 +2436,7 @@ public class FolkData implements Serializable
     /** what each folk is doing */
     public enum FolkAction
     {
-        ONWAYTOWORK, ATWORK, WANDER, ATHOME, GOINGHOME, STAYINGHOME, HAVINGBABY;
+        ONWAYTOWORK, ATWORK, WANDER, ATHOME, GOINGHOME, STAYINGHOME, HAVINGBABY, INCARE;
 
         @Override
         public String toString()
@@ -2432,6 +2468,8 @@ public class FolkData implements Serializable
                 ret = "staying at home";
             } else if (this==FolkAction.HAVINGBABY) {
             	ret= "having a baby";
+            } else if (this == FolkAction.INCARE) {
+                ret = "being looked after";
             }
 
             return ret;
@@ -2455,6 +2493,7 @@ public class FolkData implements Serializable
 
         this.employedAt = null;
         this.vocation = null;
+        Care.forget(this);
         String deathBy = "";
 
         if (d == DamageSource.cactus)
@@ -2617,6 +2656,10 @@ public class FolkData implements Serializable
         else if (this.vocation == Vocation.WAREHOUSE)
         {
             this.theirJob = new JobWarehouse(this);
+        }
+        else if (this.vocation == Vocation.MEDIC)
+        {
+            this.theirJob = new JobMedic(this);
         }
         else if (this.vocation == Vocation.CROPFARMER)
         {

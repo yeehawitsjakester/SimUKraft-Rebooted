@@ -29,6 +29,7 @@ import ashjack.simukraftreloaded.client.Gui.folk.GuiShowEmployees;
 import ashjack.simukraftreloaded.client.Gui.other.GuiBeamPlayerTo;
 import ashjack.simukraftreloaded.common.ClientMirror;
 import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
+import ashjack.simukraftreloaded.common.Care;
 import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
@@ -147,7 +148,8 @@ public class GuiControlBox extends GuiScreen
             }
         }
 
-        if (theBuilding.type.contentEquals("commercial") || theBuilding.type.contentEquals("industrial") || theBuilding.type.contentEquals("special"))
+        boolean medical = Care.isMedical(theBuilding);
+        if (theBuilding.type.contentEquals("commercial") || theBuilding.type.contentEquals("industrial") || theBuilding.type.contentEquals("special") || medical)
         {
             int down = 70;
             int idx = 2;    ///display list of employees and their fire buttons
@@ -173,6 +175,17 @@ public class GuiControlBox extends GuiScreen
                     employeeCount++;
                     idx++;
                 }
+            }
+        }
+
+        // clinics and hospitals: medics
+        if (medical)
+        {
+            GuiButton b;
+            buttonList.add(b = new GuiButton(1, 10, height - 30, 100, 20, "Hire Medic"));
+            if (employeeCount >= Care.medicCapacity(theBuilding))
+            {
+                b.enabled = false;
             }
         }
 
@@ -552,11 +565,26 @@ public class GuiControlBox extends GuiScreen
                         fontRendererObj.drawString("constructor box builds only the new part", 5, 100, 0xaaaaaa);
                     }
                 }
-                else if (theBuilding.type.contentEquals("industrial") || theBuilding.type.contentEquals("commercial") || theBuilding.type.contentEquals("special"))
+                else if (theBuilding.type.contentEquals("industrial") || theBuilding.type.contentEquals("commercial") || theBuilding.type.contentEquals("special")
+                         || Care.isMedical(theBuilding))
                 {
+                    if (Care.isMedical(theBuilding))
+                    {
+                        int patients = 0;
+                        for (FolkData p : SimukraftReloaded.folks())
+                        {
+                            if (theBuilding.primaryXYZ.toString().equals(p.careAt))
+                            {
+                                patients++;
+                            }
+                        }
+                        fontRendererObj.drawString("Patients : " + patients + " of " + Care.beds(theBuilding) + " beds", 120, 57, 0xffffa0);
+                    }
                     fontRendererObj.drawString(theBuilding.displayName.contains("Barracks")
                             ? "Soldiers : " + employeeCount + " of " + theBuilding.soldierCapacity()
-                              + "   (armory: chests in the barracks)" : "Employees :", 5, 57, 0xffff80);
+                              + "   (armory: chests in the barracks)"
+                            : Care.isMedical(theBuilding) ? "Medics : " + employeeCount + " of " + Care.medicCapacity(theBuilding)
+                            : "Employees :", 5, 57, 0xffff80);
                     int down = 70;
 
                     for (int fc = 0; fc < SimukraftReloaded.folks().size(); fc++)
@@ -720,6 +748,11 @@ public class GuiControlBox extends GuiScreen
             mc.currentScreen = null;
             GuiEmployFolk ui = new GuiEmployFolk(this.location, "", Vocation.DAIRYFARMER);
             mc.displayGuiScreen(ui);
+        }
+        else if (guibutton.displayString.contentEquals("Hire Medic"))
+        {
+            mc.currentScreen = null;
+            mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.MEDIC));
         }
         else if (guibutton.displayString.contentEquals("Hire Warehouse keeper"))
         {
