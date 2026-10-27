@@ -10,6 +10,8 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.World;
 import ashjack.simukraftreloaded.blocks.BlockMarker;
+import ashjack.simukraftreloaded.blocks.functionality.Marker;
+import ashjack.simukraftreloaded.core.registry.SimukraftReloadedConfig;
 import ashjack.simukraftreloaded.common.Effects;
 import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
 import ashjack.simukraftreloaded.common.jobs.JobBuilder;
@@ -280,8 +282,26 @@ final class BuildingActions
                 {
                     return;
                 }
-                b.lumbermillMarker = BlockMarker.serverMarkers.get(0).toV3();
+                // the marker nearest the mill (it was the first one in the world, wherever that was)
+                V3 nearest = null;
+                for (Marker m : BlockMarker.serverMarkers)
+                {
+                    V3 v = m.toV3();
+                    if (v.theDimension == b.primaryXYZ.theDimension
+                            && (nearest == null || v.getDistanceTo(b.primaryXYZ) < nearest.getDistanceTo(b.primaryXYZ)))
+                    {
+                        nearest = v;
+                    }
+                }
+                if (nearest == null)
+                {
+                    return;
+                }
+                b.lumbermillMarker = nearest;
                 b.saveThisBuilding();
+                ActionHandlers.tell(player, "Lumberjacks here now look for wild trees within "
+                        + SimukraftReloadedConfig.configLumberArea + " blocks of the marker at " + nearest.x.intValue() + ", "
+                        + nearest.z.intValue());
             }
         });
 

@@ -11,7 +11,8 @@ public class SimukraftReloadedConfig
 	////config file settings
     public static Configuration config;
     public static int configPopulationLimit = 100;
-    public static int configLumberArea = 30;
+    public static int configLumberArea = 128;
+    public static boolean configLumberInsideTown = false, configLumberReplant = false;
     public static boolean configDisableBeamEffect = false;
     public static boolean configFolkTalking = true;
     public static boolean configEnableMarkerAlignmentBeams = true;
@@ -78,9 +79,16 @@ public class SimukraftReloadedConfig
             p = config.get("Settings", "FolkTalkingEnglish", true);
             configFolkTalkingEnglish = p.getBoolean(true);
             p.comment = "If the folks ENGLISH talking gets annoying, set this to false";
-            p = config.get("Settings", "LumbermillArea", 40);
-            configLumberArea = p.getInt();
-            p.comment = "The radius in blocks that the lumberjack will look for trees from the starting point, don't set this too high, otherwise it will slow down MC every time they scan for the nearest tree, so 30 to 1000 should be ok (1000 is 1 Kilometre)";
+            config.getCategory("Settings").remove("LumbermillArea"); // replaced by LumberjackArea, which is bigger
+            p = config.get("Settings", "LumberjackArea", 128);
+            configLumberArea = Math.max(8, Math.min(256, p.getInt()));
+            p.comment = "How far (in blocks, 8 to 256) lumberjacks go from their lumbermill, or its marker, for wild trees. They search a slice at a time, only where the world is loaded, so bigger doesn't lag";
+            p = config.get("Settings", "LumberjackInsideTown", false);
+            configLumberInsideTown = p.getBoolean(false);
+            p.comment = "Whether lumberjacks fell wild trees inside town borders too, not only out in the wilds (never ones near a building, or that people planted leaves on)";
+            p = config.get("Settings", "LumberjackReplant", false);
+            configLumberReplant = p.getBoolean(false);
+            p.comment = "Whether lumberjacks plant a sapling where each tree stood; off, they clear the land (saplings go to the mill)";
             p = config.get("Settings", "PopulationLimit", 200);
             configPopulationLimit = p.getInt();
             p.comment = "Limit the population from growing beyond this number if you have an older computer";
