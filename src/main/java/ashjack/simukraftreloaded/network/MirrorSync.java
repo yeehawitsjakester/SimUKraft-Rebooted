@@ -59,6 +59,7 @@ public final class MirrorSync
         boolean ranStartup;
         ArrayList<CommodityEntry> commodities;
         ArrayList<ashjack.simukraftreloaded.core.town.Town> towns;
+        java.util.HashMap<String, Float> accounts;
     }
 
     /** a bank commodity without its ItemStack (which can't be serialised) */
@@ -90,6 +91,7 @@ public final class MirrorSync
         b.folks = new ArrayList<FolkData>(SimukraftReloaded.serverFolks);
         b.buildings = new ArrayList<Building>(SimukraftReloaded.serverBuildings);
         b.towns = new ArrayList<ashjack.simukraftreloaded.core.town.Town>(ashjack.simukraftreloaded.core.town.Towns.serverTowns);
+        b.accounts = ashjack.simukraftreloaded.core.town.Accounts.snapshot();
         b.relationships = new ArrayList<Relationship>(SimukraftReloaded.serverRelationships);
         b.miningBoxes = new ArrayList<MiningBox>(SimukraftReloaded.serverMiningBoxes);
         b.farmingBoxes = new ArrayList<FarmingBox>(SimukraftReloaded.serverFarmingBoxes);
@@ -176,6 +178,10 @@ public final class MirrorSync
             if (b.towns != null)
             {
                 ClientMirror.towns = b.towns;
+            }
+            if (b.accounts != null)
+            {
+                ClientMirror.accounts = b.accounts;
             }
             ClientMirror.relationships = b.relationships;
             ClientMirror.miningBoxes = b.miningBoxes;

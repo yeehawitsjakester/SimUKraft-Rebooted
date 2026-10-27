@@ -1,6 +1,8 @@
 package ashjack.simukraftreloaded.common.jobs;
 
 import ashjack.simukraftreloaded.core.town.Economy;
+import ashjack.simukraftreloaded.core.town.Market;
+import ashjack.simukraftreloaded.core.town.Towns;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -137,6 +139,7 @@ public class JobBurgersWaiter extends Job {
 					FolkData folk=SimukraftReloaded.folks().get(r);
 					if (folk.levelFood<10) {folk.levelFood++;}
 					folk.lastMeal = "Ate at the burger bar";
+					Economy.purchase(folk, theFolk.employedAt, Market.price(Towns.at(theFolk.employedAt), is) * 2); // a meal out costs more
 					folk.saveThisFolk();
 					SimukraftReloaded.log.info("JobBurgersWaiter: Just fed "+folk.name);
 					Economy.pay(theFolk, 0.45);

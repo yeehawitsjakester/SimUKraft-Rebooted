@@ -507,7 +507,10 @@ public class GuiControlBox extends GuiScreen
                 }
 
                 fontRendererObj.drawString("Building : " + theBuilding.displayNameWithoutPK + author, 5, 37, 0xffff80);
-                fontRendererObj.drawString("Type : " + theBuilding.type + " (" + isComplete + ")", 5, 47, 0xffff80);
+                fontRendererObj.drawString("Type : " + theBuilding.type + " (" + isComplete + ")"
+                        + (theBuilding.type.equals("commercial") || theBuilding.type.equals("industrial")
+                           ? "   Business funds: " + SimukraftReloaded.displayMoney(ashjack.simukraftreloaded.core.town.Economy.funds(theBuilding.primaryXYZ)) : ""),
+                        5, 47, 0xffff80);
 
                 if (theBuilding.type.contentEquals("residential"))
                 {

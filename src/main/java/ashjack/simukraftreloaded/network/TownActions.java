@@ -153,6 +153,19 @@ public final class TownActions
         return t.name + "'s border is now " + (2 * radius + 1) + " blocks across" + (cost > 0 ? " (" + SimukraftReloaded.displayMoney(cost) + ")" : "");
     }
 
+    /** the share of wages and sales the treasury takes, 0 to 50% */
+    public static String tax(EntityPlayer player, Town t, float rate)
+    {
+        String why = ownerOnly(player, t);
+        if (why != null)
+        {
+            return why;
+        }
+        t.taxRate = Math.max(0f, Math.min(0.5f, Math.round(rate * 100) / 100f));
+        t.save();
+        return t.name + " now taxes " + Math.round(t.taxRate * 100) + "% of wages and sales";
+    }
+
     /** the town is gone (its buildings and Sims carry on, in the wilds); the City Box comes back */
     public static String disband(EntityPlayer player, Town t)
     {
@@ -217,6 +230,10 @@ public final class TownActions
                 else if (what.equals("border"))
                 {
                     said = border(player, t, t == null ? 0 : t.radius + data.getInteger("by"));
+                }
+                else if (what.equals("tax"))
+                {
+                    said = tax(player, t, t == null ? 0 : t.taxRate + data.getInteger("by") / 100f);
                 }
                 else if (what.equals("disband"))
                 {

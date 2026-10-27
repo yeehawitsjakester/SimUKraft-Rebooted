@@ -189,6 +189,10 @@ public class GuiEntityFolk extends GuiScreen
             int days = (int) (f.pregnancyStage * 9);
             infoRow(ix, iy + 44, "Medical", days == 0 ? "Pregnant" : days == 1 ? "1 day pregnant" : days + " days pregnant");
         }
+        else
+        {
+            infoRow(ix, iy + 44, "Money", ashjack.simukraftreloaded.core.registry.SimukraftReloaded.displayMoney(f.money) + " Sim-u-credits");
+        }
         drawHappinessMeter(ix, gy + 82, gx + PANEL_W - 8 - ix);
 
         // needs on the left, skills on the right

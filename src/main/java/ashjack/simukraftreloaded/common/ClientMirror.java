@@ -40,6 +40,10 @@ public final class ClientMirror
     public static String worldName = "";
     /** the town whose treasury the HUD shows (from the HUD packet) */
     public static String townName = "";
+    /** the player's own wallet (from the HUD packet) */
+    public static float wallet = 0f;
+    /** businesses' funds, by Accounts key */
+    public static java.util.HashMap<String, Float> accounts = new java.util.HashMap<String, Float>();
     public static ArrayList<ashjack.simukraftreloaded.core.town.Town> towns = new ArrayList<ashjack.simukraftreloaded.core.town.Town>();
 
     public static void clear()

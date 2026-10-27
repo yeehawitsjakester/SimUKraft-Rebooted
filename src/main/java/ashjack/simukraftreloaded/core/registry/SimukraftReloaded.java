@@ -147,6 +147,7 @@ public class SimukraftReloaded
     	log.info("RESETTING and loading world on "+side.toString()+" SIDE"); 
     	buildings().clear();
     	Towns.all().clear();
+    	ashjack.simukraftreloaded.core.town.Accounts.clear();
         courierPoints().clear();
         courierTasks().clear();
         miningBoxes().clear();
@@ -221,6 +222,7 @@ public class SimukraftReloaded
         Building.initialiseAllBuildings(); //load ALL buildings off disk and init them
         Building.loadAllBuildings();	   //load buildings in this world
         Towns.loadAll();                   // after the buildings: a world from before towns makes one of them
+        ashjack.simukraftreloaded.core.town.Accounts.load();
         CourierTask.loadCourierTasksAndPoints();
         MiningBox.loadMiningBoxes();
         FarmingBox.loadFarmingBoxes();
@@ -611,9 +613,28 @@ public class SimukraftReloaded
                             float[] t = takings.get(town);
                             if (t == null)
                             {
-                                takings.put(town, t = new float[2]);
+                                takings.put(town, t = new float[3]);
                             }
-                            t[building.isHotel() ? 1 : 0] += building.rent;
+                            if (building.isHotel())
+                            {
+                                t[1] += building.rent; // visitors bring their money from out of town
+                                Economy.earn(town, building.rent);
+                            }
+                            else
+                            {
+                                // the tenants pay it between them, from their own money, as far as it goes
+                                float share = building.rent / building.tennants.size();
+                                for (String name : new ArrayList<String>(building.tennants))
+                                {
+                                    FolkData tenant = FolkData.getFolkByName(name);
+                                    if (tenant != null)
+                                    {
+                                        float paid = Economy.rent(tenant, town, share);
+                                        t[0] += paid;
+                                        t[2] += share - paid;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -621,10 +642,10 @@ public class SimukraftReloaded
                 for (java.util.Map.Entry<Town, float[]> e : takings.entrySet())
                 {
                     Town town = e.getKey();
-                    float rent = e.getValue()[0], hotel = e.getValue()[1];
-                    Economy.earn(town, rent + hotel);
+                    float rent = e.getValue()[0], hotel = e.getValue()[1], owed = e.getValue()[2];
                     sendChat((town == null ? "Collected " : town.name + " collected ") + displayMoney(rent) + " Sim-u-credits in rent today"
-                            + (hotel > 0f ? ", and hotel guests paid " + displayMoney(hotel) : "") + ".");
+                            + (hotel > 0f ? ", and hotel guests paid " + displayMoney(hotel) : "")
+                            + (owed > 0.005f ? " (" + displayMoney(owed) + " went unpaid - tenants without the money)" : "") + ".");
                 }
                 if (!takings.isEmpty())
                 {

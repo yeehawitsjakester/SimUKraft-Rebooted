@@ -1,22 +1,113 @@
 package ashjack.simukraftreloaded.core.town;
 
+import net.minecraft.item.ItemStack;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 
 /**
- * Whose money pays for what. Everything done inside a town is paid from (or into) that town's treasury: wages for the
- * Sims who work there, building, shop sales, rent. Outside every town (and in a world with no towns yet) it's the old
- * shared credits. All money changes go through here, so who pays can change in one place.
+ * Who pays whom. Money sits with towns (their treasury), businesses (funds, by the box their staff work at), Sims
+ * (FolkData.money) and players (their wallet) - see Accounts.
+ *
+ *   wages     - a business pays its staff from its funds; while it hasn't earned enough (a new one), and for public
+ *               work (builders, terraformers, the warehouse, soldiers), the town's treasury does
+ *   spending  - Sims pay for food at the shops (to the shop), and their rent (to the treasury)
+ *   selling   - a business's goods are bought by the town when the warehouse collects them, at market prices
+ *   taxes     - the town takes its tax rate of every wage and sale
+ *
+ * Outside every town (and in a world with no towns yet) the old shared credits stand in for a treasury.
  */
 public final class Economy
 {
     private Economy() {}
 
-    /** a Sim's pay for work done, from their town */
+    // ---------------------------------------------------------------- wages
+
+    /** a Sim's pay for work done: from their workplace's funds, or their town when those run out; taxed */
     public static void pay(FolkData folk, double amount)
     {
-        spend(Towns.of(folk), amount);
+        if (amount <= 0)
+        {
+            return;
+        }
+        Town town = Towns.of(folk);
+        if (folk.employedAt != null)
+        {
+            String biz = Accounts.business(folk.employedAt);
+            double fromBiz = Math.min(amount, Math.max(0, Accounts.get(biz)));
+            Accounts.add(biz, -fromBiz);
+            spend(town, amount - fromBiz);
+        }
+        else
+        {
+            spend(town, amount);
+        }
+        double tax = amount * taxRate(town);
+        earn(town, tax);
+        folk.money += (float) (amount - tax);
+    }
+
+    // ---------------------------------------------------------------- Sims spending
+
+    /**
+     * a Sim buys something from the business at this box. If they can't afford it (no job, or broke) the town pays
+     * for it - nobody starves. The business gets the price, less the town's tax.
+     */
+    public static void purchase(FolkData buyer, V3 seller, double amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+        Town town = Towns.at(seller);
+        double own = Math.min(amount, Math.max(0, buyer.money));
+        buyer.money -= (float) own;
+        spend(town, amount - own);
+        double tax = amount * taxRate(town);
+        earn(town, tax);
+        if (seller != null)
+        {
+            Accounts.add(Accounts.business(seller), amount - tax);
+        }
+    }
+
+    /** rent from a tenant to their town: what they can manage; returns what they paid */
+    public static float rent(FolkData tenant, Town town, double amount)
+    {
+        float paid = (float) Math.min(amount, Math.max(0, tenant.money));
+        tenant.money -= paid;
+        earn(town, paid);
+        return paid;
+    }
+
+    // ---------------------------------------------------------------- businesses selling
+
+    /** the town buys a business's goods (collected by the warehouse) at its market price; returns what it paid */
+    public static float townBuys(V3 business, ItemStack goods)
+    {
+        Town town = Towns.at(business);
+        float price = Market.price(town, goods) * goods.stackSize;
+        if (price <= 0)
+        {
+            return 0;
+        }
+        spend(town, price);
+        double tax = price * taxRate(town);
+        earn(town, tax);
+        Accounts.add(Accounts.business(business), price - tax);
+        return price;
+    }
+
+    public static float funds(V3 business)
+    {
+        return business == null ? 0 : Accounts.get(Accounts.business(business));
+    }
+
+    // ---------------------------------------------------------------- treasuries
+
+    public static double taxRate(Town town)
+    {
+        return town == null ? 0 : town.taxRate;
     }
 
     /** spent by whoever runs the place (a town, or the wilds' shared credits) */
@@ -47,7 +138,6 @@ public final class Economy
         spend(town, -amount);
     }
 
-    /** what the place can spend */
     public static float balance(V3 where)
     {
         return balance(Towns.at(where));
@@ -68,5 +158,17 @@ public final class Economy
         {
             SimukraftReloaded.states().credits = amount;
         }
+    }
+
+    // ---------------------------------------------------------------- players
+
+    public static float wallet(String player)
+    {
+        return Accounts.get(Accounts.player(player));
+    }
+
+    public static void addToWallet(String player, double amount)
+    {
+        Accounts.add(Accounts.player(player), amount);
     }
 }

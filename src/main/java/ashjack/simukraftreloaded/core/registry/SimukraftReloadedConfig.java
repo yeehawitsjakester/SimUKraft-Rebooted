@@ -26,6 +26,7 @@ public class SimukraftReloadedConfig
     public static int configBanditGroupSize = 3;
     public static int configWantedMinutes = 3;
     public static boolean configSoldiersUseModdedWeapons = true;
+    public static int configStartingMoney = 100;
     public static boolean configFolkTalkingEnglish = true;
     public static String[] configMaleNames;
     public static String[] configFemaleNames;
@@ -115,6 +116,9 @@ public class SimukraftReloadedConfig
             p = config.get("Soldiers", "UseModdedWeapons", true);
             configSoldiersUseModdedWeapons = p.getBoolean(true);
             p.comment = "Whether Veteran soldiers (level 9+) take modded swords, bows and crossbows from the barracks armory.";
+            p = config.get("Economy", "StartingMoney", 100);
+            configStartingMoney = Math.max(0, p.getInt(100));
+            p.comment = "How many Sim-u-credits a player's wallet starts with.";
             p = config.get("Crime", "BanditNightChance", 20);
             configBanditNightChance = Math.max(0, Math.min(100, p.getInt(20)));
             p.comment = "Chance (0-100) each night that bandits turn up and try to rob the town. Needs a town of a few buildings and a player nearby. 0 turns bandits off.";

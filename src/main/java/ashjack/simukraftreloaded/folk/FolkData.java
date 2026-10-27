@@ -183,6 +183,8 @@ public class FolkData implements Serializable
     public transient ArrayList<ItemStack> inventory = new ArrayList<ItemStack>();
     /** what a soldier has in hand right now (shown on their model); null for their job's usual tool */
     public transient ItemStack heldItem = null;
+    /** their own money: wages in, food and rent out (see Economy) */
+    public float money = 0f;
     /** a reference to the entity so we can check it's isDead() and mess with it etc */
     public transient EntityFolk theEntity = null;
     /** set when they are GOTO'ing and walking/beaming, used to beam them if they can't get there within 40 seconds */
@@ -2011,6 +2013,9 @@ public class FolkData implements Serializable
 	        	    			else if (name.contentEquals("skin")) {
 	        	    				folkd.skinnumber=Integer.parseInt(value);
 	        	    			}
+	        	    			else if (name.contentEquals("money")) {
+	        	    				folkd.money=Float.parseFloat(value);
+	        	    			}
 	        	    			else if (name.contentEquals("levelfood")) {
 	        	    				folkd.levelFood=Integer.parseInt(value);
 	        	    			}
@@ -2149,6 +2154,7 @@ public class FolkData implements Serializable
     		strings.add("trait3|"+this.trait3);
     		strings.add("trait4|"+this.trait4);
     		strings.add("levelfood|"+this.levelFood);
+    		strings.add("money|"+this.money);
     		strings.add("levelfun|"+this.levelFun);
     		strings.add("levelsocial|"+this.levelSocial);
     		strings.add("levelenvironment|"+this.levelEnvironment);

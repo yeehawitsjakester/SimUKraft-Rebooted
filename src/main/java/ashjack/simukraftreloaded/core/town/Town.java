@@ -30,6 +30,8 @@ public class Town implements Serializable
     /** half the border's width: it runs radius blocks out from the centre each way */
     public int radius = 64;
     public float treasury = 0f;
+    /** the share of every wage and sale in town that goes to the treasury */
+    public float taxRate = 0.10f;
     public long founded;
 
     public static final int MIN_RADIUS = 32, MAX_RADIUS = 256;
@@ -118,6 +120,7 @@ public class Town implements Serializable
         lines.add("centre|" + centre);
         lines.add("radius|" + radius);
         lines.add("treasury|" + treasury);
+        lines.add("tax|" + taxRate);
         lines.add("founded|" + founded);
         SimukraftReloaded.saveSK2(saveFile().getPath(), lines);
     }
@@ -151,6 +154,7 @@ public class Town implements Serializable
                 else if (k.equals("centre")) t.centre = new V3(v);
                 else if (k.equals("radius")) t.radius = Integer.parseInt(v);
                 else if (k.equals("treasury")) t.treasury = Float.parseFloat(v);
+                else if (k.equals("tax")) t.taxRate = Float.parseFloat(v);
                 else if (k.equals("founded")) t.founded = Long.parseLong(v);
             }
             catch (Exception e)

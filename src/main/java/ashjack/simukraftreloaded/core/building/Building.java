@@ -1199,6 +1199,10 @@ public class Building implements Serializable
             return;
         }
         SimukraftReloaded.log.info("Building: removed " + building.displayNameWithoutPK + " at " + building.primaryXYZ + " (" + reason + ")");
+        if (building.primaryXYZ != null)
+        {
+            ashjack.simukraftreloaded.core.town.Accounts.close(building.primaryXYZ); // its funds go to its town
+        }
 
         for (FolkData folk : new ArrayList<FolkData>(SimukraftReloaded.folks()))
         {

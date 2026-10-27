@@ -536,6 +536,22 @@ public class JobWarehouse extends Job
                     : WarehouseStock.take(chests, current.item, current.qty);
         }
         theFolk.inventory.addAll(got);
+        // a factory's goods are bought by the town as they're collected: that's what the business lives on
+        if (current.from.kind == Kind.FACTORY)
+        {
+            float paid = 0;
+            int n = 0;
+            for (ItemStack is : got)
+            {
+                paid += Economy.townBuys(current.from.at, is);
+                n += is.stackSize;
+            }
+            if (n > 0)
+            {
+                SimukraftReloaded.log.info("Warehouse: " + theFolk.name + " bought " + n + " from the factory at "
+                        + current.from.at + " for " + paid);
+            }
+        }
     }
 
     /** everything in hand into the warehouse chests, then the ME network */

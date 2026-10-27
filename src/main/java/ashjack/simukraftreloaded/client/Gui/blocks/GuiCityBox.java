@@ -78,6 +78,10 @@ public class GuiCityBox extends GuiScreen
         buttonList.add(b = new GuiButton(6, width / 2 - 50, y, 100, 20, "Border bigger"));
         b.enabled = owner && t.radius < Town.MAX_RADIUS;
         buttonList.add(new GuiButton(7, width / 2 + 51, y, 100, 20, "Show border: " + (TownBorderRenderer.alwaysShow ? "on" : "off")));
+        buttonList.add(b = new GuiButton(9, width / 2 - 151, y + 24, 100, 20, "Tax down 5%"));
+        b.enabled = owner && t.taxRate > 0;
+        buttonList.add(b = new GuiButton(10, width / 2 - 50, y + 24, 100, 20, "Tax up 5%"));
+        b.enabled = owner && t.taxRate < 0.5f;
         buttonList.add(b = new GuiButton(8, width - 110, height - 30, 100, 20, confirmDisband ? "Really disband?" : "Disband town"));
         b.enabled = owner && t.isClaimed();
     }
@@ -131,12 +135,12 @@ public class GuiCityBox extends GuiScreen
             initGui();
             return;
         }
-        String[] what = {null, "found", "rename", "add", "remove", "border", "border", null, "disband"};
+        String[] what = {null, "found", "rename", "add", "remove", "border", "border", null, "disband", "tax", "tax"};
         NBTTagCompound data = new NBTTagCompound();
         ActionHandlers.putV3(data, "box", location);
         data.setString("what", what[b.id]);
         data.setString("arg", field.getText());
-        data.setInteger("by", b.id == 6 ? TownActions.BORDER_STEP : -TownActions.BORDER_STEP);
+        data.setInteger("by", b.id == 9 ? -5 : b.id == 10 ? 5 : b.id == 6 ? TownActions.BORDER_STEP : -TownActions.BORDER_STEP);
         ServerActions.send("townAction", data);
         if (b.id == 8)
         {
@@ -169,6 +173,7 @@ public class GuiCityBox extends GuiScreen
             float cost = (float) ((Math.pow(next, 2) - Math.pow(now, 2)) * TownActions.COST_PER_BLOCK);
             drawCenteredString(fontRendererObj, "Border: " + now + " x " + now + " blocks. Bigger: " + next + " x " + next
                     + " for " + SimukraftReloaded.displayMoney(cost), width / 2, height / 2 - 4, 0xffffff);
+            drawString(fontRendererObj, "Tax: " + Math.round(t.taxRate * 100) + "% of wages and sales", width / 2 + 56, height / 2 + 40, 0xffffff);
         }
         field.drawTextBox();
         super.drawScreen(mx, my, partial);

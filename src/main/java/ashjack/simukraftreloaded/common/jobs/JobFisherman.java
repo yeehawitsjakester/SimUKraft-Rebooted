@@ -1,6 +1,8 @@
 package ashjack.simukraftreloaded.common.jobs;
 
 import ashjack.simukraftreloaded.core.town.Economy;
+import ashjack.simukraftreloaded.core.town.Market;
+import ashjack.simukraftreloaded.core.town.Towns;
 import net.minecraft.server.MinecraftServer;
 import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
@@ -254,6 +256,7 @@ public class JobFisherman extends Job implements Serializable
                     {
                         folk.levelFood = 10;
                         folk.lastMeal = "Bought fish from the fisherman";
+                        Economy.purchase(folk, theFolk.employedAt, Market.price(Towns.at(theFolk.employedAt), new ItemStack(fishStack.getItem(), 1)));
                         fishStack.stackSize--;
                     }
                 }

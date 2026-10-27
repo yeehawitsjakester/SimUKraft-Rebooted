@@ -78,6 +78,7 @@ public class CommonTickHandler
         SimukraftReloaded.states().saveStates();
         Building.saveAllBuildings();
         Towns.saveAll();
+        ashjack.simukraftreloaded.core.town.Accounts.save();
         CourierTask.saveCourierTasksAndPoints();
         MiningBox.saveMiningBoxes();
         FarmingBox.saveFarmingBoxes();
@@ -114,6 +115,7 @@ public class CommonTickHandler
     		hud.gameModeNumber = SimukraftReloaded.serverStates.gameModeNumber;
     		hud.credits = Economy.balance(town);
     		hud.townName = town == null ? "" : town.name;
+    		hud.wallet = Economy.wallet(player.getCommandSenderName());
     		hud.dayOfWeek = SimukraftReloaded.serverStates.dayOfWeek;
     		hud.population = FolkData.getResidentCount();
     		hud.worldName = server.getFolderName();
