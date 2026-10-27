@@ -107,8 +107,7 @@ public class GuiControlBox extends GuiScreen
             return;
         }
 
-        if (theBuilding.blockLocations != null && theBuilding.blockLocations.size() > 0
-                && theBuilding.buildingComplete)
+        if (theBuilding.buildingComplete)
         {
             buttonList.add(new GuiButton(1000, width - 110, 5, 100, 20, "Demolish!"));
             buttonList.add(new GuiButton(1001, width - 110,25,100,20,"Rotate Stairs"));
@@ -910,6 +909,10 @@ public class GuiControlBox extends GuiScreen
         	sendForBuilding("rotateStairs", theBuilding.primaryXYZ);
         }
         else if (guibutton.displayString.contentEquals("Demolish!"))
+        {
+            guibutton.displayString = "Really? Click again"; // it can't be undone
+        }
+        else if (guibutton.displayString.contentEquals("Really? Click again"))
         {
             sendForBuilding("demolish", theBuilding.primaryXYZ);
             mc.displayGuiScreen(null);

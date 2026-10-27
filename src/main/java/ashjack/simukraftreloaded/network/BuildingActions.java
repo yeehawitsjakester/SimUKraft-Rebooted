@@ -395,38 +395,19 @@ final class BuildingActions
             }
         });
 
-        // "Demolish!": staff are fired, the blocks are removed and come back as falling items
+        // "Demolish!": staff are fired, and every block of it, and what was in its chests, goes to the town's warehouses
         ServerActions.register("demolish", new ServerActions.Action()
         {
             public void run(EntityPlayerMP player, NBTTagCompound data)
             {
                 Building b = buildingAt(data);
-                if (b == null)
+                if (b == null || b.primaryXYZ == null)
                 {
                     return;
                 }
                 World world = MinecraftServer.getServer().worldServerForDimension(b.primaryXYZ.theDimension);
-                for (V3 blockLoc : new ArrayList<V3>(b.blockLocations))
-                {
-                    int x = blockLoc.x.intValue(), y = blockLoc.y.intValue(), z = blockLoc.z.intValue();
-                    Block block = world.getBlock(x, y, z);
-                    if (block.getMaterial() == Material.air)
-                    {
-                        continue;
-                    }
-                    V3 debris = new V3((double) x, (double) y, (double) z, b.primaryXYZ.theDimension);
-                    debris.blockID = Block.getIdFromBlock(block);
-                    debris.meta = world.getBlockMetadata(x, y, z);
-                    SimukraftReloaded.demolishBlocks.add(debris);
-                    world.setBlockToAir(x, y, z);
-                    if (SimukraftReloaded.demolishBlocks.size() % 8 == 0)
-                    {
-                        Effects.particles(world, "explode", x + 0.5, y + 0.5, z + 0.5, 1, 0.3, 0.05);
-                    }
-                }
                 Effects.sound(world, b.primaryXYZ.x, b.primaryXYZ.y, b.primaryXYZ.z, "random.explode");
-                // removing the control box above already removed the building; this covers buildings without one
-                Building.removeBuilding(b, "demolished");
+                ActionHandlers.tell(player, ashjack.simukraftreloaded.core.building.Demolition.demolish(b, world));
             }
         });
     }
