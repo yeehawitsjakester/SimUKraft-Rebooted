@@ -576,7 +576,8 @@ public class Building implements Serializable
         }
         catch (Exception e)
         {
-            SimukraftReloaded.log.warning("Building loadStructure() "+e.toString());
+            SimukraftReloaded.log.warning("Building loadStructure() " + type + "/" + displayNameWithoutPK + ": " + e
+                    + (e.getStackTrace().length > 0 ? " at " + e.getStackTrace()[0] : ""));
         }
     }
 
