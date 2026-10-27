@@ -9,6 +9,7 @@ import java.util.ArrayList;
 
 import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
+import ashjack.simukraftreloaded.core.building.MotelPlan;
 import ashjack.simukraftreloaded.core.game.GameMode;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloadedBlocks;
@@ -455,6 +456,8 @@ public class JobBuilder extends Job implements Serializable
 
                 blockId = bl;
                 int subtype = st;
+                // an upgrade leaves what's already built (and whatever players put in it) alone
+                boolean keep = bl == null && st == Building.KEEP;
 
                 if (blockId == Blocks.grass)
                 {
@@ -518,6 +521,11 @@ public class JobBuilder extends Job implements Serializable
                 {
                     theFolk.selfFire();
                     return;
+                }
+
+                if (keep)
+                {
+                    alreadyPlaced = true;
                 }
 
                 String want = "???";
@@ -622,7 +630,7 @@ public class JobBuilder extends Job implements Serializable
                                     gotBlock = false;
                                 }
 
-                                if (blockId == SimukraftReloadedBlocks.controlBox)
+                                if (blockId == SimukraftReloadedBlocks.controlBox || blockId == SimukraftReloadedBlocks.roomBox)
                                 {
                                     gotBlock = true;
                                 }
@@ -705,6 +713,10 @@ public class JobBuilder extends Job implements Serializable
                                 	jobWorld.setBlock(bx + xo, by + l,
                                 			bz + zo, blockId, subtype, 0x03);
                                 	jobWorld.markBlockForUpdate(bx + xo, by + l, bz + zo);
+                                	if (blockId == SimukraftReloadedBlocks.roomBox)
+                                	{
+                                		makeRoom(bx + xo, by + l, bz + zo, subtype == 1);
+                                	}
                                 }
 
                                 
@@ -833,6 +845,31 @@ public class JobBuilder extends Job implements Serializable
         } // end step 2
     }
 
+    /**
+     * a room box in a blueprint: a player placing one sets up its room, a builder placing one has to. Hotel rooms (a
+     * motel's) are named after the building, numbered in the order they're built.
+     */
+    private void makeRoom(int x, int y, int z, boolean hotel)
+    {
+        Building room = Building.createRoom(jobWorld, x, y, z);
+        if (hotel && !room.isHotel())
+        {
+            room.roomMode = Building.ROOM_HOTEL;
+            int n = 0;
+            for (Building b : SimukraftReloaded.buildings())
+            {
+                if (b.isHotel() && b.displayName.startsWith("Motel room"))
+                {
+                    n++;
+                }
+            }
+            room.displayName = "Motel room " + (n + 1);
+            room.displayNameWithoutPK = room.displayName;
+            room.updateRoomRent();
+            room.saveThisBuilding();
+        }
+    }
+
     private void stageComplete()
     {
         theFolk.isWorking = false;
@@ -847,6 +884,29 @@ public class JobBuilder extends Job implements Serializable
             if (theBuilding != null)
             {
                 theBuilding.buildingComplete = true;
+                MotelPlan motel = MotelPlan.parse(theBuilding.displayName);
+                if (motel != null && motel.fromA >= 0)
+                {
+                    theBuilding.displayName = motel.finished().name(); // an upgrade, done: just the motel now
+                }
+                if (motel != null)
+                {
+                    // its room boxes picked where guests stand before the walls around them were up
+                    for (Building room : new ArrayList<Building>(SimukraftReloaded.buildings()))
+                    {
+                        if (room.isRoom())
+                        {
+                            for (V3 placed : theBuilding.blockLocations)
+                            {
+                                if (placed.isSameCoordsAs(room.primaryXYZ, true, true))
+                                {
+                                    room.refreshLivingSpot(jobWorld);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
                 SimukraftReloaded.sendChat(theFolk.name
                                       + " has completed building a "
                                       + theBuilding.displayNameWithoutPK);

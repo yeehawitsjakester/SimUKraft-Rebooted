@@ -14,6 +14,9 @@ import ashjack.simukraftreloaded.common.Effects;
 import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
 import ashjack.simukraftreloaded.common.jobs.JobBuilder;
 import ashjack.simukraftreloaded.core.building.Building;
+import ashjack.simukraftreloaded.core.building.MotelPlan;
+import ashjack.simukraftreloaded.common.warehouse.WarehouseStock;
+import ashjack.simukraftreloaded.core.registry.SimukraftReloadedBlocks;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
@@ -27,6 +30,40 @@ final class BuildingActions
     {
         V3 box = ActionHandlers.getV3(data, "box");
         return box == null ? null : Building.getBuilding(box);
+    }
+
+    /**
+     * the builders at this constructor box start on this building; if there are none yet, the first one hired here
+     * picks it up (JobBuilder.stageBlueprint looks for an unfinished building by its constructor box)
+     */
+    private static void startBuilding(EntityPlayerMP player, V3 box, Building chosen)
+    {
+        chosen.conBoxLocation = box.clone();
+        SimukraftReloaded.serverBuildings.remove(chosen);
+        SimukraftReloaded.serverBuildings.add(chosen);
+        chosen.saveThisBuilding();
+
+        ArrayList<String> builders = new ArrayList<String>();
+        for (FolkData worker : SimukraftReloaded.serverFolks)
+        {
+            if (box.isSameCoordsAs(worker.employedAt, true, true))
+            {
+                worker.theBuilding = chosen;
+                builders.add(worker.name);
+                if (worker.vocation == Vocation.BUILDER && worker.theirJob instanceof JobBuilder)
+                {
+                    JobBuilder job = (JobBuilder) worker.theirJob;
+                    if (job.theStage == JobBuilder.Stage.IDLE)
+                    {
+                        job.theStage = JobBuilder.Stage.WORKERASSIGNED;
+                    }
+                }
+                worker.saveThisFolk();
+            }
+        }
+        ActionHandlers.tell(player, builders.isEmpty()
+                ? chosen.displayNameWithoutPK + " is chosen. Hire a builder at the constructor box and they'll start on it."
+                : String.join(" and ", builders) + (builders.size() == 1 ? " is" : " are") + " going to build the " + chosen.displayNameWithoutPK + ".");
     }
 
     static void register()
@@ -44,32 +81,86 @@ final class BuildingActions
                     return;
                 }
                 chosen.buildDirection = data.getString("dir");
-                chosen.conBoxLocation = box.clone();
-                SimukraftReloaded.serverBuildings.remove(chosen);
-                SimukraftReloaded.serverBuildings.add(chosen);
-                chosen.saveThisBuilding();
+                startBuilding(player, box, chosen);
+            }
+        });
 
-                ArrayList<String> builders = new ArrayList<String>();
-                for (FolkData worker : SimukraftReloaded.serverFolks)
+        // GuiBuildingConstructor's motel page: a motel made to order, if there's room for it
+        ServerActions.register("buildMotel", new ServerActions.Action()
+        {
+            public void run(EntityPlayerMP player, NBTTagCompound data)
+            {
+                V3 box = ActionHandlers.getV3(data, "box");
+                if (box == null)
                 {
-                    if (box.isSameCoordsAs(worker.employedAt, true, true))
-                    {
-                        worker.theBuilding = chosen;
-                        builders.add(worker.name);
-                        if (worker.vocation == Vocation.BUILDER && worker.theirJob instanceof JobBuilder)
-                        {
-                            JobBuilder job = (JobBuilder) worker.theirJob;
-                            if (job.theStage == JobBuilder.Stage.IDLE)
-                            {
-                                job.theStage = JobBuilder.Stage.WORKERASSIGNED;
-                            }
-                        }
-                        worker.saveThisFolk();
-                    }
+                    return;
                 }
-                ActionHandlers.tell(player, builders.isEmpty()
-                        ? chosen.displayNameWithoutPK + " is chosen. Hire a builder here and they'll start on it."
-                        : String.join(" and ", builders) + (builders.size() == 1 ? " is" : " are") + " going to build the " + chosen.displayNameWithoutPK + ".");
+                MotelPlan plan = new MotelPlan(data.getString("shape").isEmpty() ? 'S' : data.getString("shape").charAt(0),
+                        data.getInteger("floors"), data.getInteger("roomsA"), data.getInteger("roomsB"), data.getString("dir"));
+                World world = MinecraftServer.getServer().worldServerForDimension(box.theDimension);
+                String blocked = world == null ? "no world" : plan.obstruction(world, box.x.intValue(), box.y.intValue(), box.z.intValue());
+                if (blocked != null)
+                {
+                    ActionHandlers.tell(player, "There isn't room for that motel here: " + blocked);
+                    return;
+                }
+                startBuilding(player, box, Building.fromMotelPlan(plan));
+            }
+        });
+
+        // a motel's control box "Add rooms": checks there's room, then the builders at its constructor box add them
+        ServerActions.register("upgradeMotel", new ServerActions.Action()
+        {
+            public void run(EntityPlayerMP player, NBTTagCompound data)
+            {
+                Building motel = buildingAt(data);
+                MotelPlan plan = motel == null ? null : MotelPlan.parse(motel.displayName);
+                if (plan == null || plan.fromA >= 0 || !motel.buildingComplete)
+                {
+                    ActionHandlers.tell(player, "Finish building the motel before adding to it");
+                    return;
+                }
+                int a = Math.min(MotelPlan.MAX_ROOMS, Math.max(plan.roomsA, data.getInteger("roomsA")));
+                int b = plan.shape == 'S' ? 0 : Math.min(MotelPlan.MAX_ROOMS, Math.max(plan.roomsB, data.getInteger("roomsB")));
+                if (a == plan.roomsA && b == plan.roomsB)
+                {
+                    ActionHandlers.tell(player, "It's as big as it gets (" + MotelPlan.MAX_ROOMS + " rooms a wing)");
+                    return;
+                }
+                V3 con = WarehouseStock.conBoxOf(motel);
+                World world = con == null ? null : MinecraftServer.getServer().worldServerForDimension(con.theDimension);
+                if (world == null)
+                {
+                    ActionHandlers.tell(player, "Couldn't work out where this motel's constructor box was");
+                    return;
+                }
+                int cx = con.x.intValue(), cy = con.y.intValue(), cz = con.z.intValue();
+                MotelPlan bigger = plan.grownTo(a, b);
+                String blocked = bigger.obstruction(world, cx, cy, cz);
+                if (blocked != null)
+                {
+                    ActionHandlers.tell(player, "There isn't room to add those rooms: " + blocked);
+                    return;
+                }
+                // the builders work from the constructor box: put it back if it's gone
+                Block there = world.getBlock(cx, cy, cz);
+                if (there != SimukraftReloadedBlocks.buildingConstructor)
+                {
+                    if (!there.isAir(world, cx, cy, cz) && !there.isReplaceable(world, cx, cy, cz))
+                    {
+                        ActionHandlers.tell(player, "Clear the spot where the motel's constructor box was (" + con + ") first");
+                        return;
+                    }
+                    world.setBlock(cx, cy, cz, SimukraftReloadedBlocks.buildingConstructor);
+                }
+
+                Building upgrade = Building.fromMotelPlan(bigger);
+                upgrade.primaryXYZ = motel.primaryXYZ.clone(); // its control box stays where it is
+                upgrade.livingXYZ = motel.livingXYZ;
+                upgrade.tennants = motel.tennants;
+                upgrade.buildingComplete = false;
+                Building.register(upgrade); // in place of the finished motel, by its control box
+                startBuilding(player, con, upgrade);
             }
         });
 

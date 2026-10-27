@@ -28,6 +28,8 @@ import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
 import ashjack.simukraftreloaded.common.jobs.JobBuilder.Stage;
 import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
+import ashjack.simukraftreloaded.core.building.BuildingCategory;
+import ashjack.simukraftreloaded.core.building.MotelPlan;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
@@ -49,7 +51,14 @@ public class GuiBuildingConstructor extends GuiScreen
     private int buildingsOnPage = 0; //how many building are currently displayed, used for offset
     private int fixedBuildingCount = -1;
 
-    private HashMap pkIndex = new HashMap();
+    /** the building each button on a list page stands for */
+    private HashMap<Integer, Building> listedByButton = new HashMap<Integer, Building>();
+    /** page 12 lists this category, or every building matching the search when null */
+    private String listCategory = null;
+    /** the motel being designed on page 13 */
+    private char motelShape = 'S';
+    private int motelFloors = 1, motelRoomsA = 4, motelRoomsB = 2;
+    private String motelSpace = "";
     private GuiTextField tfSearch;
     private String search = "";
     private Building selectedBuilding = null;
@@ -154,6 +163,14 @@ public class GuiBuildingConstructor extends GuiScreen
             }
 
             drawCenteredString(fontRendererObj, "Current status: " + s , width / 2, 30, 0xaaffff);
+            if (isListPage() && tfSearch != null)
+            {
+                drawString(fontRendererObj, "Search:", width / 2 - 92, height - 24, 0xaaaaaa);
+                if (tfSearch.getText().isEmpty())
+                {
+                    drawString(fontRendererObj, "\u00a78name, by:author, uses:glass, w:9", width / 2 + 54, height - 24, 0xffffff);
+                }
+            }
             drawCenteredString(fontRendererObj, "Building: " + t , width / 2, 40, 0xaaffff);
 
             if (currentPage == 0)
@@ -196,6 +213,20 @@ public class GuiBuildingConstructor extends GuiScreen
             {
                 drawCenteredString(fontRendererObj, "Now choose the special type of building to build", width / 2, 50, 0xffffaa);
                 tfSearch.drawTextBox();
+            }
+            else if (currentPage == 11)
+            {
+                drawCenteredString(fontRendererObj, "Choose a category", width / 2, 50, 0xffffaa);
+            }
+            else if (currentPage == 12)
+            {
+                drawCenteredString(fontRendererObj, listCategory == null ? "Search every building" : listCategory,
+                        width / 2, 50, 0xffffaa);
+                tfSearch.drawTextBox();
+            }
+            else if (currentPage == 13)
+            {
+                drawMotelPage();
             }
             else if (currentPage == 10)
             {
@@ -381,7 +412,10 @@ public class GuiBuildingConstructor extends GuiScreen
             buttonList.add(new GuiButton(6, (width / 2) - 100, 150, 100, 20, "Commercial"));
             buttonList.add(new GuiButton(7, (width / 2), 150, 100, 20, "Industrial"));
             buttonList.add(new GuiButton(8, (width / 2) + 100, 150, 100, 20, "Other"));
-            buttonList.add(new GuiButton(9, (width / 2) -50, 180, 100, 20, "Special"));
+            buttonList.add(new GuiButton(9, (width / 2) - 200, 180, 100, 20, "Special"));
+            buttonList.add(new GuiButton(10, (width / 2) - 100, 180, 100, 20, "By category"));
+            buttonList.add(new GuiButton(11, (width / 2), 180, 100, 20, "Search all"));
+            buttonList.add(new GuiButton(12, (width / 2) + 100, 180, 100, 20, "Motel..."));
         }
         else if (currentPage == 3)    //choose worker
         {
@@ -433,129 +467,64 @@ public class GuiBuildingConstructor extends GuiScreen
                 e.printStackTrace();
             }
         }
-        else if (currentPage == 2 || currentPage == 5 || currentPage == 6 || currentPage == 7 || currentPage == 9) //what r/c/i/o building
+        else if (isListPage()) //what r/c/i/o building, a category, or a search of everything
         {
-            ArrayList<Building> houses = new ArrayList<Building>();
-            String theType = "";
-            buildingsOnPage = 0;
             tfSearch = new GuiTextField(fontRendererObj, width / 2 - 50, height - 30, 100, 20);
+            tfSearch.setMaxStringLength(40);
             tfSearch.setText(search);
             tfSearch.setFocused(true);
-            tfSearch.setMaxStringLength(10);
-
-            if (currentPage == 2)
+            String q = tfSearch.getText().trim();
+            ArrayList<Building> houses;
+            if (currentPage == 12)
             {
-                houses = Building.getBuildingBlueprints("residential", tfSearch.getText().trim());
-                theType = "residential";
-            }
-            else if (currentPage == 5)
-            {
-                houses = Building.getBuildingBlueprints("commercial", tfSearch.getText().trim());
-                theType = "commercial";
-            }
-            else if (currentPage == 6)
-            {
-                houses = Building.getBuildingBlueprints("industrial", tfSearch.getText().trim());
-                theType = "industrial";
-            }
-            else if (currentPage == 7)
-            {
-                houses = Building.getBuildingBlueprints("other", tfSearch.getText().trim());
-                theType = "other";
-            }
-            else if (currentPage == 9)
-            {
-                houses = Building.getBuildingBlueprints("special", tfSearch.getText().trim());
-                theType = "special";
-            }
-
-            int x = 10, y = 60, idx = 1;
-
-            if (houses != null)
-            {
-                for (int b = 0; b <= houses.size(); b++)
+                houses = Building.searchAllBlueprints(q);
+                if (listCategory != null)
                 {
-                    int boff = b + buildingOffset;
-
-                    if (boff < 0)
-                    {
-                        boff = 0;
-                        buildingOffset = 0;
-                    }
-
-                    if ((boff) < houses.size())
-                    {
-                        if (houses.get(boff) != null)
-                        {
-                            String line2, line3 = "", line4;
-                            Building building = houses.get(boff);
-                            String realCost = "";
-
-                            if (theWorkers.size() > 1)
-                            {
-                                realCost = " (" + SimukraftReloaded.displayMoney((float)(building.blocksInBuilding * 0.02f) * theWorkers.size()) + ")";
-                            }//BOOKMARK
-
-                            line2 = building.ltrCount + " x " + building.ftbCount + " x " + building.layerCount;
-                            line3 = SimukraftReloaded.displayMoney((float)(building.blocksInBuilding * 0.02f)) + realCost;
-                            line4 = building.author;
-                            GuiButton b1;
-                            GuiButton b2;
-                            GuiButton b3;
-                            buttonList.add(b3 = new GuiButton(idx + 300, x, y + 48, 120, 20, line4));
-                            buttonList.add(b2 = new GuiButton(idx + 200, x, y + 32, 120, 20, line3));
-                            buttonList.add(b1 = new GuiButton(idx + 100, x, y + 16, 120, 20, line2));
-                            b1.enabled = false;
-                            b2.enabled = false;
-                            b3.enabled = false;
-                            String pk = "";
-
-                            if (building.displayName.startsWith("PKID"))        /// PKID123-title
-                            {
-                                int hyphen = building.displayName.indexOf("-");
-                                pk = building.displayName.substring(0, hyphen + 1); // PKID123-
-                            }
-
-                            pkIndex.put(idx, pk);
-                            buttonList.add(new GuiButton(idx, x, y, 120, 20, building.displayNameWithoutPK));
-                            x += 120;
-
-                            if ((x + 120) > width)
-                            {
-                                x = 10;
-                                y += 71;
-                            }
-
-                            idx++;
-                            buildingsOnPage++;
-
-                            if (buildingOffset > 0)
-                            {
-                                buttonList.add(new GuiButton(501, 5, height - 20, 75, 20, "< Page"));
-                            }
-
-                            if ((y + 20 + 20 + 20 + 20) > height)
-                            {
-                                buttonList.add(new GuiButton(500, width - 80, height - 20, 75, 20, "Page >"));
-                                break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        buttonList.add(new GuiButton(501, 5, height - 20, 75, 20, "< Page!"));
-                    }
-                }
-
-                if (fixedBuildingCount == -1)
-                {
-                    fixedBuildingCount = buildingsOnPage;
+                    houses = BuildingCategory.in(houses, listCategory);
                 }
             }
             else
             {
-                buttonList.add(new GuiButton(1, 10, 60, 300, 20, "Nothing found, go back and choose another"));
+                houses = Building.getBuildingBlueprints(pageType(currentPage), q);
             }
+            showList(houses);
+        }
+        else if (currentPage == 11)    // categories, with how many of each
+        {
+            ArrayList<Building> all = Building.searchAllBlueprints("");
+            int x = width / 2 - 205, y = 65, idx = 1;
+            categoryButtons.clear();
+            for (String cat : BuildingCategory.ALL)
+            {
+                int n = BuildingCategory.in(all, cat).size();
+                if (n == 0)
+                {
+                    continue;
+                }
+                categoryButtons.put(idx, cat);
+                buttonList.add(new GuiButton(idx++, x, y, 135, 20, cat + " (" + n + ")"));
+                x += 137;
+                if (x + 135 > width / 2 + 210)
+                {
+                    x = width / 2 - 205;
+                    y += 22;
+                }
+            }
+        }
+        else if (currentPage == 13)    // design a motel
+        {
+            int x = 20, y = 70;
+            buttonList.add(new GuiButton(20, x, y, 150, 20, "Shape: " + new MotelPlan(motelShape, 1, 1, 1, "-x").shapeName()));
+            buttonList.add(new GuiButton(21, x, y + 22, 150, 20, "Floors: " + motelFloors));
+            buttonList.add(new GuiButton(22, x, y + 44, 20, 20, "-"));
+            buttonList.add(new GuiButton(23, x + 130, y + 44, 20, 20, "+"));
+            GuiButton less = new GuiButton(24, x, y + 66, 20, 20, "-"), more = new GuiButton(25, x + 130, y + 66, 20, 20, "+");
+            less.enabled = more.enabled = motelShape != 'S';
+            buttonList.add(less);
+            buttonList.add(more);
+            buttonList.add(new GuiButton(1001, (width / 2) - 100, height - 25, 100, 20, "Go Back"));
+            buttonList.add(new GuiButton(969, (width / 2), height - 25, 100, 20, "Requirements"));
+            updateMotel();
         }
         else if (currentPage == 8)     ///building requirements
         {
@@ -665,11 +634,25 @@ public class GuiBuildingConstructor extends GuiScreen
             	currentPage = 9;
             	showPage();
             }
+            else if (guibutton.id == 10)
+            {
+                currentPage = 11;
+                showPage();
+            }
+            else if (guibutton.id == 11)
+            {
+                listCategory = null;
+                currentPage = 12;
+                showPage();
+            }
+            else if (guibutton.id == 12)
+            {
+                currentPage = 13;
+                showPage();
+            }
         }
-        else if (currentPage == 2 || currentPage == 5 || currentPage == 6 || currentPage == 7 || currentPage == 9) //chosen building to build
+        else if (isListPage()) //chosen building to build
         {
-            previousPage = currentPage;
-
             if (guibutton.id == 1 && guibutton.displayString.startsWith("Nothing found"))
             {
                 goBack();
@@ -687,50 +670,83 @@ public class GuiBuildingConstructor extends GuiScreen
                 showPage();
                 return;
             }
-            else       //they've clicked a building
+            Building clicked = listedByButton.get(guibutton.id);
+            if (clicked == null)
             {
-                String type = "";
+                return;
+            }
+            previousPage = currentPage;
+            selectedBuilding = Building.getFromAllBuildings(clicked.displayName, clicked.type);
+            try {
+            	selectedBuilding.buildDirection = this.buildDirection;
+            } catch(Exception e) {} //probably not stood in the right place, live-ware issue!
 
-                if (currentPage == 2)
-                {
-                    type = "residential";
-                }
-
-                if (currentPage == 5)
-                {
-                    type = "commercial";
-                }
-
-                if (currentPage == 6)
-                {
-                    type = "industrial";
-                }
-
-                if (currentPage == 7)
-                {
-                    type = "other";
-                }
-                if (currentPage == 9)
-                {
-                    type = "special";
-                }
-
-                String pkPrefix = "";
-                pkPrefix = (String) pkIndex.get(guibutton.id); //  PKID123-
-                selectedBuilding = Building.getFromAllBuildings(pkPrefix + guibutton.displayString, type);
-                try {
-                	selectedBuilding.buildDirection = this.buildDirection;
-                } catch(Exception e) {} //probably not stood in the right place, live-ware issue!
-                
-                preview = selectedBuilding == null ? null : new BuildingPreview(selectedBuilding);
-                lastFrame = 0;
-                currentPage = 10;
+            preview = selectedBuilding == null ? null : new BuildingPreview(selectedBuilding);
+            lastFrame = 0;
+            currentPage = 10;
+            showPage();
+        }
+        else if (currentPage == 11)    // a category
+        {
+            String cat = categoryButtons.get(guibutton.id);
+            if (cat != null)
+            {
+                listCategory = cat;
+                buildingOffset = 0;
+                fixedBuildingCount = -1;
+                search = "";
+                currentPage = 12;
                 showPage();
             }
         }
+        else if (currentPage == 13)    // the motel designer
+        {
+            if (guibutton.id == 20)
+            {
+                motelShape = motelShape == 'S' ? 'L' : motelShape == 'L' ? 'U' : 'S';
+            }
+            else if (guibutton.id == 21)
+            {
+                motelFloors = motelFloors == 1 ? 2 : 1;
+            }
+            else if (guibutton.id == 22 || guibutton.id == 23)
+            {
+                motelRoomsA = Math.max(MotelPlan.minA(motelShape), Math.min(MotelPlan.MAX_ROOMS, motelRoomsA + (guibutton.id == 23 ? 1 : -1)));
+            }
+            else if (guibutton.id == 24 || guibutton.id == 25)
+            {
+                motelRoomsB = Math.max(1, Math.min(MotelPlan.MAX_ROOMS, motelRoomsB + (guibutton.id == 25 ? 1 : -1)));
+            }
+            else if (guibutton.id == 969)
+            {
+                previousPage = 13;
+                currentPage = 8;
+            }
+            else if (guibutton.id == 1001)
+            {
+                goBack();
+                return;
+            }
+            showPage();
+        }
         else if (currentPage == 8)   // building requirements (what blocks are need)
         {
-            if (guibutton.displayString.contentEquals("Build it!"))
+            if (guibutton.displayString.contentEquals("Build it!") && MotelPlan.isGenerated(selectedBuilding.displayName))
+            {
+                MotelPlan plan = MotelPlan.parse(selectedBuilding.displayName);
+                NBTTagCompound data = new NBTTagCompound();
+                ActionHandlers.putV3(data, "box", constructorLoc);
+                data.setString("shape", String.valueOf(plan.shape));
+                data.setInteger("floors", plan.floors);
+                data.setInteger("roomsA", plan.roomsA);
+                data.setInteger("roomsB", plan.roomsB);
+                data.setString("dir", plan.dir);
+                ServerActions.send("buildMotel", data);
+                mc.displayGuiScreen(null);
+                mc.setIngameFocus();
+                return;
+            }
+            else if (guibutton.displayString.contentEquals("Build it!"))
             {
                 // the server sets the builders working on it (it looks the blueprint up in its own catalogue)
                 NBTTagCompound data = new NBTTagCompound();
@@ -746,8 +762,7 @@ public class GuiBuildingConstructor extends GuiScreen
             }
             else if (guibutton.id == 1001)    //go back
             {
-                currentPage = 10;
-                showPage();
+                goBack();
             }
         }
         else if (currentPage == 10)
@@ -785,20 +800,157 @@ public class GuiBuildingConstructor extends GuiScreen
         }
         else if (currentPage == 8)
         {
-            currentPage = 10;
+            currentPage = MotelPlan.isGenerated(selectedBuilding == null ? null : selectedBuilding.displayName) ? 13 : 10;
         }
-        else if (currentPage == 2 || currentPage == 5 || currentPage == 6 || currentPage == 7 || currentPage == 9)
+        else if (isListPage())
         {
-            currentPage = 1;
+            currentPage = currentPage == 12 && listCategory != null ? 11 : 1;
             buildingOffset = 0;
+            fixedBuildingCount = -1;
             search = "";
             tfSearch = null;
+        }
+        else if (currentPage == 11 || currentPage == 13)
+        {
+            currentPage = 1;
         }
         else
         {
             currentPage = 0;
         }
         showPage();
+    }
+
+    private final HashMap<Integer, String> categoryButtons = new HashMap<Integer, String>();
+
+    /** the pages that list buildings to pick from */
+    private boolean isListPage()
+    {
+        return currentPage == 2 || currentPage == 5 || currentPage == 6 || currentPage == 7 || currentPage == 9
+                || currentPage == 12;
+    }
+
+    private static String pageType(int page)
+    {
+        return page == 2 ? "residential" : page == 5 ? "commercial" : page == 6 ? "industrial" : page == 7 ? "other" : "special";
+    }
+
+    /** a page of buildings as buttons: name, size, cost and author */
+    private void showList(ArrayList<Building> houses)
+    {
+        listedByButton.clear();
+        buildingsOnPage = 0;
+        if (houses.isEmpty())
+        {
+            buttonList.add(new GuiButton(1, 10, 60, 300, 20, "Nothing found, go back and choose another"));
+            return;
+        }
+        if (buildingOffset < 0 || buildingOffset >= houses.size())
+        {
+            buildingOffset = 0;
+        }
+        if (buildingOffset > 0)
+        {
+            buttonList.add(new GuiButton(501, 5, height - 20, 75, 20, "< Page"));
+        }
+        int x = 10, y = 60, idx = 1;
+        for (int b = buildingOffset; b < houses.size(); b++)
+        {
+            Building building = houses.get(b);
+            String realCost = "";
+            if (theWorkers.size() > 1)
+            {
+                realCost = " (" + SimukraftReloaded.displayMoney((float)(building.blocksInBuilding * 0.02f) * theWorkers.size()) + ")";
+            }
+            GuiButton b1, b2, b3;
+            buttonList.add(b3 = new GuiButton(idx + 300, x, y + 48, 120, 20, building.author));
+            buttonList.add(b2 = new GuiButton(idx + 200, x, y + 32, 120, 20, SimukraftReloaded.displayMoney((float)(building.blocksInBuilding * 0.02f)) + realCost));
+            buttonList.add(b1 = new GuiButton(idx + 100, x, y + 16, 120, 20, building.ltrCount + " x " + building.ftbCount + " x " + building.layerCount));
+            b1.enabled = b2.enabled = b3.enabled = false;
+            listedByButton.put(idx, building);
+            buttonList.add(new GuiButton(idx, x, y, 120, 20, building.displayNameWithoutPK));
+            idx++;
+            buildingsOnPage++;
+            x += 120;
+            if ((x + 120) > width)
+            {
+                x = 10;
+                y += 71;
+            }
+            if ((y + 20 + 20 + 20 + 20) > height)
+            {
+                if (b + 1 < houses.size())
+                {
+                    buttonList.add(new GuiButton(500, width - 80, height - 20, 75, 20, "Page >"));
+                }
+                break;
+            }
+        }
+        if (fixedBuildingCount == -1)
+        {
+            fixedBuildingCount = buildingsOnPage;
+        }
+    }
+
+    /** the motel as set on page 13: its blueprint, preview and whether there's room for it here */
+    private void updateMotel()
+    {
+        motelRoomsA = Math.max(MotelPlan.minA(motelShape), motelRoomsA);
+        if (buildDirection == null || buildDirection.isEmpty())
+        {
+            selectedBuilding = null;
+            preview = null;
+            motelSpace = "\u00a7cStand in line with the constructor box, facing where the motel should go, and open it again";
+            return;
+        }
+        MotelPlan plan = new MotelPlan(motelShape, motelFloors, motelRoomsA, motelRoomsB, buildDirection);
+        selectedBuilding = Building.fromMotelPlan(plan);
+        preview = new BuildingPreview(selectedBuilding);
+        try
+        {
+            String blocked = plan.obstruction(mc.theWorld, constructorLoc.x.intValue(), constructorLoc.y.intValue(), constructorLoc.z.intValue());
+            motelSpace = blocked == null ? "\u00a7aThere's room for it here" : "\u00a7c" + blocked;
+        }
+        catch (Exception e)
+        {
+            motelSpace = "";
+        }
+    }
+
+    private void drawMotelPage()
+    {
+        drawCenteredString(fontRendererObj, "Design a motel", width / 2, 55, 0xffffaa);
+        drawCenteredString(fontRendererObj, "Main wing: " + motelRoomsA + " rooms", 95, 70 + 44 + 6, 0xffffff);
+        drawCenteredString(fontRendererObj, motelShape == 'S' ? "\u00a78No side wings" : (motelShape == 'U' ? "Each side wing: " : "Side wing: ") + motelRoomsB + " rooms",
+                95, 70 + 66 + 6, 0xffffff);
+        int y = 165, colW = width / 2 - 30;
+        if (selectedBuilding != null)
+        {
+            MotelPlan plan = MotelPlan.parse(selectedBuilding.displayName);
+            y = detail("Rooms", plan.rooms() + " (guests from out of town pay to stay)", y, colW);
+            y = detail("Size", selectedBuilding.ltrCount + " wide, " + selectedBuilding.ftbCount + " deep, " + selectedBuilding.layerCount + " high", y, colW);
+            y = detail("Cost", SimukraftReloaded.displayMoney((float)(selectedBuilding.blocksInBuilding * 0.02f)), y, colW);
+        }
+        for (Object line : fontRendererObj.listFormattedStringToWidth(motelSpace, colW))
+        {
+            drawString(fontRendererObj, (String) line, 20, y, 0xffffff);
+            y += 10;
+        }
+        drawString(fontRendererObj, "\u00a78Add more rooms later from its control box", 20, y + 4, 0xffffff);
+
+        int px = width / 2 + 10, py = 65, pw = width / 2 - 20, ph = height - 65 - 32;
+        drawRect(px, py, px + pw, py + ph, 0x40000000);
+        if (preview != null && !preview.isEmpty())
+        {
+            long now = System.currentTimeMillis();
+            if (!draggingPreview && lastFrame != 0)
+            {
+                preview.yaw += (now - lastFrame) * 0.02f;
+            }
+            lastFrame = now;
+            preview.draw(px + 6, py + 6, pw - 12, ph - 12);
+            drawCenteredString(fontRendererObj, "Drag to turn it", px + pw / 2, py + ph - 10, 0x808080);
+        }
     }
 
     public void fireAllFolksForThisBuilding()
@@ -842,7 +994,7 @@ public class GuiBuildingConstructor extends GuiScreen
             tfSearch.mouseClicked(i, j, k);
         }
 
-        draggingPreview = currentPage == 10 && k == 0 && i > width / 2 + 10 && j > 65 && j < height - 32;
+        draggingPreview = (currentPage == 10 || currentPage == 13) && k == 0 && i > width / 2 + 10 && j > 65 && j < height - 32;
         lastDragX = i;
         super.mouseClicked(i, j, k);
     }

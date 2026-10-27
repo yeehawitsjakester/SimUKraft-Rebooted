@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.Serializable;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -45,6 +46,10 @@ public class Building implements Serializable
     public transient Block[] structure; // / holds a 3D array of block IDs for this
     public transient int[] structureSub;
     public String description = "None";
+    /** CAT= in the blueprint, or null to work it out from the name (see BuildingCategory) */
+    public String category = null;
+    /** structureSub for a cell the builder leaves as it is (with a null structure entry) */
+    public static final int KEEP = -1;
     public transient Infrastructure infrastructureRequirement = null;
     public transient Infrastructure infrastructureProducer = null;
     // building
@@ -222,20 +227,24 @@ public class Building implements Serializable
             }
 
             blocksInBuilding = 0;
-            File f = new File(SimukraftReloaded.getSimukraftFolder() + "/buildings/"
-                              + type + "/" + displayName + ".txt");
-
-            if (!f.exists())
+            BufferedReader br;
+            MotelPlan motel = MotelPlan.parse(displayName);
+            if (motel != null)
             {
-                return;
+                // made to order, not from a file: generated again from its name
+                br = new BufferedReader(new StringReader(motel.blueprint()));
             }
+            else
+            {
+                File f = new File(SimukraftReloaded.getSimukraftFolder() + "/buildings/"
+                                  + type + "/" + displayName + ".txt");
 
-            
-            FileInputStream fstream = new FileInputStream(
-            		SimukraftReloaded.getSimukraftFolder() + "/buildings/" + type
-                + "/" + displayName + ".txt");
-            DataInputStream in = new DataInputStream(fstream);
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+                if (!f.exists())
+                {
+                    return;
+                }
+                br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
+            }
             String strLine;
             strLine = br.readLine().toString().toLowerCase().trim(); // dimensions
             String[] d = strLine.split("x");
@@ -260,7 +269,7 @@ public class Building implements Serializable
                 {
                     continue;
                 }
-                if(!k[0].toUpperCase().contentEquals("AU") && !k[0].toUpperCase().contentEquals("DESC") && !k[0].toUpperCase().contentEquals("ELEV") && !k[0].toUpperCase().contentEquals("REQ") && !k[0].toUpperCase().contentEquals("INFREQ"))
+                if(!k[0].toUpperCase().contentEquals("AU") && !k[0].toUpperCase().contentEquals("DESC") && !k[0].toUpperCase().contentEquals("ELEV") && !k[0].toUpperCase().contentEquals("REQ") && !k[0].toUpperCase().contentEquals("INFREQ") && !k[0].toUpperCase().contentEquals("CAT"))
                 {
                 	 thekey.put(k[0], parseKeyBlock(k[1]));
                 }
@@ -271,6 +280,10 @@ public class Building implements Serializable
                     // stored in key
                     // AU=me;
                     this.author = k[1].trim();
+                }
+                else if (k[0].toUpperCase().contentEquals("CAT"))   // CAT=Temporary housing: which category to list it under
+                {
+                    this.category = k[1].trim();
                 }
                 else if (k[0].toUpperCase().contentEquals("DESC"))   // Description of this
                 {
@@ -330,7 +343,20 @@ public class Building implements Serializable
                                                           bcount + 1);
                             char cha=ch.charAt(0);
 
-                            if (ch.contentEquals("!"))   // living block
+                            if (cha == MotelPlan.KEEP_CHAR)   // leave whatever is there (an upgrade's existing part)
+                            {
+                                structure[acount] = null;
+                                structureSub[acount] = KEEP;
+                                acount++;
+                                bcount++;
+                                continue;
+                            }
+                            else if (cha == MotelPlan.HOTEL_ROOM_CHAR)   // a room box, as a hotel room
+                            {
+                                structure[acount] = SimukraftReloadedBlocks.roomBox;
+                                structureSub[acount] = 1;
+                            }
+                            else if (ch.contentEquals("!"))   // living block
                             {
                                 structure[acount] = SimukraftReloadedBlocks.livingBlock;
                                 structureSub[acount] = 0;
@@ -508,7 +534,11 @@ public class Building implements Serializable
             }
 
             br.close();
-            in.close();
+            if (motel != null)
+            {
+                displayNameWithoutPK = motel.title();
+                author = "Sim-U-Kraft";
+            }
             this.rent = blocksInBuilding * 0.01f;
         }
         catch (Exception e)
@@ -718,13 +748,23 @@ public class Building implements Serializable
     }
 
     /** returns list of buildings available for specific type eg. Small house */
+    /** every blueprint of every type that matches the search (see BuildingCategory.matches) */
+    public static ArrayList<Building> searchAllBlueprints(String searchWords)
+    {
+        ArrayList<Building> all = new ArrayList<Building>();
+        for (String type : new String[] {"residential", "commercial", "industrial", "other", "special"})
+        {
+            all.addAll(getBuildingBlueprints(type, searchWords));
+        }
+        return all;
+    }
+
     public static ArrayList<Building> getBuildingBlueprints(String theType, String searchWords)
     {
         ArrayList<Building> retBuildings = new ArrayList<Building>();
         
         try
         {
-            int sizesearch = 0;
 
             if (theType.contentEquals("residential"))
             {
@@ -747,72 +787,13 @@ public class Building implements Serializable
                 copyArrayList(buildingsSpec, retBuildings);
             }
 
-            if (!searchWords.contentEquals(""))
+            for (int i = retBuildings.size() - 1; i >= 0; i--)
             {
-                try
+                if (!BuildingCategory.matches(retBuildings.get(i), searchWords))
                 {
-                    sizesearch = Integer.parseInt(searchWords.substring(2));
+                    retBuildings.remove(i);
                 }
-                catch (Exception e) {}
-
-                //search by width
-                if (searchWords.startsWith("w:"))
-                {
-                    for (int i = retBuildings.size() - 1; i >= 0; i--)
-                    {
-                        Building build = retBuildings.get(i);
-
-                        if (build.ltrCount != sizesearch)
-                        {
-                            retBuildings.remove(i);
-                        }
-                    }
-
-                    //search by depth
-                }
-                else if (searchWords.startsWith("d:"))
-                {
-                    for (int i = retBuildings.size() - 1; i >= 0; i--)
-                    {
-                        Building build = retBuildings.get(i);
-
-                        if (build.ftbCount != sizesearch)
-                        {
-                            retBuildings.remove(i);
-                        }
-                    }
-
-                    //search by height
-                }
-                else if (searchWords.startsWith("h:"))
-                {
-                    for (int i = retBuildings.size() - 1; i >= 0; i--)
-                    {
-                        Building build = retBuildings.get(i);
-
-                        if (build.layerCount != sizesearch)
-                        {
-                            retBuildings.remove(i);
-                        }
-                    }
-
-                    // search by word
-                }
-                else
-                {
- 
-                    for (int i = retBuildings.size() - 1; i >= 0; i--)
-                    {
-                        Building build = retBuildings.get(i);
-
-                        if (!build.displayName.toLowerCase().contains(searchWords.toLowerCase()))
-                        {
-                            retBuildings.remove(i);
-                        }
-                    }
-                    
-                }
-            } 
+            }
         }
         catch (Exception e) {}
 
@@ -1086,6 +1067,16 @@ public class Building implements Serializable
         SimukraftReloaded.buildings().add(room);
         room.saveThisBuilding();
         return room;
+    }
+
+    /** works out a room's standing spot again, now the walls around it are built */
+    public void refreshLivingSpot(World world)
+    {
+        if (isRoom() && primaryXYZ != null)
+        {
+            livingXYZ = findRoomLivingSpot(world, primaryXYZ.x.intValue(), primaryXYZ.y.intValue(), primaryXYZ.z.intValue());
+            saveThisBuilding();
+        }
     }
 
     /** where folks stand when "at home" in a room: a free spot beside the box, or on top of it */
@@ -1591,7 +1582,22 @@ public class Building implements Serializable
     
     /** used when loading folks, to get the building they are currently building
      * partialFile name should be just "PK123-buildingname.txt" */
+    /** a made-to-order motel, ready to preview or build */
+    public static Building fromMotelPlan(MotelPlan plan)
+    {
+        Building b = new Building(plan.name(), "commercial");
+        b.buildDirection = plan.dir;
+        b.loadStructure();
+        return b;
+    }
+
     public static Building getBuildingForFolk(String partialFilename, String type) {
+    	String generated = partialFilename.endsWith(".txt") ? partialFilename.substring(0, partialFilename.length() - 4) : partialFilename;
+    	if (MotelPlan.isGenerated(generated)) {
+    		Building build = new Building(generated, type);
+    		build.loadStructure();
+    		return build;
+    	}
     	File f = new File(SimukraftReloaded.getSimukraftFolder() + "/buildings/" + type+"/"+partialFilename);
     	if (f.exists()) {
     		String name = f.getName().substring(0, f.getName().length() - 4);

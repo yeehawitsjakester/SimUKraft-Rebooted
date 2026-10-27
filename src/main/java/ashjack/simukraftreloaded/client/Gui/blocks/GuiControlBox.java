@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.client.Gui.blocks;
 
+import ashjack.simukraftreloaded.core.building.MotelPlan;
 import net.minecraft.nbt.NBTTagCompound;
 import ashjack.simukraftreloaded.network.ServerActions;
 import ashjack.simukraftreloaded.network.ActionHandlers;
@@ -109,6 +110,24 @@ public class GuiControlBox extends GuiScreen
 
         buttonList.add(new GuiButton(21, width - 110, height - 30, 100, 20, "Show Employees"));
         buttonList.add(new GuiButton(30, width - 110, height - 50, 100, 20, "Beam me to.."));
+
+        // a motel grows away from its constructor box: the main wing longer, the side wings deeper
+        MotelPlan motel = MotelPlan.parse(theBuilding.displayName);
+        if (motel != null && theBuilding.buildingComplete)
+        {
+            if (motel.shape != 'U')
+            {
+                GuiButton b = new GuiButton(1100, 10, height - 30, 160, 20, motel.shape == 'S' ? "Add a room" : "Add a room: main wing");
+                b.enabled = motel.roomsA < MotelPlan.MAX_ROOMS;
+                buttonList.add(b);
+            }
+            if (motel.shape != 'S')
+            {
+                GuiButton b = new GuiButton(1101, 10, height - 52, 160, 20, motel.shape == 'U' ? "Add a room to each side wing" : "Add a room: side wing");
+                b.enabled = motel.roomsB < MotelPlan.MAX_ROOMS;
+                buttonList.add(b);
+            }
+        }
 
         if (theBuilding.type.contentEquals("commercial") || theBuilding.type.contentEquals("industrial") || theBuilding.type.contentEquals("special"))
         {
@@ -491,6 +510,27 @@ public class GuiControlBox extends GuiScreen
                         down += 20;
                     }
                 }
+                else if (MotelPlan.isGenerated(theBuilding.displayName))
+                {
+                    MotelPlan motel = MotelPlan.parse(theBuilding.displayName);
+                    int booked = 0, rooms = 0;
+                    for (Building b : SimukraftReloaded.buildings())
+                    {
+                        if (b.isHotel() && b.displayName.startsWith("Motel room"))
+                        {
+                            rooms++;
+                            booked += b.tennants.isEmpty() ? 0 : 1;
+                        }
+                    }
+                    fontRendererObj.drawString(motel.rooms() + " rooms, " + motel.shapeName().toLowerCase() + ", "
+                            + (motel.floors == 1 ? "1 floor" : motel.floors + " floors"), 5, 57, 0xffff80);
+                    fontRendererObj.drawString(booked + " of the town's " + rooms + " motel rooms have guests", 5, 70, 0xffffa0);
+                    if (theBuilding.buildingComplete)
+                    {
+                        fontRendererObj.drawString("Adding rooms checks there's space first, then the builder at the", 5, 90, 0xaaaaaa);
+                        fontRendererObj.drawString("constructor box builds only the new part", 5, 100, 0xaaaaaa);
+                    }
+                }
                 else if (theBuilding.type.contentEquals("industrial") || theBuilding.type.contentEquals("commercial") || theBuilding.type.contentEquals("special"))
                 {
                     fontRendererObj.drawString("Employees :", 5, 57, 0xffff80);
@@ -537,6 +577,18 @@ public class GuiControlBox extends GuiScreen
         if (guibutton.id == 0) // /cancel button
         {
             mc.currentScreen = null;
+            mc.setIngameFocus();
+            return;
+        }
+        else if (guibutton.id == 1100 || guibutton.id == 1101)
+        {
+            MotelPlan motel = MotelPlan.parse(theBuilding.displayName);
+            NBTTagCompound data = new NBTTagCompound();
+            ActionHandlers.putV3(data, "box", location);
+            data.setInteger("roomsA", motel.roomsA + (guibutton.id == 1100 ? 1 : 0));
+            data.setInteger("roomsB", motel.roomsB + (guibutton.id == 1101 ? 1 : 0));
+            ServerActions.send("upgradeMotel", data);
+            mc.displayGuiScreen(null);
             mc.setIngameFocus();
             return;
         }
