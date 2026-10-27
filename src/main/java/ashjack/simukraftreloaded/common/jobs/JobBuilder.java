@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import net.minecraft.item.Item;
 import java.util.LinkedHashMap;
 import ashjack.simukraftreloaded.common.Effects;
@@ -790,7 +791,7 @@ public class JobBuilder extends Job implements Serializable
 
                                 if (blockId != null && GameMode.gameMode != GameMode.GAMEMODES.CREATIVE && blockId != SimukraftReloadedBlocks.livingBlock)
                                 {
-                                	SimukraftReloaded.states().credits -= (0.02f);
+                                	Economy.pay(theFolk, (0.02f));
                                 }
                             }
                             catch (Exception e)

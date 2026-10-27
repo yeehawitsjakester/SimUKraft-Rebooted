@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import java.util.ArrayList;
 
 import ashjack.simukraftreloaded.core.ModSimukraft;
@@ -389,7 +390,7 @@ public class JobBurgersManager extends Job {
     		
     		theStage=Stage.HANGINGOUT;
     		step=0;
-    		SimukraftReloaded.states().credits -=2.45;
+    		Economy.pay(theFolk, 2.45);
     	}
     }
     

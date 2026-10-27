@@ -14,6 +14,7 @@ import net.minecraft.util.ChatComponentText;
 import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
 import ashjack.simukraftreloaded.core.game.GameMode;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
+import ashjack.simukraftreloaded.core.town.Economy;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 
@@ -114,9 +115,9 @@ public final class ActionHandlers
                 {
                     return;
                 }
-                if (SimukraftReloaded.serverStates.credits <= 0 && GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
+                if (Economy.balance(box) <= 0 && GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                 {
-                    tell(player, "You need some Sim-u-Credits to employ folks.");
+                    tell(player, "The town needs some Sim-u-Credits in its treasury to employ folks.");
                     return;
                 }
                 if (GameMode.gameMode == GameMode.GAMEMODES.CREATIVE && vocation == Vocation.MERCHANT)
@@ -200,6 +201,7 @@ public final class ActionHandlers
 
         BuildingActions.register();
         Placement.register();
+        TownActions.register();
         BoxActions.register();
         ShopActions.register();
     }

@@ -17,6 +17,7 @@ import ashjack.simukraftreloaded.common.jobs.JobTerraformer;
 import ashjack.simukraftreloaded.common.jobs.JobTerraformer.TerraformerType;
 import ashjack.simukraftreloaded.core.game.GameMode;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
+import ashjack.simukraftreloaded.core.town.Economy;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 
@@ -64,7 +65,7 @@ final class BoxActions
                 }
                 float cost = (box.getSizeLength() * box.getSizeWidth()) / 15f;
                 boolean creative = GameMode.gameMode == GameMode.GAMEMODES.CREATIVE;
-                if (!creative && cost > SimukraftReloaded.serverStates.credits)
+                if (!creative && cost > Economy.balance(box.location))
                 {
                     ActionHandlers.tell(player, "You don't have enough Sim-U-credits to upgrade this farm");
                     return;
@@ -76,7 +77,7 @@ final class BoxActions
                 }
                 if (!creative)
                 {
-                    SimukraftReloaded.serverStates.credits -= cost;
+                    Economy.spend(box.location, cost);
                 }
                 SimukraftReloaded.farmToUpgradeCounter = 0;
                 SimukraftReloaded.farmToUpgrade = box;

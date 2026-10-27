@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -138,7 +139,7 @@ public class JobBurgersWaiter extends Job {
 					folk.lastMeal = "Ate at the burger bar";
 					folk.saveThisFolk();
 					SimukraftReloaded.log.info("JobBurgersWaiter: Just fed "+folk.name);
-					SimukraftReloaded.states().credits -=0.45;
+					Economy.pay(theFolk, 0.45);
 				} else {
 					theFolk.statusText="Who put "+is.getDisplayName()+" in my chest, folks can't eat that!";
 				}

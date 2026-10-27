@@ -61,6 +61,9 @@ public class ClientProxy extends CommonProxy
         super.registerMisc();
         FMLCommonHandler.instance().bus().register(this);
         FMLCommonHandler.instance().bus().register(new ClientTickHandler());
+        ashjack.simukraftreloaded.client.TownBorderRenderer borders = new ashjack.simukraftreloaded.client.TownBorderRenderer();
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(borders); // the wall
+        FMLCommonHandler.instance().bus().register(borders);                   // entering/leaving
 
     }
     

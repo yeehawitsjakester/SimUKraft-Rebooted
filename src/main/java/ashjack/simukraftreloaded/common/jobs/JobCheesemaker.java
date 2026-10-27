@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import ashjack.simukraftreloaded.common.Effects;
 import java.util.ArrayList;
 
@@ -454,7 +455,7 @@ public class JobCheesemaker extends Job {
 					theFolk.inventory.add(new ItemStack(SimukraftReloadedBlocks.blockCheese));
 					jobWorld.setBlock(block.x.intValue(),block.y.intValue(),block.z.intValue(),id,0,0x03);
 					theFolk.isWorking=true;
-					SimukraftReloaded.states().credits -=0.45;
+					Economy.pay(theFolk, 0.45);
 					break;
 				}
 			}

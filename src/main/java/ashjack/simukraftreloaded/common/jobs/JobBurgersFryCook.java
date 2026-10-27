@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import java.util.ArrayList;
 
 import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
@@ -197,7 +198,7 @@ public class JobBurgersFryCook extends Job {
 				theFolk.isWorking=false;
 				step=1;
 				theFolk.statusText="Checking Ingredients";
-				SimukraftReloaded.states().credits -=0.45;
+				Economy.pay(theFolk, 0.45);
 			}
 			 
 			

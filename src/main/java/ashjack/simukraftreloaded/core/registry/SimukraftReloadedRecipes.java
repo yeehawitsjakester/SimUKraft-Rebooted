@@ -17,6 +17,13 @@ public class SimukraftReloadedRecipes
                     'P', Blocks.planks,
                     'W', Blocks.crafting_table
                 });
+// City Box: founds a town - a constructor box with gold for the treasury, a book for the records, wool for the flag
+GameRegistry.addRecipe(new ItemStack(SimukraftReloadedBlocks.cityBox, 1), new Object[]
+{
+" W ",
+"GCB",
+'W', Blocks.wool, 'G', Items.gold_ingot, 'C', SimukraftReloadedBlocks.buildingConstructor, 'B', Items.book
+});
 // Room Box: a bed surrounded by planks (any wood)
 GameRegistry.addRecipe(new ShapedOreRecipe(new ItemStack(SimukraftReloadedBlocks.roomBox, 1), new Object[]
 {

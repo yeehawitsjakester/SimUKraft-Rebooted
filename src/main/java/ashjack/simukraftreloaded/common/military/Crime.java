@@ -69,6 +69,23 @@ public class Crime
         }
     }
 
+    /** nobody but a town's own people breaks the boxes that make its buildings work */
+    @SubscribeEvent
+    public void onBreak(net.minecraftforge.event.world.BlockEvent.BreakEvent event)
+    {
+        if (event.world.isRemote || event.getPlayer() == null || !ashjack.simukraftreloaded.network.Placement.isProtected(event.block))
+        {
+            return;
+        }
+        ashjack.simukraftreloaded.core.town.Town t = ashjack.simukraftreloaded.core.town.Towns.at(event.world.provider.dimensionId, event.x, event.z);
+        if (t != null && t.isClaimed() && !t.canManage(event.getPlayer()))
+        {
+            event.setCanceled(true);
+            event.getPlayer().addChatComponentMessage(new net.minecraft.util.ChatComponentText(
+                    "That belongs to " + t.name + " - only its owner and members can break it"));
+        }
+    }
+
     @SubscribeEvent
     public void onHurt(LivingHurtEvent event)
     {

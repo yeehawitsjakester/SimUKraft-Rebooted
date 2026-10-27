@@ -38,6 +38,9 @@ public final class ClientMirror
     /** from the HUD packet */
     public static int population = 0;
     public static String worldName = "";
+    /** the town whose treasury the HUD shows (from the HUD packet) */
+    public static String townName = "";
+    public static ArrayList<ashjack.simukraftreloaded.core.town.Town> towns = new ArrayList<ashjack.simukraftreloaded.core.town.Town>();
 
     public static void clear()
     {

@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import net.minecraft.entity.player.EntityPlayer;
 import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
@@ -257,7 +258,7 @@ public class JobShepherd extends Job implements Serializable
 
     private boolean placeWoolIntoAChest(int metaColor, int amount)
     {
-        SimukraftReloaded.states().credits -= (0.02f * amount);
+        Economy.pay(theFolk, (0.02f * amount));
         farmChests = inventoriesFindClosest(theFolk.employedAt, 4);
         inventoriesPut(farmChests, new ItemStack(Blocks.wool, amount, metaColor), true);
         return true;

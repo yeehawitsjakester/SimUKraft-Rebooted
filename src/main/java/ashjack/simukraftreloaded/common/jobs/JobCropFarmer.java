@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraft.server.MinecraftServer;
@@ -496,7 +497,7 @@ public class JobCropFarmer extends Job implements Serializable
                             //jobWorld.playAuxSFX(2001, xxx, yyy, zzz, id + (meta << 12));
                         }
 
-                        SimukraftReloaded.states().credits -= 0.02f;
+                        Economy.pay(theFolk, 0.02f);
                         doneSomeWork = true;
                         hasHarvest = true;
                     }
@@ -622,7 +623,7 @@ public class JobCropFarmer extends Job implements Serializable
                             jobWorld.setBlock(xxx, yyy - 1, zzz, Blocks.dirt, 0, 0x03);
                             Effects.sound(jobWorld, xxx, yyy - 1, zzz, Blocks.grass.stepSound.getStepResourcePath(), 1.0f, 1.0f);
                             hasTilled = true;
-                            SimukraftReloaded.states().credits -= 0.01f;
+                            Economy.pay(theFolk, 0.01f);
                         }
                     }
                     else if ((rowCounter + 2) % 3 == 0)
@@ -631,7 +632,7 @@ public class JobCropFarmer extends Job implements Serializable
                         {
                             jobWorld.setBlock(xxx, yyy - 1, zzz, Blocks.water, 0, 0x03);
                             hasTilled = true;
-                            SimukraftReloaded.states().credits -= 0.01f;
+                            Economy.pay(theFolk, 0.01f);
                         }
                     }
 
@@ -652,7 +653,7 @@ public class JobCropFarmer extends Job implements Serializable
                         {
                             jobWorld.setBlock(xxx, yyy - 1, zzz, Blocks.sand, 0, 0x03);
                             hasTilled = true;
-                            SimukraftReloaded.states().credits -= 0.01f;
+                            Economy.pay(theFolk, 0.01f);
                         }
                     }
 
@@ -672,7 +673,7 @@ public class JobCropFarmer extends Job implements Serializable
                                               Blocks.farmland, 0, 0x03);
                             Effects.sound(jobWorld, xxx, yyy - 1, zzz, Blocks.grass.stepSound.getStepResourcePath(), 1.0f, 1.0f);
                             hasTilled = true;
-                            SimukraftReloaded.states().credits -= 0.01f;
+                            Economy.pay(theFolk, 0.01f);
                         }
                     }
                 }
@@ -950,7 +951,7 @@ public class JobCropFarmer extends Job implements Serializable
                     if (hasSown)
                     {
                         Effects.sound(jobWorld, xxx, yyy, zzz, Blocks.grass.stepSound.getStepResourcePath(), 1.0f, 1.0f);
-                        SimukraftReloaded.states().credits -= 0.01f;
+                        Economy.pay(theFolk, 0.01f);
                         doneSomeWork = true;
                     }
                 }

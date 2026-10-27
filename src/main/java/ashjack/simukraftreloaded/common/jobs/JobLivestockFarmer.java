@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -289,7 +290,7 @@ public class JobLivestockFarmer extends Job implements Serializable
         	return;
         }
         
-        SimukraftReloaded.states().credits -= (0.02f * quant);
+        Economy.pay(theFolk, (0.02f * quant));
         theStage = Stage.WAITINGFORMATUREANIMAL;
     }
 

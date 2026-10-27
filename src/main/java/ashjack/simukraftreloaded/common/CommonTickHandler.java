@@ -1,5 +1,9 @@
 package ashjack.simukraftreloaded.common;
 
+import net.minecraft.entity.player.EntityPlayerMP;
+import ashjack.simukraftreloaded.core.town.Towns;
+import ashjack.simukraftreloaded.core.town.Town;
+import ashjack.simukraftreloaded.core.town.Economy;
 import ashjack.simukraftreloaded.packetsNEW.toClient.HudPacket;
 import ashjack.simukraftreloaded.packetsNEW.PacketHandler;
 import ashjack.simukraftreloaded.network.MirrorSync;
@@ -73,6 +77,7 @@ public class CommonTickHandler
         Long start = System.currentTimeMillis();
         SimukraftReloaded.states().saveStates();
         Building.saveAllBuildings();
+        Towns.saveAll();
         CourierTask.saveCourierTasksAndPoints();
         MiningBox.saveMiningBoxes();
         FarmingBox.saveFarmingBoxes();
@@ -95,14 +100,25 @@ public class CommonTickHandler
     	{
     		return;
     	}
-    	HudPacket hud = new HudPacket();
-    	hud.ranStartup = ModSimukraft.proxy.ranStartup;
-    	hud.gameModeNumber = SimukraftReloaded.serverStates.gameModeNumber;
-    	hud.credits = SimukraftReloaded.serverStates.credits;
-    	hud.dayOfWeek = SimukraftReloaded.serverStates.dayOfWeek;
-    	hud.population = FolkData.getResidentCount();
-    	hud.worldName = server.getFolderName();
-    	PacketHandler.net.sendToAll(hud);
+    	// each player sees the treasury of the town they're in, or of their own town out in the wilds
+    	for (Object o : server.getConfigurationManager().playerEntityList)
+    	{
+    		EntityPlayerMP player = (EntityPlayerMP) o;
+    		Town town = Towns.at(player);
+    		if (town == null && !Towns.of(player.getCommandSenderName()).isEmpty())
+    		{
+    			town = Towns.of(player.getCommandSenderName()).get(0);
+    		}
+    		HudPacket hud = new HudPacket();
+    		hud.ranStartup = ModSimukraft.proxy.ranStartup;
+    		hud.gameModeNumber = SimukraftReloaded.serverStates.gameModeNumber;
+    		hud.credits = Economy.balance(town);
+    		hud.townName = town == null ? "" : town.name;
+    		hud.dayOfWeek = SimukraftReloaded.serverStates.dayOfWeek;
+    		hud.population = FolkData.getResidentCount();
+    		hud.worldName = server.getFolderName();
+    		PacketHandler.net.sendTo(hud, player);
+    	}
     }
 
     int ticks = 0;

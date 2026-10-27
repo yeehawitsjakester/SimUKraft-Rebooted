@@ -15,6 +15,7 @@ import ashjack.simukraftreloaded.common.Effects;
 import ashjack.simukraftreloaded.common.PricesForBlocks;
 import ashjack.simukraftreloaded.common.jobs.Job;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
+import ashjack.simukraftreloaded.core.town.Economy;
 import ashjack.simukraftreloaded.proxies.CommonProxy.Commodity;
 import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 
@@ -79,7 +80,7 @@ public final class ShopActions
                     return;
                 }
                 int count = data.getBoolean("all") ? is.stackSize : 1;
-                SimukraftReloaded.serverStates.credits += each * count;
+                Economy.earn(atm, each * count);
                 player.inventory.decrStackSize(slot, count);
                 player.inventoryContainer.detectAndSendChanges();
                 Effects.sound(player.worldObj, player.posX, player.posY, player.posZ, "ashjacksimukraftreloaded:cashshort");
@@ -117,10 +118,10 @@ public final class ShopActions
                 {
                     return;
                 }
-                if (cost > SimukraftReloaded.serverStates.credits)
+                if (cost > Economy.balance(atm))
                 {
                     ActionHandlers.tell(player, "The cost is " + SimukraftReloaded.displayMoney(cost) + ", but you only have "
-                            + SimukraftReloaded.displayMoney(SimukraftReloaded.serverStates.credits));
+                            + SimukraftReloaded.displayMoney(Economy.balance(atm)));
                     return;
                 }
                 for (int i = 0; i < bought.size(); i++)
@@ -135,7 +136,7 @@ public final class ShopActions
                     SimukraftReloaded.theCommodities.remove(comm);
                 }
                 player.inventoryContainer.detectAndSendChanges();
-                SimukraftReloaded.serverStates.credits -= cost;
+                Economy.spend(atm, cost);
                 ActionHandlers.tell(player, "Bought commodities worth " + SimukraftReloaded.displayMoney(cost));
                 Effects.sound(player.worldObj, player.posX, player.posY, player.posZ, "ashjacksimukraftreloaded:cash");
             }
@@ -146,6 +147,7 @@ public final class ShopActions
         {
             public void run(EntityPlayerMP player, NBTTagCompound data)
             {
+                V3 here = new V3(player.posX, player.posY, player.posZ, player.dimension); // paid by the town it's in
                 int[] quantities = data.getIntArray("qty");
                 ArrayList<IInventory> chests = Job.inventoriesFindClosest(new V3(player.posX, player.posY, player.posZ, player.dimension), 5);
                 if (chests == null || chests.isEmpty())
@@ -162,7 +164,7 @@ public final class ShopActions
                 {
                     return;
                 }
-                if (SimukraftReloaded.serverStates.credits < total)
+                if (Economy.balance(here) < total)
                 {
                     ActionHandlers.tell(player, "Merchant: 'Sorry, your card has been declined, you could try buying less.'");
                     return;
@@ -172,7 +174,7 @@ public final class ShopActions
                     for (int c = 0; c < quantities[i]; c++)
                     {
                         placeIntoChest(chests.get(0), new ItemStack(MERCHANT_GOODS[i], 64), 0, 64);
-                        SimukraftReloaded.serverStates.credits -= PricesForBlocks.getPrice(MERCHANT_GOODS[i], true);
+                        Economy.spend(here, PricesForBlocks.getPrice(MERCHANT_GOODS[i], true));
                     }
                     if (quantities[i] > 0)
                     {
@@ -189,6 +191,7 @@ public final class ShopActions
         {
             public void run(EntityPlayerMP player, NBTTagCompound data)
             {
+                V3 here = new V3(player.posX, player.posY, player.posZ, player.dimension); // paid to the town it's in
                 ArrayList<IInventory> chests = Job.inventoriesFindClosest(new V3(player.posX, player.posY, player.posZ, player.dimension), 5);
                 if (chests == null || chests.isEmpty())
                 {
@@ -208,7 +211,7 @@ public final class ShopActions
                     float price = PricesForBlocks.getPrice(block, false);
                     if (price > 0)
                     {
-                        SimukraftReloaded.serverStates.credits += price;
+                        Economy.earn(here, price);
                         PricesForBlocks.adjustPrice(block, false); // the old code passed a null block here
                         total += price;
                         chest.setInventorySlotContents(g, null);

@@ -1,5 +1,9 @@
 package ashjack.simukraftreloaded.network;
 
+import ashjack.simukraftreloaded.core.town.Town;
+import ashjack.simukraftreloaded.core.town.Towns;
+import ashjack.simukraftreloaded.folk.FolkData;
+import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 import java.util.HashMap;
 
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -39,6 +43,34 @@ public final class ServerActions
         send(name, new NBTTagCompound());
     }
 
+    /**
+     * the town an action is about: the box (or ATM, or Sim) it's for. Only a town's owner and members (and ops) may
+     * hire, fire, build, trade and so on in it; an unclaimed town is anyone's until someone claims it.
+     */
+    private static Town townConcerned(NBTTagCompound data)
+    {
+        for (String key : new String[] {"box", "atm"})
+        {
+            if (data.hasKey(key) || data.hasKey(key + "X") || data.hasKey(key + "x"))
+            {
+                V3 v = ActionHandlers.getV3(data, key);
+                if (v != null)
+                {
+                    return Towns.at(v);
+                }
+            }
+        }
+        for (String key : new String[] {"name", "folk"})
+        {
+            FolkData f = data.hasKey(key) ? FolkData.getFolkByName(data.getString(key)) : null;
+            if (f != null)
+            {
+                return Towns.of(f);
+            }
+        }
+        return null;
+    }
+
     /** server thread */
     public static void handle(EntityPlayerMP player, String name, NBTTagCompound data)
     {
@@ -49,6 +81,13 @@ public final class ServerActions
             return;
         }
         SimukraftReloaded.log.info("ServerActions: " + player.getCommandSenderName() + " -> " + name + " " + data);
+        Town town = townConcerned(data);
+        if (town != null && town.isClaimed() && !town.canManage(player))
+        {
+            ActionHandlers.tell(player, "That's in " + town.name + ", " + town.owner + "'s town - only its owner and members can do that");
+            MirrorSync.sendTo(player);
+            return;
+        }
         try
         {
             action.run(player, data);

@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import net.minecraft.server.MinecraftServer;
 import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
@@ -255,7 +256,7 @@ public class JobGlassMaker extends Job implements Serializable
                 theFolk.statusText = "Putting glass into storage";
                 boolean placedOk = inventoriesPut(factoryChests, currentGlass, true);
 
-                SimukraftReloaded.states().credits -= (0.005 * currentGlass.stackSize);
+                Economy.pay(theFolk, (0.005 * currentGlass.stackSize));
                 factoryFurnace.setInventorySlotContents(2, null);
             }
             else if (!outOfSand && !outOfFuel)

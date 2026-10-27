@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -328,7 +329,7 @@ public class JobBaker extends Job implements Serializable
         {
             if (pay > 0)
             {
-            	SimukraftReloaded.states().credits -= pay;
+            	Economy.pay(theFolk, pay);
                 SimukraftReloaded.sendChat(theFolk.name
                                       + " has made some bread and has been paid "
                                       + SimukraftReloaded.displayMoney(pay) + " Sim-u-credits.");

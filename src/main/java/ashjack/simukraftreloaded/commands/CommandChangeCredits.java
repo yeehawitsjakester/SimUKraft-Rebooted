@@ -1,5 +1,9 @@
 package ashjack.simukraftreloaded.commands;
 
+import net.minecraft.entity.player.EntityPlayer;
+import ashjack.simukraftreloaded.core.town.Towns;
+import ashjack.simukraftreloaded.core.town.Town;
+import ashjack.simukraftreloaded.core.town.Economy;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,7 +58,13 @@ public class CommandChangeCredits implements ICommand{
 		{
 			if(argString.length < 2)
 			{
-				SimukraftReloaded.states().credits = Float.parseFloat(argString[0]);
+				// the treasury of the town you're standing in (the shared credits out in the wilds)
+				Town town = sender instanceof EntityPlayer ? Towns.at((EntityPlayer) sender) : null;
+				Economy.set(town, Float.parseFloat(argString[0]));
+				if (town != null)
+				{
+					town.save();
+				}
 				SimukraftReloaded.states().saveStates();
 			}
 			else

@@ -18,6 +18,8 @@ public class HudPacket implements IMessage
     public int population;
     public int dayOfWeek;
     public String worldName = "";
+    /** the town whose treasury credits is, or empty for the wilds */
+    public String townName = "";
 
     public HudPacket() {}
 
@@ -30,6 +32,7 @@ public class HudPacket implements IMessage
         population = buf.readInt();
         dayOfWeek = buf.readInt();
         worldName = ByteBufUtils.readUTF8String(buf);
+        townName = ByteBufUtils.readUTF8String(buf);
     }
 
     @Override
@@ -41,6 +44,7 @@ public class HudPacket implements IMessage
         buf.writeInt(population);
         buf.writeInt(dayOfWeek);
         ByteBufUtils.writeUTF8String(buf, worldName);
+        ByteBufUtils.writeUTF8String(buf, townName);
     }
 
     public static class Handler implements IMessageHandler<HudPacket, IMessage>
@@ -58,6 +62,7 @@ public class HudPacket implements IMessage
                     ClientMirror.states.dayOfWeek = m.dayOfWeek;
                     ClientMirror.population = m.population;
                     ClientMirror.worldName = m.worldName;
+                    ClientMirror.townName = m.townName;
                     try
                     {
                         GameMode.setGameModeFromNumber(m.gameModeNumber);

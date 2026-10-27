@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import net.minecraft.server.MinecraftServer;
 import ashjack.simukraftreloaded.common.Effects;
 import net.minecraft.block.material.Material;
@@ -732,7 +733,7 @@ public class JobMiner extends Job implements Serializable
 
         if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
         {
-            SimukraftReloaded.states().credits -= (0.012f);
+            Economy.pay(theFolk, (0.012f));
             int b4 = (int)Math.floor(theFolk.levelMiner);
 
             if (theFolk.levelMiner < 10.0f)

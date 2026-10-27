@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import net.minecraft.server.MinecraftServer;
 import ashjack.simukraftreloaded.common.Effects;
 import java.util.ArrayList;
@@ -495,7 +496,7 @@ public class JobTerraformer extends Job
 
                 if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                 {
-                    SimukraftReloaded.states().credits -= 0.009;
+                    Economy.pay(theFolk, 0.009);
                 }
             }
             else if (theType == TerraformerType.NATURE)
@@ -508,7 +509,7 @@ public class JobTerraformer extends Job
 
                     if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                     {
-                        SimukraftReloaded.states().credits -= 0.009;
+                        Economy.pay(theFolk, 0.009);
                     }
 
                     runDelay = 500;
@@ -551,7 +552,7 @@ public class JobTerraformer extends Job
                 if (!jobWorld.isRemote)
                 {
                     jobWorld.setBlock(v.x.intValue(), v.y.intValue(), v.z.intValue(), Blocks.air, 0, 0x03);
-                    SimukraftReloaded.states().credits -= 0.009;
+                    Economy.pay(theFolk, 0.009);
                 }
             }
             else if (theType == TerraformerType.FLATTENIZER)
@@ -580,7 +581,7 @@ public class JobTerraformer extends Job
 
                         if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                         {
-                            SimukraftReloaded.states().credits -= 0.009;
+                            Economy.pay(theFolk, 0.009);
                         }
                     }
                 }
@@ -598,7 +599,7 @@ public class JobTerraformer extends Job
 
                     if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                     {
-                        SimukraftReloaded.states().credits -= 0.009;
+                        Economy.pay(theFolk, 0.009);
                     }
                 }
             }
@@ -622,7 +623,7 @@ public class JobTerraformer extends Job
 
                             if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                             {
-                                SimukraftReloaded.states().credits -= 0.009;
+                                Economy.pay(theFolk, 0.009);
                             }
                         }
                     }
@@ -636,7 +637,7 @@ public class JobTerraformer extends Job
 
                         if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                         {
-                            SimukraftReloaded.states().credits -= 0.009;
+                            Economy.pay(theFolk, 0.009);
                         }
                     }
                 }
@@ -651,7 +652,7 @@ public class JobTerraformer extends Job
 
                     if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                     {
-                        SimukraftReloaded.states().credits -= 0.009;
+                        Economy.pay(theFolk, 0.009);
                     }
                 }
             }
@@ -664,7 +665,7 @@ public class JobTerraformer extends Job
 
                     if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                     {
-                        SimukraftReloaded.states().credits -= 0.009;
+                        Economy.pay(theFolk, 0.009);
                     }
 
                     inventoriesPut(constructorChests, new ItemStack(Items.lava_bucket, 1), false);
@@ -680,7 +681,7 @@ public class JobTerraformer extends Job
                     
                     if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                     {
-                        SimukraftReloaded.states().credits -= 0.009;
+                        Economy.pay(theFolk, 0.009);
                     }
                     
                     if (counter % 4==0) {

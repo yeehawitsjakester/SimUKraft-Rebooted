@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import net.minecraft.server.MinecraftServer;
 import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
@@ -292,7 +293,7 @@ public class JobButcher extends Job implements Serializable
 
             if (pay > 0)
             {
-            	SimukraftReloaded.states().credits -= pay;
+            	Economy.pay(theFolk, pay);
                 SimukraftReloaded.sendChat(theFolk.name
                                       + " has collected meat and has been paid "
                                       + SimukraftReloaded.displayMoney(pay) + " Sim-u-credits.");

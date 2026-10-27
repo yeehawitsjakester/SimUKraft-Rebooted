@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Random;
@@ -294,7 +295,7 @@ public class JobGrocer extends Job implements Serializable
             pay += (float)(carrots * 0.05);
             pay += (float)(potatoes * 0.05);
             inventoriesTransferFromFolk(theFolk.inventory, grocerChests, null);
-            SimukraftReloaded.states().credits -= pay;
+            Economy.pay(theFolk, pay);
             step = 2;
         }
         else if (step == 2)

@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -146,7 +147,7 @@ private void stageStoringEggs() {
 			theFolk.statusText = "Can't work, the chests are full";
 			theStage=Stage.CANTWORK;
 		} else {
-			SimukraftReloaded.states().credits -= 0.05f;
+			Economy.pay(theFolk, 0.05f);
 	        theStage = Stage.FEEDINGCHICKENS;
 		}
 	} else {

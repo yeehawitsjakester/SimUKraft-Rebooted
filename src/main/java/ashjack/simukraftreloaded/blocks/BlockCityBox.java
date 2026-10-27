@@ -1,5 +1,8 @@
 package ashjack.simukraftreloaded.blocks;
 
+import ashjack.simukraftreloaded.core.registry.SimukraftReloadedTabs;
+import ashjack.simukraftreloaded.core.town.Towns;
+import ashjack.simukraftreloaded.core.town.Town;
 import net.minecraft.client.gui.GuiScreen;
 import ashjack.simukraftreloaded.client.ClientGuiOpener;
 import java.util.Random;
@@ -33,7 +36,7 @@ public class BlockCityBox extends Block
         setHardness(10F);
         setResistance(1.0F);
         setBlockName("SUKcitybox");
-        //this.setCreativeTab(CreativeTabs.tabMisc);
+        setCreativeTab(SimukraftReloadedTabs.SUKTab);
 	}
 	 
 	 @SideOnly(Side.CLIENT)
@@ -74,10 +77,20 @@ public class BlockCityBox extends Block
 	        return true;
 	    }
 
+	    /**
+	     * the centre of a town can't be broken (or a town lost by a stray pickaxe): its owner disbands the town from
+	     * the City Box screen, which gives the box back
+	     */
 	    @Override
-	    public int quantityDropped(Random random)
+	    public float getPlayerRelativeBlockHardness(EntityPlayer player, World world, int x, int y, int z)
 	    {
-	        return 0;   // no recipe and no drop
+	        Town town = Towns.at(world.provider.dimensionId, x, z);
+	        if (town != null && town.centre != null && town.centre.x.intValue() == x && town.centre.y.intValue() == y
+	                && town.centre.z.intValue() == z)
+	        {
+	            return 0F;
+	        }
+	        return super.getPlayerRelativeBlockHardness(player, world, x, y, z);
 	    }
 
 }

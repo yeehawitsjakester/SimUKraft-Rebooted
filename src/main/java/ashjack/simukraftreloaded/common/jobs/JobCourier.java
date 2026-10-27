@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import java.io.Serializable;
 import java.util.ArrayList;
 
@@ -360,7 +361,7 @@ public class JobCourier extends Job implements Serializable
             while (theFolk.inventory.size() > 0)
             {
                 int oldSize = theFolk.inventory.size();
-                SimukraftReloaded.states().credits -= 0.11f;
+                Economy.pay(theFolk, 0.11f);
                 ItemStack invItem = theFolk.inventory.get(0);
 
                 if (theFolk.inventory.size() > 1)

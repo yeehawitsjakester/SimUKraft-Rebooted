@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -316,7 +317,7 @@ public class JobWarehouse extends Job
         {
             if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
             {
-                SimukraftReloaded.states().credits -= 0.05f;
+                Economy.pay(theFolk, 0.05f);
             }
             SimukraftReloaded.log.info("Warehouse: " + theFolk.name + " delivered " + given + " "
                     + new ItemStack(current.item).getDisplayName() + " to " + current.builder);

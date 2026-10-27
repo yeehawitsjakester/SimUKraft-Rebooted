@@ -178,7 +178,8 @@ public class ClientTickHandler
                     {
                         hud.drawString(mc.fontRenderer, worldname + " (" + SimukraftReloaded.getDayOfWeek() +
                                        ") - Population: " + ClientMirror.population +
-                                       "   Sim-U-credits: " + SimukraftReloaded.displayMoney(SimukraftReloaded.states().credits), hud.width / 2, 2 + HUDoffset, 0xffffff);
+                                       "   " + (ClientMirror.townName.isEmpty() ? "Sim-U-credits" : ClientMirror.townName + " treasury")
+                                       + ": " + SimukraftReloaded.displayMoney(SimukraftReloaded.states().credits), hud.width / 2, 2 + HUDoffset, 0xffffff);
                     }
                 }
                 }

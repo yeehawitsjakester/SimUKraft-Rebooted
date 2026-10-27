@@ -1,5 +1,6 @@
 package ashjack.simukraftreloaded.common.jobs;
 
+import ashjack.simukraftreloaded.core.town.Economy;
 import net.minecraft.server.MinecraftServer;
 import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
@@ -177,7 +178,7 @@ public class JobFisherman extends Job implements Serializable
         timeSinceLastCaughtFish = System.currentTimeMillis();
         theFolk.statusText = "Caught a fish, yay!";
         fishCount++;
-        SimukraftReloaded.states().credits -= (0.02f);
+        Economy.pay(theFolk, (0.02f));
         dockChests = inventoriesFindClosest(theFolk.employedAt, 4);
 
         if (dockChests.size() == 0)

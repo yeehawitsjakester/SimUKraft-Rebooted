@@ -40,6 +40,9 @@ import ashjack.simukraftreloaded.common.jobs.JobSoldier;
 import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
 import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
+import ashjack.simukraftreloaded.core.town.Economy;
+import ashjack.simukraftreloaded.core.town.Town;
+import ashjack.simukraftreloaded.core.town.Towns;
 import ashjack.simukraftreloaded.core.game.GameMode;
 import ashjack.simukraftreloaded.folk.FolkData;
 import ashjack.simukraftreloaded.proxies.CommonProxy.Commodity;
@@ -143,6 +146,7 @@ public class SimukraftReloaded
     	Side side = cpw.mods.fml.common.FMLCommonHandler.instance().getEffectiveSide();
     	log.info("RESETTING and loading world on "+side.toString()+" SIDE"); 
     	buildings().clear();
+    	Towns.all().clear();
         courierPoints().clear();
         courierTasks().clear();
         miningBoxes().clear();
@@ -216,6 +220,7 @@ public class SimukraftReloaded
         folks().clear();
         Building.initialiseAllBuildings(); //load ALL buildings off disk and init them
         Building.loadAllBuildings();	   //load buildings in this world
+        Towns.loadAll();                   // after the buildings: a world from before towns makes one of them
         CourierTask.loadCourierTasksAndPoints();
         MiningBox.loadMiningBoxes();
         FarmingBox.loadFarmingBoxes();
@@ -587,9 +592,8 @@ public class SimukraftReloaded
         //collect rent
         // collect rent - this used to run on a background thread that slept 3s and then changed credits from it
         {
-                float totalRent = 0f;
-                float totalHotel = 0f;
-                float totalCorpTax = 0f;
+                // each town takes the rent of the homes inside it (and the wilds' go to the old shared credits)
+                java.util.LinkedHashMap<Town, float[]> takings = new java.util.LinkedHashMap<Town, float[]>();
 
                 if (GameMode.gameMode != GameMode.GAMEMODES.CREATIVE)
                 {
@@ -603,43 +607,27 @@ public class SimukraftReloaded
                             {
                                 building.rent = 1f;
                             }
-
-                            log.fine("Building rent for " + building.displayNameWithoutPK + ": " + building.rent + "(" +
-                                building.blocksInBuilding + ")");
-                            if (building.isHotel())
+                            Town town = Towns.at(building.primaryXYZ);
+                            float[] t = takings.get(town);
+                            if (t == null)
                             {
-                                totalHotel += building.rent;
+                                takings.put(town, t = new float[2]);
                             }
-                            else
-                            {
-                                totalRent += building.rent;
-                            }
+                            t[building.isHotel() ? 1 : 0] += building.rent;
                         }
-                        
-                        /*if (building.type.contentEquals("commercial") && FolkData.getFolkByEmployedAt(building.primaryXYZ) != null)
-                        {
-                            if (building.corpTax == null || building.corpTax == 0f)
-                            {
-                                building.corpTax = 1f;
-                            }
-
-                            log.info("Building corpTax for " + building.displayNameWithoutPK + ": " + building.corpTax + "(" +
-                                building.blocksInBuilding + ")");
-                            totalRent += building.corpTax;
-                        }*/
                     }
                 }
 
-                if (totalRent > 0f || totalHotel > 0f)
+                for (java.util.Map.Entry<Town, float[]> e : takings.entrySet())
                 {
-                    sendChat("Collected " + displayMoney(totalRent) + " Sim-u-credits in rent today.");
-                    if (totalHotel > 0f)
-                    {
-                        sendChat("Hotel guests paid " + displayMoney(totalHotel) + " Sim-u-credits last night.");
-                    }
-                    sendChat("Collected " + displayMoney(totalCorpTax) + " Sim-u-credits in corporation tax today.");
-                    states().credits += totalRent + totalHotel;
-                    states().credits += totalCorpTax;
+                    Town town = e.getKey();
+                    float rent = e.getValue()[0], hotel = e.getValue()[1];
+                    Economy.earn(town, rent + hotel);
+                    sendChat((town == null ? "Collected " : town.name + " collected ") + displayMoney(rent) + " Sim-u-credits in rent today"
+                            + (hotel > 0f ? ", and hotel guests paid " + displayMoney(hotel) : "") + ".");
+                }
+                if (!takings.isEmpty())
+                {
                     for (Object o : MinecraftServer.getServer().getConfigurationManager().playerEntityList)
                     {
                         EntityPlayer p = (EntityPlayer) o;
@@ -737,7 +725,7 @@ public class SimukraftReloaded
                                     + (job.kills > 0 ? "killing " + job.kills + " hostile mobs" : "")
                                     + (job.kills > 0 && job.bounty > 0 ? " and " : "")
                                     + (job.bounty > 0 ? "bounties on bandits and arrests" : "") + " yesterday.");
-                            states().credits -= pay;
+                            Economy.pay(folk, pay);
                             job.kills = 0;
                             job.bounty = 0;
                         }

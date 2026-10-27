@@ -75,6 +75,20 @@ public class Placement
         }
         int[] f = r.bounds;
 
+        // not across a border into another town
+        ashjack.simukraftreloaded.core.town.Town home = ashjack.simukraftreloaded.core.town.Towns.at(box);
+        for (ashjack.simukraftreloaded.core.town.Town other : ashjack.simukraftreloaded.core.town.Towns.all())
+        {
+            if (other != home && other.dimension() == box.theDimension
+                    && f[0] <= other.centre.x + other.radius && f[3] >= other.centre.x - other.radius
+                    && f[2] <= other.centre.z + other.radius && f[5] >= other.centre.z - other.radius)
+            {
+                b.placementStatus = "It would reach over into " + other.name + " - move it";
+                r.blocked = true;
+                return false;
+            }
+        }
+
         // the other buildings' outlines, to say whose blocks are in the way
         List<Object[]> others = new ArrayList<Object[]>();
         for (Building o : new ArrayList<Building>(SimukraftReloaded.serverBuildings))
