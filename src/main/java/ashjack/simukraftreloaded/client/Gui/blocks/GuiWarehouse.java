@@ -23,7 +23,7 @@ import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 /** what a warehouse has in stock and where, and the deliveries under way (sent by the keeper, see JobWarehouse) */
 public class GuiWarehouse extends GuiScreen
 {
-    private static final String[] COLUMNS = {"Warehouse", "Mines", "Leftovers", "ME"};
+    private static final String[] COLUMNS = {"Warehouse", "Mines", "Leftovers", "ME", "Factories"};
     private static final int ROW = 18, TOP = 62;
 
     private final V3 location;

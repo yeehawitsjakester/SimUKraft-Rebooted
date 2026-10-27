@@ -39,7 +39,7 @@ public class JobWarehouse extends Job
         IDLE, FETCHING, DELIVERING, RETURNING;
     }
 
-    /** a trip under way; a haul back to the warehouse has no item (anything) and no builder */
+    /** a trip under way: to a builder (or other worker), or a haul back to the warehouse (of anything, or one item) */
     static class Delivery
     {
         String keeper;
@@ -48,6 +48,7 @@ public class JobWarehouse extends Job
         Source from;
         Item item;
         int qty;
+        boolean haul;
     }
 
     /** every keeper's trips, so they don't promise the same items twice */
@@ -194,11 +195,12 @@ public class JobWarehouse extends Job
                     + " in stock, nothing to deliver";
             return;
         }
-        if (d.item == null)
+        if (d.haul)
         {
             current = d;
             underWay.add(d);
-            theFolk.statusText = "Fetching " + d.from.kind.label + " back to the warehouse";
+            theFolk.statusText = "Fetching " + (d.item == null ? d.from.kind.label : new ItemStack(d.item).getDisplayName()
+                    + " from " + d.from.kind.label) + " back to the warehouse";
             theFolk.isWorking = true;
             theFolk.gotoXYZ(d.from.at, null);
             theStage = Stage.FETCHING;
@@ -255,7 +257,7 @@ public class JobWarehouse extends Job
             goBack();
             return;
         }
-        if (current.item == null)
+        if (current.haul)
         {
             // a haul: carry it home, where stageIdle puts it away
             theFolk.statusText = "Bringing " + carried(null) + " items back to the warehouse";
@@ -423,6 +425,8 @@ public class JobWarehouse extends Job
         d.builder = "the warehouse";
         d.to = theFolk.employedAt.clone();
         d.from = best;
+        d.item = best.only; // from a factory, only what it makes
+        d.haul = true;
         d.qty = TRIP_MAX;
         return d;
     }
@@ -432,7 +436,7 @@ public class JobWarehouse extends Job
     {
         for (Delivery d : underWay)
         {
-            if (d.item == null && d.from.kind == s.kind && d.from.at.isSameCoordsAs(s.at, true, true))
+            if (d.haul && d.from.kind == s.kind && d.from.at.isSameCoordsAs(s.at, true, true))
             {
                 return true;
             }
@@ -640,7 +644,7 @@ public class JobWarehouse extends Job
         ArrayList<String> trips = new ArrayList<String>();
         for (Delivery d : underWay)
         {
-            if (d.item != null)
+            if (!d.haul)
             {
                 trips.add(d.keeper + "|" + d.qty + "|" + Item.itemRegistry.getNameForObject(d.item) + "|" + d.builder + "|" + d.from.kind.label);
             }

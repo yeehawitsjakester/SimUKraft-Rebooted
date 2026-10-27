@@ -4,6 +4,9 @@ import net.minecraft.server.MinecraftServer;
 import ashjack.simukraftreloaded.common.Effects;
 import java.io.Serializable;
 import java.util.ArrayList;
+import ashjack.simukraftreloaded.common.warehouse.WarehouseStock;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 import ashjack.simukraftreloaded.common.jobs.Job.Vocation;
 import ashjack.simukraftreloaded.common.jobs.JobMiner.Stage;
@@ -80,239 +83,63 @@ public class JobGlassMaker extends Job implements Serializable
 
         super.onUpdateGoingToWork(theFolk);
 
-        if (theStage == Stage.IDLE)
+        if (theFolk.action != FolkAction.ATWORK)
         {
-            runDelay = 2000;
-            theStage = Stage.SCANFORSAND;
             return;
         }
-        else if (theStage == Stage.COLLECTSAND ||
-                 theStage == Stage.GOTOSANDBLOCK ||
-                 theStage == Stage.SCANFORSAND)
-        {
-            runDelay = 500 / 2;
-        }
-        else
-        {
-            runDelay = 2000;
-        }
-
+        runDelay = 4000;
         if (System.currentTimeMillis() - timeSinceLastRun < runDelay)
         {
             return;
         }
-
         timeSinceLastRun = System.currentTimeMillis();
 
-        if (factoryFurnace == null)
-        {
-            factoryFurnace = findFurnace(theFolk.employedAt);
-        }
-
-        if (theStage == Stage.IDLE && SimukraftReloaded.isDayTime())
-        {
-        }
-        else if (theStage == Stage.SCANFORSAND)
-        {
-            stageScanForSand();
-        }
-        else if (theStage == Stage.GOTOSANDBLOCK)
-        {
-            stageGotoSandBlock();
-        }
-        else if (theStage == Stage.COLLECTSAND)
-        {
-            stageCollectSand();
-        }
-        else if (theStage == Stage.RETURNSAND)
-        {
-            stageReturnSand();
-        }
-        else if (theStage == Stage.USEFURNACE)
-        {
-            stageUseFurnace();
-        }
-        else if (theStage == Stage.CANTWORK)
-        {
-            stageCantWork();
-        }
+        // sand and fuel come from the warehouse now (miners bring coal back to it); nobody digs a pit behind the
+        // factory any more. The keeper also takes the glass away, to stock or to whichever builder needs it.
+        theStage = Stage.USEFURNACE;
+        stageUseFurnace();
     }
 
-    private void stageCantWork()
+    /** what a warehouse keeper should bring: sand to keep the furnace going, and coal if there's no fuel to hand */
+    @Override
+    public Map<Item, Integer> remainingNeeds()
     {
-        theFolk.statusText = "There's no sand around here!";
-        return;
+        Map<Item, Integer> needs = new LinkedHashMap<Item, Integer>();
+        if (theFolk == null || theFolk.employedAt == null || jobWorld == null)
+        {
+            return needs;
+        }
+        ArrayList<IInventory> chests = WarehouseStock.storageNear(jobWorld, theFolk.employedAt, 4);
+        TileEntityFurnace furnace = findFurnace(theFolk.employedAt);
+        Item sand = Item.getItemFromBlock(Blocks.sand);
+        int haveSand = WarehouseStock.count(chests, sand) + slotCount(furnace, 0, sand);
+        int haveFuel = WarehouseStock.count(chests, Items.coal) + slotCount(furnace, 1, Items.coal)
+                + WarehouseStock.count(chests, Item.getItemFromBlock(Blocks.log)) + WarehouseStock.count(chests, Item.getItemFromBlock(Blocks.log2))
+                + WarehouseStock.count(chests, Items.lava_bucket) * 12;
+        if (haveSand < SAND_WANTED)
+        {
+            needs.put(sand, SAND_WANTED - haveSand);
+        }
+        if (haveFuel < FUEL_WANTED)
+        {
+            needs.put(Items.coal, FUEL_WANTED - haveFuel);
+        }
+        return needs;
     }
 
-    private void stageScanForSand()
+    @Override
+    public Item waitingFor()
     {
-        if (theFolk.statusText.contains("Arrived") || theFolk.statusText.contains("glass"))
-        {
-            theFolk.statusText = "Going to dig up some more sand";
-        }
-
-        try
-        {
-            blockOfSand = findClosestBlockType(theFolk.employedAt, Blocks.sand, 48, true); // was 80
-
-            if (blockOfSand == null)
-            {
-                theStage = Stage.USEFURNACE;
-                return;
-            }
-            else
-            {
-                theStage = Stage.GOTOSANDBLOCK;
-            }
-        }
-        catch (Exception e)
-        {
-       
-        }
+        return outOfFuel ? Items.coal : outOfSand ? Item.getItemFromBlock(Blocks.sand) : null;
     }
 
-    private long lastGotocmd = 0l;
+    private static final int SAND_WANTED = 128, FUEL_WANTED = 24;
+    private transient boolean outOfSand, outOfFuel;
 
-    private void stageGotoSandBlock()
+    private static int slotCount(TileEntityFurnace furnace, int slot, Item item)
     {
-        try
-        {
-            if (theFolk.theEntity != null)
-            {
-                theFolk.theEntity.swingProgress = 0.0f;
-            }
-
-            theFolk.updateLocationFromEntity();
-            double dist = theFolk.location.getDistanceTo(blockOfSand);
-
-            if (dist > 4  && System.currentTimeMillis() - lastGotocmd > 10000)
-            {
-                theFolk.stayPut = false;
-                theFolk.gotoXYZ(blockOfSand, null);
-                theFolk.stayPut = false;
-                lastGotocmd = System.currentTimeMillis();
-            }
-
-            theStage = Stage.COLLECTSAND;
-        }
-        catch (Exception e)
-        {
-            
-        }
-    }
-
-    private int gotoCount = 0;
-
-    private void stageCollectSand()
-    {
-        this.runDelay = 1000;
-        theFolk.isWorking = true;
-        theFolk.updateLocationFromEntity();
-        double dist = theFolk.location.getDistanceTo(blockOfSand);
-
-        if (dist > 6  && System.currentTimeMillis() - lastGotocmd > 10000)
-        {
-            theFolk.gotoXYZ(blockOfSand, null);
-            theFolk.stayPut = false;
-            lastGotocmd = System.currentTimeMillis();
-            gotoCount++;
-
-            if (gotoCount > 2)
-            {
-                gotoCount = 0;
-                V3 bs = blockOfSand.clone();
-                bs.y++;
-                theFolk.beamMeTo(bs);
-            }
-
-            return;
-        } //not there yet
-
-        if (dist > 6)
-        {
-            return;
-        }
-
-        try
-        {
-            if (dist < 6)
-            {
-                //theFolk.stayPut=true;
-            }
-
-            gotoCount = 0;
-            jobWorld.setBlock(blockOfSand.x.intValue(), blockOfSand.y.intValue(), blockOfSand.z.intValue(), Blocks.air, 0, 0x03);
-            Effects.sound(jobWorld, blockOfSand.x, blockOfSand.y, blockOfSand.z, "step.sand", 1f, 1f);
-            theFolk.inventory.add(new ItemStack(Item.getItemFromBlock(Blocks.sand), 1));
-            theFolk.statusText = "Diggy diggy sand, got " + theFolk.inventory.size();
-            SimukraftReloaded.states().credits -= 0.012;
-
-            if (theFolk.inventory.size() < 64)
-            {
-                theStage = Stage.SCANFORSAND;
-            }
-            else
-            {
-                theStage = Stage.RETURNSAND;
-                step = 1;
-            }
-        }
-        catch (Exception e)
-        {
-            
-        }
-    }
-
-    private void stageReturnSand()
-    {
-        theFolk.isWorking = false;
-
-        try
-        {
-            if (step == 1)
-            {
-                V3 adj = theFolk.employedAt.clone();
-                adj.y++;
-                theFolk.gotoXYZ(adj, null);
-            
-                step = 2;
-            }
-            else if (step == 2)
-            {
-                if (theFolk.gotoMethod == GotoMethod.WALK)
-                {
-                    theFolk.updateLocationFromEntity();
-                }
-
-                double dist = theFolk.location.getDistanceTo(theFolk.employedAt);
-
-                if (dist < 4)
-                {
-                    theFolk.stayPut = true;
-                    step = 3;
-                }
-                else
-                {
-                    if (theFolk.destination == null)
-                    {
-                        theFolk.gotoXYZ(theFolk.employedAt, null);
-                    }
-                }
-            }
-            else if (step == 3)
-            {
-                factoryChests = inventoriesFindClosest(theFolk.employedAt, 5);
-                openCloseChest(factoryChests.get(0), 1000);
-                boolean placed = inventoriesTransferFromFolk(theFolk.inventory, factoryChests, null);
-        
-                theStage = Stage.USEFURNACE;
-                step = 1;
-            }
-        }
-        catch (Exception e)
-        {
-           
-        }
+        ItemStack is = furnace == null ? null : furnace.getStackInSlot(slot);
+        return is != null && is.getItem() == item ? is.stackSize : 0;
     }
 
     ////  0 = sand (top)   1=fuel coal/wood/lava    2=output
@@ -355,14 +182,14 @@ public class JobGlassMaker extends Job implements Serializable
 
                 if (gotFuel == null)
                 {
-                    SimukraftReloaded.sendChat(theFolk.name + " (Glass maker) doesn't have any fuel for their furnace");
-                    theStage = Stage.SCANFORSAND;
-                    step = 1;
+                    outOfFuel = true;
+                    theFolk.statusText = "Waiting for coal from the warehouse";
+                    step = 2; // still take the glass out and top up the sand
                     return;
                 }
                 else
                 {
-    
+                    outOfFuel = false;
                     //put the fuel in the bottom slot
                     factoryFurnace.setInventorySlotContents(1, gotFuel);
                     step = 2;
@@ -371,6 +198,7 @@ public class JobGlassMaker extends Job implements Serializable
             }
             else
             {
+                outOfFuel = false;
                 step = 2;
             }
         }
@@ -391,7 +219,11 @@ public class JobGlassMaker extends Job implements Serializable
                     {
                         //place sand in top slot
                         factoryFurnace.setInventorySlotContents(0, gotSand);
-                   
+                    }
+                    outOfSand = gotSand == null;
+                    if (outOfSand)
+                    {
+                        theFolk.statusText = "Waiting for sand from the warehouse";
                     }
 
                     step = 3;
@@ -426,13 +258,12 @@ public class JobGlassMaker extends Job implements Serializable
                 SimukraftReloaded.states().credits -= (0.005 * currentGlass.stackSize);
                 factoryFurnace.setInventorySlotContents(2, null);
             }
-            else
+            else if (!outOfSand && !outOfFuel)
             {
-                theFolk.statusText = "No glass been made";
-
+                theFolk.statusText = "Making glass";
             }
 
-            theStage = Stage.SCANFORSAND;
+            step = 1;
         }
     }
 
@@ -448,6 +279,7 @@ public class JobGlassMaker extends Job implements Serializable
             theFolk.stayPut = true;
             theFolk.statusText = "Arrived at the factory";
             theStage = Stage.USEFURNACE;
+            step = 1;
         }
         else
         {

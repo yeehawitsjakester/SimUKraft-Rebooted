@@ -31,7 +31,8 @@ public class WarehouseStock
 {
     public enum Kind
     {
-        WAREHOUSE("the warehouse"), MINE("a mine"), LEFTOVERS("leftovers by a finished building"), ME("the ME network");
+        WAREHOUSE("the warehouse"), MINE("a mine"), LEFTOVERS("leftovers by a finished building"), ME("the ME network"),
+        FACTORY("a glass factory");
 
         public final String label;
 
@@ -48,6 +49,8 @@ public class WarehouseStock
         public final V3 at;
         public final ArrayList<IInventory> chests = new ArrayList<IInventory>();
         public Object network;
+        /** only this item counts as available here (a factory's output, not its supplies); null for anything */
+        public Item only;
         /** any-meta counts, for planning */
         public final Map<Item, Integer> counts = new IdentityHashMap<Item, Integer>();
 
@@ -101,7 +104,8 @@ public class WarehouseStock
         IdentityHashMap<IInventory, Boolean> seen = new IdentityHashMap<IInventory, Boolean>();
         int dim = box.theDimension;
 
-        // chests by a builder or terraformer at work are deliveries' destinations, never sources
+        // chests by a builder or terraformer at work are deliveries' destinations, never sources; a glass factory's are
+        // both: sand and fuel go in, and only its glass can be taken away
         for (FolkData f : new ArrayList<FolkData>(SimukraftReloaded.serverFolks))
         {
             if ((f.vocation == Vocation.BUILDER || f.vocation == Vocation.TERRAFORMER) && f.employedAt != null
@@ -111,6 +115,12 @@ public class WarehouseStock
                 {
                     seen.put(inv, true);
                 }
+            }
+            else if (f.vocation == Vocation.GLASSMAKER && f.employedAt != null && f.employedAt.theDimension == dim)
+            {
+                Source factory = chestSource(Kind.FACTORY, f.employedAt, world, seen);
+                factory.only = Item.getItemFromBlock(Blocks.glass);
+                stock.add(factory);
             }
         }
 
@@ -205,7 +215,7 @@ public class WarehouseStock
             for (int i = 0; i < inv.getSizeInventory(); i++)
             {
                 ItemStack is = inv.getStackInSlot(i);
-                if (is == null || is.getItem() == null || is.stackSize <= 0)
+                if (is == null || is.getItem() == null || is.stackSize <= 0 || s.only != null && is.getItem() != s.only)
                 {
                     continue;
                 }
