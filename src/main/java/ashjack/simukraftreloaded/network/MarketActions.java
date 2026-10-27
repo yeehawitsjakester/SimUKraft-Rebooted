@@ -114,12 +114,14 @@ public final class MarketActions
                 Town town = Towns.at(ActionHandlers.getV3(data, "atm"));
                 Item item = (Item) Item.itemRegistry.getObject(data.getString("item"));
                 int qty = Math.max(1, Math.min(2304, data.getInteger("qty")));
+                // just the one slot (the sell tab's click), or any of the item, slot by slot
+                int onlySlot = data.hasKey("slot") ? data.getInteger("slot") : -1;
                 if (town == null || item == null)
                 {
                     return;
                 }
                 TownMarket market = TownMarket.of(town);
-                float each = market.price(new ItemStack(item)) * SELL_SHARE;
+                ItemStack sample = new ItemStack(item);
                 List<IInventory> warehouse = new ArrayList<IInventory>();
                 for (Source s : TownMarket.storage(town, player.worldObj))
                 {
@@ -134,21 +136,24 @@ public final class MarketActions
                     return;
                 }
                 int sold = 0;
+                float paid = 0;
                 for (int slot = 0; slot < player.inventory.mainInventory.length && sold < qty; slot++)
                 {
                     ItemStack is = player.inventory.mainInventory[slot];
-                    if (is == null || is.getItem() != item)
+                    if (is == null || is.getItem() != item || onlySlot >= 0 && slot != onlySlot)
                     {
                         continue;
                     }
+                    sample = is;
                     int n = Math.min(is.stackSize, qty - sold);
-                    if (Economy.balance(town) < each * (sold + n))
+                    // as many as the treasury can pay for, at the falling price
+                    while (n > 0 && paid + market.sellValueAfter(is, sold, n) > Economy.balance(town))
                     {
-                        n = (int) Math.max(0, Economy.balance(town) / each - sold);
-                        if (n <= 0)
-                        {
-                            break;
-                        }
+                        n--;
+                    }
+                    if (n <= 0)
+                    {
+                        break;
                     }
                     ItemStack part = is.splitStack(n);
                     ItemStack left = WarehouseStock.put(warehouse, part);
@@ -161,6 +166,7 @@ public final class MarketActions
                     {
                         player.inventory.mainInventory[slot] = null;
                     }
+                    paid += market.sellValueAfter(is, sold, in);
                     sold += in;
                     if (left != null)
                     {
@@ -169,11 +175,10 @@ public final class MarketActions
                 }
                 if (sold == 0)
                 {
-                    ActionHandlers.tell(player, Economy.balance(town) < each ? town.name + " can't afford to buy right now"
+                    ActionHandlers.tell(player, Economy.balance(town) < market.sellValue(sample, 1) ? town.name + " can't afford to buy right now"
                             : "Nothing sold - is the warehouse full?");
                     return;
                 }
-                float paid = each * sold;
                 Economy.spend(town, paid);
                 Economy.addToWallet(player.getCommandSenderName(), paid);
                 market.count(town);

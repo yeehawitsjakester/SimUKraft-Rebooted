@@ -88,6 +88,39 @@ public class TownMarket implements Serializable
         return base * Math.max(MIN, Math.min(MAX, ratio));
     }
 
+    /** the price of one more of these once this many more are in stock */
+    public float priceWith(ItemStack is, int moreInStock)
+    {
+        float base = Market.basePrice(is);
+        float ratio = (float) Math.sqrt((demandOf(is.getItem()) + SOFTEN) / (supplyOf(is.getItem()) + moreInStock + SOFTEN));
+        return base * Math.max(MIN, Math.min(MAX, ratio));
+    }
+
+    /**
+     * what a player gets for selling this many: each one at the sell share of the price as it stands with the ones
+     * before it already in stock, so a big pile fetches less a piece than one. Shown before a sale and paid by it.
+     */
+    public float sellValue(ItemStack is, int qty)
+    {
+        float total = 0;
+        for (int k = 0; k < qty; k++)
+        {
+            total += priceWith(is, k);
+        }
+        return total * ashjack.simukraftreloaded.network.MarketActions.SELL_SHARE;
+    }
+
+    /** sellValue for n more, after `already` have gone in this same sale */
+    public float sellValueAfter(ItemStack is, int already, int n)
+    {
+        float total = 0;
+        for (int k = 0; k < n; k++)
+        {
+            total += priceWith(is, already + k);
+        }
+        return total * ashjack.simukraftreloaded.network.MarketActions.SELL_SHARE;
+    }
+
     /** someone wanted this many: Sims eating, builders needing, players buying */
     public void want(Item item, double qty)
     {

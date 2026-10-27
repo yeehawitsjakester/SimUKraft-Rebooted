@@ -28,11 +28,17 @@ import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
  * A town's market, at its bank: everything it holds or wants, with today's price (and how it's moved since
  * yesterday), how many are in stock, how much they're wanted, and the last two weeks' prices. Pick one, then buy from
  * the town's stock or sell into its warehouse with your wallet.
+ *
+ * The Sell tab shows your inventory instead: hover over anything for what one fetches now and what the stack, and all
+ * of it you're carrying, would fetch (each one sold lowers the price a little); click a stack to sell it, shift-click
+ * to sell every one of that item you have.
  */
 public class GuiMarket extends GuiScreen
 {
     private final V3 atm;
     private int scroll = 0, selected = -1, seenSync = -1;
+    private boolean selling;
+    private static final int SLOT = 18;
     private List<String> rows = new ArrayList<String>();
     private static final int TOP = 48, ROW = 18;
 
@@ -63,6 +69,8 @@ public class GuiMarket extends GuiScreen
         buttonList.clear();
         buttonList.add(new GuiButton(0, 5, 5, 50, 20, "Done"));
         buttonList.add(new GuiButton(30, width - 135, 5, 130, 20, "Sell what I'm holding"));
+        buttonList.add(new GuiButton(40, 60, 5, 40, 20, "Buy"));
+        buttonList.add(new GuiButton(41, 102, 5, 40, 20, "Sell"));
         int[] qty = {1, 8, 64};
         for (int i = 0; i < 3; i++)
         {
@@ -83,6 +91,15 @@ public class GuiMarket extends GuiScreen
             if (b.id >= 10 && b.id < 30)
             {
                 b.enabled = chosen;
+                b.visible = !selling;
+            }
+            if (b.id == 30)
+            {
+                b.visible = !selling;
+            }
+            if (b.id == 40 || b.id == 41)
+            {
+                b.enabled = selling == (b.id == 40); // the other tab
             }
         }
     }
@@ -103,6 +120,12 @@ public class GuiMarket extends GuiScreen
         if (b.id == 0)
         {
             mc.displayGuiScreen(null);
+            return;
+        }
+        if (b.id == 40 || b.id == 41)
+        {
+            selling = b.id == 41;
+            refresh();
             return;
         }
         if (b.id == 30)
@@ -134,6 +157,25 @@ public class GuiMarket extends GuiScreen
     protected void mouseClicked(int x, int y, int button)
     {
         super.mouseClicked(x, y, button);
+        if (selling)
+        {
+            int slot = slotAt(x, y);
+            ItemStack is = slot < 0 ? null : mc.thePlayer.inventory.mainInventory[slot];
+            if (is != null && button == 0)
+            {
+                boolean all = isShiftKeyDown();
+                NBTTagCompound data = new NBTTagCompound();
+                ActionHandlers.putV3(data, "atm", atm);
+                data.setString("item", String.valueOf(Item.itemRegistry.getNameForObject(is.getItem())));
+                data.setInteger("qty", all ? carried(is.getItem()) : is.stackSize);
+                if (!all)
+                {
+                    data.setInteger("slot", slot);
+                }
+                ServerActions.send("marketSell", data);
+            }
+            return;
+        }
         if (y >= TOP && y < height - 34 && x > 8 && x < width - 8)
         {
             int i = scroll + (y - TOP) / ROW;
@@ -156,12 +198,128 @@ public class GuiMarket extends GuiScreen
         }
     }
 
+    // ---------------------------------------------------------------- the sell tab
+
+    /** where the inventory grid starts: three rows of the bag, then the hotbar a little apart */
+    private int gridX()
+    {
+        return width / 2 - 9 * SLOT / 2;
+    }
+
+    private int gridY()
+    {
+        return height / 2 - 30;
+    }
+
+    /** the inventory slot under the mouse, or -1 */
+    private int slotAt(int x, int y)
+    {
+        int col = (x - gridX()) / SLOT;
+        if (x < gridX() || col > 8)
+        {
+            return -1;
+        }
+        int dy = y - gridY();
+        if (dy >= 0 && dy < 3 * SLOT)
+        {
+            return 9 + (dy / SLOT) * 9 + col;
+        }
+        int hot = dy - 3 * SLOT - 6;
+        return hot >= 0 && hot < SLOT ? col : -1;
+    }
+
+    private int[] slotPos(int slot)
+    {
+        return slot < 9 ? new int[] {gridX() + slot * SLOT, gridY() + 3 * SLOT + 6}
+                : new int[] {gridX() + (slot % 9) * SLOT, gridY() + ((slot - 9) / 9) * SLOT};
+    }
+
+    private int carried(Item item)
+    {
+        int n = 0;
+        for (ItemStack is : mc.thePlayer.inventory.mainInventory)
+        {
+            if (is != null && is.getItem() == item)
+            {
+                n += is.stackSize;
+            }
+        }
+        return n;
+    }
+
+    private void drawSelling(Town t, TownMarket m, int mx, int my)
+    {
+        drawCenteredString(fontRendererObj, "Hover for prices. Click a stack to sell it - shift-click to sell all of that item",
+                width / 2, gridY() - 24, 0xa0a0a0);
+        int hovered = -1;
+        for (int slot = 0; slot < 36; slot++)
+        {
+            int[] p = slotPos(slot);
+            boolean over = slotAt(mx, my) == slot;
+            if (over)
+            {
+                hovered = slot;
+            }
+            drawRect(p[0], p[1], p[0] + SLOT - 1, p[1] + SLOT - 1, over ? 0x80ffffff : 0x40000000);
+            drawRect(p[0] + 1, p[1] + 1, p[0] + SLOT - 2, p[1] + SLOT - 2, over ? 0x60a0a0a0 : 0x608b8b8b);
+            ItemStack is = mc.thePlayer.inventory.mainInventory[slot];
+            if (is != null)
+            {
+                drawItem(is, p[0] + 1, p[1] + 1);
+                GL11.glDisable(GL11.GL_LIGHTING);
+                itemRender.renderItemOverlayIntoGUI(fontRendererObj, mc.getTextureManager(), is, p[0] + 1, p[1] + 1);
+            }
+        }
+        ItemStack is = hovered < 0 ? null : mc.thePlayer.inventory.mainInventory[hovered];
+        if (is == null || m == null)
+        {
+            return;
+        }
+        List<String> lines = new ArrayList<String>();
+        lines.add(is.getDisplayName());
+        float now = m.price(is);
+        if (now <= 0)
+        {
+            lines.add("\u00a77" + (t == null ? "" : t.name + " ") + "won't pay for this");
+        }
+        else
+        {
+            int all = carried(is.getItem());
+            lines.add("\u00a77Price " + SimukraftReloaded.displayMoney(now) + " - one sells for \u00a7a"
+                    + SimukraftReloaded.displayMoney(m.sellValue(is, 1)));
+            if (is.stackSize > 1)
+            {
+                lines.add("\u00a77This stack of " + is.stackSize + ": \u00a7a" + SimukraftReloaded.displayMoney(m.sellValue(is, is.stackSize)));
+            }
+            if (all > is.stackSize)
+            {
+                lines.add("\u00a77All " + all + " you're carrying: \u00a7a" + SimukraftReloaded.displayMoney(m.sellValue(is, all)));
+            }
+            lines.add("\u00a78In stock " + m.supplyOf(is.getItem()) + ", wanted " + Math.round(m.demandOf(is.getItem()))
+                    + " - each one sold lowers the price");
+            if (t != null && m.sellValue(is, all) > t.treasury)
+            {
+                lines.add("\u00a7cThe treasury (" + SimukraftReloaded.displayMoney(t.treasury) + ") can't pay for all of it");
+            }
+        }
+        drawHoveringText(lines, mx, my, fontRendererObj);
+    }
+
     @Override
     public void drawScreen(int mx, int my, float partial)
     {
         drawDefaultBackground();
         Town t = town();
         TownMarket m = market();
+        if (selling)
+        {
+            drawCenteredString(fontRendererObj, (t == null ? "No town" : t.name) + " Market - selling", width / 2, 10, 0xffffff);
+            drawCenteredString(fontRendererObj, "Your wallet: " + SimukraftReloaded.displayMoney(ClientMirror.wallet)
+                    + "   Treasury: " + (t == null ? "-" : SimukraftReloaded.displayMoney(t.treasury)), width / 2, 22, 0xa0a0a0);
+            super.drawScreen(mx, my, partial);
+            drawSelling(t, m, mx, my);
+            return;
+        }
         drawCenteredString(fontRendererObj, (t == null ? "No town" : t.name) + " Market", width / 2, 10, 0xffffff);
         drawCenteredString(fontRendererObj, "Your wallet: " + SimukraftReloaded.displayMoney(ClientMirror.wallet)
                 + "   Treasury: " + (t == null ? "-" : SimukraftReloaded.displayMoney(t.treasury))
