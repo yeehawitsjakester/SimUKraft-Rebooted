@@ -1,5 +1,7 @@
 package ashjack.simukraftreloaded.blocks;
 
+import ashjack.simukraftreloaded.network.Placement;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.client.gui.GuiScreen;
 import ashjack.simukraftreloaded.client.ClientGuiOpener;
 import java.util.List;
@@ -101,6 +103,19 @@ public class BlockConstructorBox extends Block
                                     int par4, EntityPlayer thePlayer, int par6, float par7,
                                     float par8, float par9)
     {
+        V3 here = new V3((double) par2, (double) par3, (double) par4, par1World.provider.dimensionId);
+        if (thePlayer.isSneaking())
+        {
+            // shift-right-click: the go-ahead for a building waiting to be placed here
+            if (!par1World.isRemote && thePlayer instanceof EntityPlayerMP)
+            {
+                if (Placement.confirm((EntityPlayerMP) thePlayer, here))
+                {
+                    par1World.playSoundEffect(par2, par3, par4, "ashjacksimukraftreloaded:constructoractivated", 1f, 1f);
+                }
+            }
+            return true;
+        }
         if (!par1World.isRemote)
         {
             par1World.playSoundEffect(par2, par3, par4, "ashjacksimukraftreloaded:computer", 1f, 1f);

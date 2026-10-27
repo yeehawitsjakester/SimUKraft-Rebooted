@@ -199,6 +199,7 @@ public final class ActionHandlers
         });
 
         BuildingActions.register();
+        Placement.register();
         BoxActions.register();
         ShopActions.register();
     }

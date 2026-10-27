@@ -30,6 +30,7 @@ import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.building.BuildingCategory;
 import ashjack.simukraftreloaded.core.building.MotelPlan;
+import ashjack.simukraftreloaded.network.Placement;
 import ashjack.simukraftreloaded.core.building.ApartmentConversion;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.folk.FolkData;
@@ -179,7 +180,19 @@ public class GuiBuildingConstructor extends GuiScreen
 
             if (currentPage == 0)
             {
-                drawCenteredString(fontRendererObj, "Please choose a task for this building constructor", width / 2, 100, 0xffffaa);
+                Building placing = Placement.waitingAt(constructorLoc);
+                if (placing != null)
+                {
+                    drawCenteredString(fontRendererObj, "Placing the " + placing.displayNameWithoutPK + " - see the outline", width / 2, 55, 0xffffaa);
+                    drawCenteredString(fontRendererObj, placing.placementStatus, width / 2, 66,
+                            placing.placementStatus.startsWith("It would destroy") || placing.placementStatus.startsWith("Couldn't")
+                            || placing.placementStatus.startsWith("Part") ? 0xff8080 : 0xaaffaa);
+                    drawCenteredString(fontRendererObj, "\u00a77Start it here, or shift-right-click the constructor box with an empty hand", width / 2, 136, 0xffffff);
+                }
+                else
+                {
+                    drawCenteredString(fontRendererObj, "Please choose a task for this building constructor", width / 2, 100, 0xffffaa);
+                }
             }
             else if (currentPage == 1)
             {
@@ -417,6 +430,18 @@ public class GuiBuildingConstructor extends GuiScreen
                 ((GuiButton)buttonList.get(7)).enabled = false;
             }
 
+            if (Placement.waitingAt(constructorLoc) != null)
+            {
+                // move it before anyone builds it (left/right and nearer/further as seen from the box)
+                String[] moves = {"< Left", "Right >", "Closer", "Further", "Up", "Down"};
+                for (int m = 0; m < moves.length; m++)
+                {
+                    buttonList.add(new GuiButton(40 + m, width / 2 - 183 + m * 61, 80, 60, 20, moves[m]));
+                }
+                buttonList.add(new GuiButton(46, width / 2 - 101, 104, 100, 20, "Start building"));
+                buttonList.add(new GuiButton(47, width / 2 + 1, 104, 100, 20, "Cancel it"));
+            }
+
         }
         else if (currentPage == 1)  	///choose type of building
         {
@@ -584,6 +609,24 @@ public class GuiBuildingConstructor extends GuiScreen
             return;
         }
 
+        if (currentPage == 0 && guibutton.id >= 40 && guibutton.id <= 47)
+        {
+            NBTTagCompound data = new NBTTagCompound();
+            ActionHandlers.putV3(data, "box", constructorLoc);
+            if (guibutton.id <= 45)
+            {
+                int[][] step = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, -1}};
+                data.setInteger("ltr", step[guibutton.id - 40][0]);
+                data.setInteger("ftb", step[guibutton.id - 40][1]);
+                data.setInteger("up", step[guibutton.id - 40][2]);
+                ServerActions.send("movePlacement", data);
+                return;
+            }
+            ServerActions.send(guibutton.id == 46 ? "confirmPlacement" : "cancelPlacement", data);
+            mc.displayGuiScreen(null);
+            mc.setIngameFocus();
+            return;
+        }
         if (currentPage == 0)
         {
             if (guibutton.displayString.contentEquals("Choose building"))   //chosen to construct a building

@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.building.MotelPlan;
+import ashjack.simukraftreloaded.network.Placement;
 import ashjack.simukraftreloaded.core.building.ApartmentConversion;
 import ashjack.simukraftreloaded.core.game.GameMode;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
@@ -40,6 +41,7 @@ public class JobBuilder extends Job implements Serializable
 
     private transient ArrayList<IInventory> constructorChests = new ArrayList<IInventory>();
     private transient Building theBuilding = null;
+    private transient long lastBoxCheck = 0;
     private transient EntityConBox theConBox = null;
     private transient long lastNotifiedOfMaterials = 0;
 
@@ -190,12 +192,28 @@ public class JobBuilder extends Job implements Serializable
 
     private void stageBlueprint()
     {
+        Building saved = Building.getBuildingByConBox(theFolk.employedAt);
+        if (saved != null && saved.awaitingAt != null)
+        {
+            theFolk.statusText = "Waiting for the go-ahead on the " + saved.displayNameWithoutPK + " (shift-right-click the constructor box)";
+            return;
+        }
         if (theFolk.theBuilding == null)
         {
-            Building pending = Building.getBuildingByConBox(theFolk.employedAt);
-            if (pending != null && !pending.buildingComplete)
+            if (saved != null && !saved.buildingComplete)
             {
-                theFolk.theBuilding = pending;
+                theFolk.theBuilding = saved;
+            }
+        }
+        else if (saved != null && saved != theFolk.theBuilding && saved.displayName.equals(theFolk.theBuilding.displayName))
+        {
+            // resumed after a restart with a fresh copy of the blueprint: keep where it was placed
+            theFolk.theBuilding.offsetLtr = saved.offsetLtr;
+            theFolk.theBuilding.offsetFtb = saved.offsetFtb;
+            theFolk.theBuilding.offsetUp = saved.offsetUp;
+            if (theFolk.theBuilding.conBoxLocation == null)
+            {
+                theFolk.theBuilding.conBoxLocation = saved.conBoxLocation;
             }
         }
         theBuilding = theFolk.theBuilding;
@@ -338,14 +356,30 @@ public class JobBuilder extends Job implements Serializable
             return;
         }
 
+        // no constructor box, no building: it's been broken (or built over) - stop rather than carry on regardless
+        if (jobWorld != null && System.currentTimeMillis() - lastBoxCheck > 5000)
+        {
+            lastBoxCheck = System.currentTimeMillis();
+            int x = theFolk.employedAt.x.intValue(), y = theFolk.employedAt.y.intValue(), z = theFolk.employedAt.z.intValue();
+            if (jobWorld.blockExists(x, y, z) && jobWorld.getBlock(x, y, z) != SimukraftReloadedBlocks.buildingConstructor)
+            {
+                SimukraftReloaded.sendChat(theFolk.name + " has stopped building the " + theBuilding.displayNameWithoutPK
+                        + ": its constructor box is gone");
+                theFolk.selfFire();
+                return;
+            }
+        }
+
         if (step == 1)
         {
-            cx = theFolk.employedAt.x.intValue();
-            cy = theFolk.employedAt.y.intValue();
-            cz = theFolk.employedAt.z.intValue();
-            ex = theFolk.employedAt.x.intValue();
-            ey = theFolk.employedAt.y.intValue();
-            ez = theFolk.employedAt.z.intValue();
+            // laid out from the box, moved however far it was moved when it was placed
+            V3 origin = theBuilding.layoutBox(theFolk.employedAt);
+            cx = origin.x.intValue();
+            cy = origin.y.intValue();
+            cz = origin.z.intValue();
+            ex = cx;
+            ey = cy;
+            ez = cz;
             bx = ex;
             by = ey;
             bz = ez;
@@ -527,6 +561,12 @@ public class JobBuilder extends Job implements Serializable
                 if (keep)
                 {
                     alreadyPlaced = true;
+                }
+                // another building's box (constructor, control, room, mining, farming) is never cleared or built over
+                if (!alreadyPlaced && currBlockId != null && Placement.isProtected(currBlockId))
+                {
+                    alreadyPlaced = true;
+                    blockId = null;
                 }
 
                 String want = "???";

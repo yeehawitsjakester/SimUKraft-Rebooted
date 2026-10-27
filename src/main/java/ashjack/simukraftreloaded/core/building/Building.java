@@ -48,6 +48,33 @@ public class Building implements Serializable
     public String description = "None";
     /** CAT= in the blueprint, or null to work it out from the name (see BuildingCategory) */
     public String category = null;
+    /**
+     * how far the building is moved from where its constructor box would put it: left/right, away from/towards the
+     * box, up/down (blueprint directions, so they turn with the build direction). Set while it's being placed.
+     */
+    public int offsetLtr = 0, offsetFtb = 0, offsetUp = 0;
+    /**
+     * the constructor box it's waiting at (V3 text) while its placement is checked, before anyone builds it; null
+     * once it's been given the go-ahead. A string so it reaches clients (conBoxLocation doesn't).
+     */
+    public String awaitingAt = null;
+    /** what the placement check last found, for the constructor box screen */
+    public String placementStatus = "";
+
+    /**
+     * where the building is laid out from: its constructor box, moved by the offset. Everything that works out where
+     * a building's blocks are (the builder, the warehouse's footprint, the motel and flats maths) goes from here.
+     */
+    public V3 layoutBox(V3 box)
+    {
+        if (box == null || (offsetLtr == 0 && offsetFtb == 0 && offsetUp == 0) || buildDirection == null || buildDirection.isEmpty())
+        {
+            return box;
+        }
+        int[] step = MotelPlan.stepToWorld(buildDirection, offsetLtr, offsetFtb);
+        return new V3(box.x + step[0], box.y + offsetUp, box.z + step[1], box.theDimension);
+    }
+
     /** structureSub for a cell the builder leaves as it is (with a null structure entry) */
     public static final int KEEP = -1;
     public transient Infrastructure infrastructureRequirement = null;
@@ -954,6 +981,14 @@ public class Building implements Serializable
         {
             strings.add("conbox|" + this.conBoxLocation.toString()); // the warehouse takes leftovers from chests by it
         }
+        if (offsetLtr != 0 || offsetFtb != 0 || offsetUp != 0)
+        {
+            strings.add("offset|" + offsetLtr + "," + offsetFtb + "," + offsetUp);
+        }
+        if (awaitingAt != null)
+        {
+            strings.add("awaiting|" + awaitingAt);
+        }
         if (this.roomMode != null)
         {
             strings.add("roommode|" + this.roomMode);
@@ -1370,6 +1405,13 @@ public class Building implements Serializable
 	        					}
 	        				} else if (name.contentEquals("conbox")) {
 	        					build.conBoxLocation=new V3(value);
+	        				} else if (name.contentEquals("offset")) {
+	        					String[] o = value.split(",");
+	        					build.offsetLtr = Integer.parseInt(o[0].trim());
+	        					build.offsetFtb = Integer.parseInt(o[1].trim());
+	        					build.offsetUp = Integer.parseInt(o[2].trim());
+	        				} else if (name.contentEquals("awaiting")) {
+	        					build.awaitingAt = value;
 	        				} else if (name.contentEquals("buildingcomplete")) {
 	        					build.buildingComplete=Boolean.parseBoolean(value);
 	        				} else if (name.contentEquals("capacity")) {

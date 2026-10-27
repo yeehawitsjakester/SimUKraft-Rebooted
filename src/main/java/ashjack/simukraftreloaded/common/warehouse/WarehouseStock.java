@@ -270,7 +270,7 @@ public class WarehouseStock
     {
         int bx = box.x.intValue(), by = box.y.intValue(), bz = box.z.intValue();
         int[] r = {bx - 6, by - 1, bz - 6, bx + 6, by + 5, bz + 6};
-        int[] f = warehouse == null ? null : footprint(warehouse, conBoxOf(warehouse));
+        int[] f = warehouse == null ? null : footprint(warehouse, warehouse.layoutBox(conBoxOf(warehouse)));
         if (f != null && f[0] <= bx && bx <= f[3] && f[1] <= by && by <= f[4] && f[2] <= bz && bz <= f[5])
         {
             r = f; // sanity: the control box is part of the building
@@ -278,8 +278,8 @@ public class WarehouseStock
         return r;
     }
 
-    /** the blueprint laid out from a constructor box, as JobBuilder places it, or null */
-    private static int[] footprint(Building b, V3 con)
+    /** the blueprint laid out from a constructor box (already moved by any offset), as JobBuilder places it, or null */
+    public static int[] footprint(Building b, V3 con)
     {
         if (con == null || b.ltrCount <= 0 || b.ftbCount <= 0 || b.layerCount <= 0 || b.buildDirection == null)
         {

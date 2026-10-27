@@ -51,14 +51,41 @@ final class BuildingActions
     }
 
     /**
+     * a building chosen at this constructor box. A new one is first shown where it'll go (Placement), to be moved and
+     * given the go-ahead; an addition to one already standing (a motel's rooms, flats) starts straight away.
+     */
+    private static void startBuilding(EntityPlayerMP player, V3 box, Building chosen, boolean inspect)
+    {
+        chosen.conBoxLocation = box.clone();
+        // anything else waiting at this box is replaced
+        for (Building other : new ArrayList<Building>(SimukraftReloaded.serverBuildings))
+        {
+            if (other != chosen && box.toString().equals(other.awaitingAt))
+            {
+                SimukraftReloaded.serverBuildings.remove(other);
+            }
+        }
+        SimukraftReloaded.serverBuildings.remove(chosen);
+        SimukraftReloaded.serverBuildings.add(chosen);
+        if (inspect)
+        {
+            chosen.awaitingAt = box.toString();
+            Placement.check(chosen);
+            ActionHandlers.tell(player, "Here's where the " + chosen.displayNameWithoutPK + " will go (the outline). "
+                    + chosen.placementStatus + ". Move it from the constructor box if you need to, then shift-right-click"
+                    + " the box (empty hand) or press Start building.");
+            return;
+        }
+        assignBuilders(player, box, chosen);
+    }
+
+    /**
      * the builders at this constructor box start on this building; if there are none yet, the first one hired here
      * picks it up (JobBuilder.stageBlueprint looks for an unfinished building by its constructor box)
      */
-    private static void startBuilding(EntityPlayerMP player, V3 box, Building chosen)
+    static void assignBuilders(EntityPlayerMP player, V3 box, Building chosen)
     {
-        chosen.conBoxLocation = box.clone();
-        SimukraftReloaded.serverBuildings.remove(chosen);
-        SimukraftReloaded.serverBuildings.add(chosen);
+        chosen.awaitingAt = null;
         chosen.saveThisBuilding();
 
         ArrayList<String> builders = new ArrayList<String>();
@@ -101,7 +128,7 @@ final class BuildingActions
                     return;
                 }
                 chosen.buildDirection = data.getString("dir");
-                startBuilding(player, box, chosen);
+                startBuilding(player, box, chosen, true);
             }
         });
 
@@ -117,14 +144,7 @@ final class BuildingActions
                 }
                 MotelPlan plan = new MotelPlan(data.getString("shape").isEmpty() ? 'S' : data.getString("shape").charAt(0),
                         data.getInteger("floors"), data.getInteger("roomsA"), data.getInteger("roomsB"), data.getString("dir"));
-                World world = MinecraftServer.getServer().worldServerForDimension(box.theDimension);
-                String blocked = world == null ? "no world" : plan.obstruction(world, box.x.intValue(), box.y.intValue(), box.z.intValue());
-                if (blocked != null)
-                {
-                    ActionHandlers.tell(player, "There isn't room for that motel here: " + blocked);
-                    return;
-                }
-                startBuilding(player, box, Building.fromMotelPlan(plan));
+                startBuilding(player, box, Building.fromMotelPlan(plan), true);
             }
         });
 
@@ -158,11 +178,14 @@ final class BuildingActions
                     return;
                 }
                 flats.primaryXYZ = b.primaryXYZ.clone();
+                flats.offsetLtr = b.offsetLtr;
+                flats.offsetFtb = b.offsetFtb;
+                flats.offsetUp = b.offsetUp;
                 flats.livingXYZ = b.livingXYZ;
                 flats.tennants = b.tennants;
                 flats.buildingComplete = false;
                 Building.register(flats); // in place of the building as it was, by its control box
-                startBuilding(player, con, flats);
+                startBuilding(player, con, flats, false);
             }
         });
 
@@ -192,7 +215,8 @@ final class BuildingActions
                     ActionHandlers.tell(player, "Couldn't work out where this motel's constructor box was");
                     return;
                 }
-                int cx = con.x.intValue(), cy = con.y.intValue(), cz = con.z.intValue();
+                V3 origin = motel.layoutBox(con);
+                int cx = origin.x.intValue(), cy = origin.y.intValue(), cz = origin.z.intValue();
                 MotelPlan bigger = plan.grownTo(a, b);
                 String blocked = bigger.obstruction(world, cx, cy, cz);
                 if (blocked != null)
@@ -207,11 +231,14 @@ final class BuildingActions
 
                 Building upgrade = Building.fromMotelPlan(bigger);
                 upgrade.primaryXYZ = motel.primaryXYZ.clone(); // its control box stays where it is
+                upgrade.offsetLtr = motel.offsetLtr;
+                upgrade.offsetFtb = motel.offsetFtb;
+                upgrade.offsetUp = motel.offsetUp;
                 upgrade.livingXYZ = motel.livingXYZ;
                 upgrade.tennants = motel.tennants;
                 upgrade.buildingComplete = false;
                 Building.register(upgrade); // in place of the finished motel, by its control box
-                startBuilding(player, con, upgrade);
+                startBuilding(player, con, upgrade, false);
             }
         });
 

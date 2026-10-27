@@ -532,6 +532,7 @@ public final class ApartmentConversion
         {
             return;
         }
+        con = b.layoutBox(con);
         String title = b.displayNameWithoutPK.replace(" (apartments)", "");
         int number = 0;
         for (Building room : SimukraftReloaded.buildings())

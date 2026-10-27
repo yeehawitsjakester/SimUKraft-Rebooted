@@ -605,7 +605,7 @@ public class MotelPlan
         return new int[] {cx + 1 + ftb, cz + ltr};
     }
 
-    private static boolean clearable(World world, Block b, int x, int y, int z)
+    public static boolean clearable(World world, Block b, int x, int y, int z)
     {
         if (world.getTileEntity(x, y, z) != null)
         {
