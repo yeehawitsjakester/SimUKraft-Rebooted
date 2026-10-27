@@ -218,6 +218,7 @@ public class MotelPlan
         key.put('k', "minecraft:cobblestone,0");     // foundations under the walls
         key.put('l', "minecraft:bookshelf,0");
         key.put('r', "minecraft:wooden_door,8");     // a door's top half
+        key.put('m', "minecraft:double_stone_slab,0"); // under and over the walkway posts, so they meet something
 
         int L = ltrCount(), F = ftbCount(), H = layerCount();
         grid = new char[H][F][L];
@@ -415,6 +416,30 @@ public class MotelPlan
                 if (c != 'i')
                 {
                     set(w, u, v, top, v == 1 && u % MODULE == 2 ? 'i' : 'h');
+                }
+            }
+        }
+
+        // a post standing on a ground-floor (bottom) slab, or holding up an upstairs (top) slab, has half a block of air
+        // between: that slab is a full one instead
+        for (int u = 0; u < len; u++)
+        {
+            for (int v = 0; v < 2; v++)
+            {
+                for (int y = 1; y < top; y++)
+                {
+                    if (get(w, u, v, y) != 'g')
+                    {
+                        continue;
+                    }
+                    if (get(w, u, v, y - 1) == 'a')
+                    {
+                        set(w, u, v, y - 1, 'm');
+                    }
+                    if (get(w, u, v, y + 1) == 'b')
+                    {
+                        set(w, u, v, y + 1, 'm');
+                    }
                 }
             }
         }
