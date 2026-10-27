@@ -923,10 +923,17 @@ public class JobBuilder extends Job implements Serializable
                 || b == Blocks.stone || b == Blocks.log;
     }
 
+    @Override
+    public Item waitingFor()
+    {
+        return wanted == null ? null : wanted.getItem();
+    }
+
     /**
      * what this builder still has to be given, by item (any meta: they take any planks, wool...), counted over the
      * rest of the blueprint. Blocks already standing in the way get counted too, so it can run a little high.
      */
+    @Override
     public LinkedHashMap<Item, Integer> remainingNeeds()
     {
         LinkedHashMap<Item, Integer> needs = new LinkedHashMap<Item, Integer>();

@@ -18,6 +18,8 @@ import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.init.Blocks;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.IInventory;
 
@@ -72,6 +74,51 @@ public class JobTerraformer extends Job
     {
         WATERTODIRT, NATURE, LAWNMOWER, FLATTENIZER, VALUEPACK, GLACIAL, MOISTURIZER, THERMALIZER, DEICER;
     }
+    /**
+     * what's left to do in the supplies it uses up: a dirt per water block filled in, a sapling per 15 blocks of
+     * nature, a bucket per lava block, a water bucket per 1000 blocks of snow or moisture. Counted from the last scan.
+     */
+    @Override
+    public Map<Item, Integer> remainingNeeds()
+    {
+        Map<Item, Integer> needs = new LinkedHashMap<Item, Integer>();
+        TerraformerType type = theType != null ? theType : theFolk == null ? null : theFolk.terraformerType;
+        int left = closestBlocks == null ? 0 : closestBlocks.size();
+        if (type == null || left == 0 || theStage == null || theStage == Stage.IDLE || theStage == Stage.COMPLETE
+                || GameMode.gameMode == GameMode.GAMEMODES.CREATIVE)
+        {
+            return needs;
+        }
+        if (type == TerraformerType.WATERTODIRT || type == TerraformerType.VALUEPACK)
+        {
+            needs.put(Item.getItemFromBlock(Blocks.dirt), left);
+        }
+        else if (type == TerraformerType.NATURE)
+        {
+            needs.put(Item.getItemFromBlock(Blocks.sapling), left / 15 + 1);
+        }
+        else if (type == TerraformerType.THERMALIZER)
+        {
+            needs.put(Items.bucket, left);
+        }
+        else if ((type == TerraformerType.GLACIAL || type == TerraformerType.MOISTURIZER) && buckets == 0)
+        {
+            needs.put(Items.water_bucket, 1);
+        }
+        return needs;
+    }
+
+    @Override
+    public Item waitingFor()
+    {
+        if (theStage != Stage.WAITINGFORRESOURCES)
+        {
+            return null;
+        }
+        Map<Item, Integer> needs = remainingNeeds();
+        return needs.isEmpty() ? null : needs.keySet().iterator().next();
+    }
+
     @Override
     public void onUpdate()
     {

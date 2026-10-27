@@ -20,7 +20,7 @@ import ashjack.simukraftreloaded.proxies.CommonProxy.V3;
 
 /**
  * Keeps a warehouse: knows what's in its chests, the mines' chests, the chests left by finished buildings' constructor
- * boxes and a connected ME network, and carries what builders still need to the chests by their constructor boxes,
+ * boxes and a connected ME network, and carries what builders and terraformers still need to the chests by their constructor boxes,
  * starting with whatever a builder is stuck waiting for. With nothing to deliver, they bring the leftovers and the
  * mines' output back to the warehouse.
  *
@@ -286,7 +286,7 @@ public class JobWarehouse extends Job
         ArrayList<IInventory> chests = WarehouseStock.storageNear(jobWorld, current.to, 4);
         if (chests.isEmpty())
         {
-            theFolk.statusText = "There's no chest by " + current.builder + "'s constructor box";
+            theFolk.statusText = "There's no chest by " + current.builder + "'s box";
             return;
         }
         int given = 0;
@@ -327,7 +327,7 @@ public class JobWarehouse extends Job
 
     // ---------------------------------------------------------------- planning
 
-    /** the most useful trip: a block a builder is stuck on first, then whatever's most short */
+    /** the most useful trip: whatever a builder or terraformer is stuck waiting for first, then whatever's most short */
     private Delivery plan()
     {
         Delivery best = null;
@@ -335,12 +335,12 @@ public class JobWarehouse extends Job
 
         for (FolkData f : new ArrayList<FolkData>(SimukraftReloaded.serverFolks))
         {
-            if (!(f.theirJob instanceof JobBuilder) || f.employedAt == null
+            if (f.theirJob == null || f == theFolk || f.employedAt == null
                     || f.employedAt.theDimension != theFolk.employedAt.theDimension)
             {
                 continue;
             }
-            JobBuilder job = (JobBuilder) f.theirJob;
+            Job job = f.theirJob;
             Map<Item, Integer> needs = job.remainingNeeds();
             if (needs.isEmpty())
             {
@@ -364,7 +364,7 @@ public class JobWarehouse extends Job
                 {
                     continue;
                 }
-                boolean stuck = job.wanted != null && job.wanted.getItem() == item;
+                boolean stuck = job.waitingFor() == item;
                 int score = (stuck ? 1000000 : 0) + Math.min(shortBy, TRIP_MAX);
                 if (score > bestScore)
                 {

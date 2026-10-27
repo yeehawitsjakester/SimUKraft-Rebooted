@@ -101,10 +101,11 @@ public class WarehouseStock
         IdentityHashMap<IInventory, Boolean> seen = new IdentityHashMap<IInventory, Boolean>();
         int dim = box.theDimension;
 
-        // chests by a builder at work are deliveries' destinations, never sources
+        // chests by a builder or terraformer at work are deliveries' destinations, never sources
         for (FolkData f : new ArrayList<FolkData>(SimukraftReloaded.serverFolks))
         {
-            if (f.vocation == Vocation.BUILDER && f.employedAt != null && f.employedAt.theDimension == dim)
+            if ((f.vocation == Vocation.BUILDER || f.vocation == Vocation.TERRAFORMER) && f.employedAt != null
+                    && f.employedAt.theDimension == dim)
             {
                 for (IInventory inv : storageNear(world, f.employedAt, 4))
                 {

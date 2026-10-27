@@ -739,6 +739,21 @@ public abstract class Job
         }
     }
 
+    /**
+     * what a warehouse keeper should bring to the chests by this job's box, by item (any meta), counting what's still
+     * to do; nothing by default. Builders and terraformers say.
+     */
+    public Map<Item, Integer> remainingNeeds()
+    {
+        return new LinkedHashMap<Item, Integer>();
+    }
+
+    /** the item this job has stopped and is waiting for right now, if any: a keeper brings that first */
+    public Item waitingFor()
+    {
+        return null;
+    }
+
     /** sets the closestBlocks arraylist with V3 locations in world where the passed in Block types are found */
     public void setClosestBlocksOfType(final V3 startXYZ, final ArrayList<Block> blockIDs, final int distanceLimit, final boolean needsToSeeSky, final boolean scanDownwards, final boolean oneLayerOnly)
     {
