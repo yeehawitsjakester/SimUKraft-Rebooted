@@ -750,6 +750,25 @@ public class EntityFolk extends EntityCreature implements INpc {
 		return worldObj.isRemote || !MineSafety.inMine(dimension, posX, posY, posZ, 2);
 	}
 
+	/**
+	 * Sims pass through each other: two meeting head-on in a doorway or on a narrow path (a warehouse keeper on the
+	 * way back as another sets out) used to push against each other for ever, as neither's path knows the other is
+	 * there. Players and other mobs still push them, and they them.
+	 */
+	@Override
+	protected void collideWithEntity(Entity other) {
+		if (!(other instanceof EntityFolk)) {
+			super.collideWithEntity(other);
+		}
+	}
+
+	@Override
+	public void applyEntityCollision(Entity other) {
+		if (!(other instanceof EntityFolk)) {
+			super.applyEntityCollision(other);
+		}
+	}
+
 	@Override
 	protected void fall(float distance) {
 		// miners wear a harness, and anyone who ends up in a mine pit lands safely
