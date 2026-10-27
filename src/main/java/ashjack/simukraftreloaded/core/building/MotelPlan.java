@@ -212,7 +212,7 @@ public class MotelPlan
         key.put('e', "minecraft:stained_hardened_clay,0"); // walls
         key.put('f', "minecraft:glass_pane,0");
         key.put('g', "minecraft:fence,0");
-        key.put('h', "minecraft:wooden_slab,1");     // roof
+        key.put('h', "minecraft:double_wooden_slab,1"); // roof: full blocks, so the lights in it sit flush
         key.put('i', "minecraft:glowstone,0");
         key.put('j', "minecraft:wool,14");           // the bed
         key.put('k', "minecraft:cobblestone,0");     // foundations under the walls
