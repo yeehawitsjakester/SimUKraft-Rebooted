@@ -2300,6 +2300,10 @@ public class FolkData implements Serializable
     }
 
     /** PLURAL of getFolkByEmployedAt (which returns the first one it finds) */
+    /**
+     * the folks who work at this box. Exactly at it: within 2 blocks, as it used to be, breaking a constructor box put
+     * down beside a warehouse or shop fired that building's staff, and control boxes listed their neighbours' staff
+     */
     public static ArrayList<FolkData> getFolksByEmployedAt(V3 v)
     {
         ArrayList<FolkData> ret = new ArrayList<FolkData>();
@@ -2310,7 +2314,7 @@ public class FolkData implements Serializable
 
             if (f.employedAt != null)
             {
-                if (f.employedAt.isSameCoordsAs(v, true, false))
+                if (f.employedAt.isSameCoordsAs(v, true, true))
                 {
                     ret.add(f);
                 }
