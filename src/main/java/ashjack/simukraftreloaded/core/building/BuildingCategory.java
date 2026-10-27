@@ -26,23 +26,25 @@ public final class BuildingCategory
     public static final List<String> ALL = Arrays.asList(HOUSING, TEMPORARY, SHOPS, INDUSTRY, CIVIC, INFRASTRUCTURE,
             LANDMARKS, UTILITY, DECORATIVE_HOMES, DECORATION, SPECIAL, MISC);
 
-    /** for "other" blueprints: the first category with a word in the name wins */
+    /** for "other" blueprints: the first category with a word in the name starting with one of these wins */
     private static final String[][] WORDS = {
-        {INFRASTRUCTURE, "rail", "road", "street", "highway", "bridge", "station", "ramp", "train", "lane", "tunnel",
-            "crossing", "path", "depot"},
         {TEMPORARY, "motel", "hotel", "inn", "hostel", "trailer", "igloo", "camp"},
-        {CIVIC, "town hall", "school", "library", "church", "cathedral", "kirche", "chapel", "fire station", "police",
-            "hospital", "clinic", "museum", "court"},
+        {INFRASTRUCTURE, "rail", "road", "street", "highway", "bridge", "station", "ramp", "train", "lane", "tunnel",
+            "crossing", "path", "depot", "wall", "gate", "corner", "subway", "stair"},
+        {CIVIC, "town", "plaza", "square", "school", "library", "church", "cathedral", "dorfkirche", "chapel",
+            "fire station", "police", "jail", "hospital", "clinic", "museum", "court", "temple", "monastery"},
         {INDUSTRY, "farm", "barn", "silo", "stable", "grain", "greenhouse", "orchard", "pasture", "coop", "mill",
-            "factory", "dock"},
-        {SHOPS, "shop", "store", "theatre", "theater", "cinema", "movie", "bowling", "bank", "pub", "cafe",
-            "restaurant", "market", "office", "rink"},
-        {UTILITY, "trap", "mob ", "destroyer", "minefield", "lava well", "containment", "exploitation", "generator"},
-        {LANDMARKS, "tower", "skyscraper", "lighthouse", "palace", "castle", "lair", "pyramid"},
+            "factory", "dock", "warehouse", "fishing"},
+        {SHOPS, "shop", "store", "mart", "theatre", "theater", "cinema", "movie", "bowling", "bank", "pub", "tavern",
+            "cafe", "restaurant", "mcdonald", "donald", "market", "office", "rink", "blacksmith", "alchemist"},
+        {UTILITY, "trap", "mob", "destroyer", "minefield", "lava well", "containment", "exploitation", "generator",
+            "harvester", "cooker", "storage", "bunker", "shelter", "archery"},
+        {LANDMARKS, "tower", "skyscraper", "scraper", "trade center", "lighthouse", "palace", "castle", "lair",
+            "pyramid", "watchtower"},
         {DECORATIVE_HOMES, "house", "home", "cabin", "hut", "studio", "apartment", "apts", "cottage", "villa",
-            "mansion", "bungalow"},
+            "mansion", "manor", "bungalow", "shack", "getaway", "loghouse"},
         {DECORATION, "well", "obelisk", "torch", "logo", "statue", "fountain", "garden", "beach", "graveyard", "park",
-            "sign", "pond", "tree", "sky love"},
+            "sign", "pond", "pool", "whirlpool", "tree", "sky love", "ship", "balloon", "fount", "maze", "outhouse"},
     };
 
     public static String of(Building b)
@@ -68,12 +70,15 @@ public final class BuildingCategory
         {
             return SPECIAL;
         }
-        String name = " " + (b.displayNameWithoutPK == null ? b.displayName : b.displayNameWithoutPK).toLowerCase() + " ";
+        // words, not bits of words: "trailer" isn't a railway, a warehouse isn't a house
+        // (and the words in RunTogetherNames)
+        String name = " " + (b.displayNameWithoutPK == null ? b.displayName : b.displayNameWithoutPK)
+                .replaceAll("([a-z])([A-Z])", "$1 $2").toLowerCase().replaceAll("[^a-z0-9]+", " ") + " ";
         for (String[] rule : WORDS)
         {
             for (int i = 1; i < rule.length; i++)
             {
-                if (name.contains(rule[i]))
+                if (name.contains(" " + rule[i]))
                 {
                     return rule[0];
                 }
