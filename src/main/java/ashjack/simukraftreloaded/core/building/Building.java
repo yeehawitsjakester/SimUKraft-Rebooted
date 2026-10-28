@@ -277,10 +277,15 @@ public class Building implements Serializable
             }
             BufferedReader br;
             MotelPlan motel = MotelPlan.parse(displayName);
+            ApartmentPlan apts = ApartmentPlan.parse(displayName);
             if (motel != null)
             {
                 // made to order, not from a file: generated again from its name
                 br = new BufferedReader(new StringReader(motel.blueprint()));
+            }
+            else if (apts != null)
+            {
+                br = new BufferedReader(new StringReader(apts.blueprint()));
             }
             else
             {
@@ -597,6 +602,11 @@ public class Building implements Serializable
             if (motel != null)
             {
                 displayNameWithoutPK = motel.title();
+                author = "Sim-U-Kraft";
+            }
+            if (apts != null)
+            {
+                displayNameWithoutPK = apts.title();
                 author = "Sim-U-Kraft";
             }
             this.rent = blocksInBuilding * 0.01f;
@@ -1823,14 +1833,17 @@ public class Building implements Serializable
         MotelPlan motel = MotelPlan.parse(name);
         ApartmentConversion.Name flats = ApartmentConversion.parse(name);
         Basement.Name basements = Basement.parse(name);
-        b.buildDirection = motel != null ? motel.dir : flats != null ? flats.dir : basements != null ? basements.dir : null;
+        ApartmentPlan apts = ApartmentPlan.parse(name);
+        b.buildDirection = motel != null ? motel.dir : flats != null ? flats.dir : basements != null ? basements.dir
+                : apts != null ? apts.dir : null;
         b.loadStructure();
         return b;
     }
 
     public static boolean isGenerated(String name)
     {
-        return MotelPlan.isGenerated(name) || ApartmentConversion.isGenerated(name) || Basement.isGenerated(name);
+        return MotelPlan.isGenerated(name) || ApartmentConversion.isGenerated(name) || Basement.isGenerated(name)
+                || ApartmentPlan.isGenerated(name);
     }
 
     /** how many soldiers a barracks can train: one per so much floor (config BarracksAreaPerSoldier) */

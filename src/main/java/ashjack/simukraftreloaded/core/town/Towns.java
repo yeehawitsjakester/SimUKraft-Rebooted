@@ -107,7 +107,7 @@ public final class Towns
     }
 
     /** how far outside a border a new building can be and still be taken into that town, and the room left around it */
-    public static final int REACH = 48, MARGIN = 12;
+    public static final int REACH = 48, MARGIN = 32;
 
     /**
      * a building going up in a town, or just outside one its builder belongs to: the border moves out, free, to take it

@@ -30,6 +30,7 @@ import ashjack.simukraftreloaded.core.ModSimukraft;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.building.BuildingCategory;
 import ashjack.simukraftreloaded.core.building.MotelPlan;
+import ashjack.simukraftreloaded.core.building.ApartmentPlan;
 import ashjack.simukraftreloaded.network.Placement;
 import ashjack.simukraftreloaded.core.building.ApartmentConversion;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
@@ -61,6 +62,9 @@ public class GuiBuildingConstructor extends GuiScreen
     private char motelShape = 'S';
     private int motelFloors = 1, motelRoomsA = 4, motelRoomsB = 2;
     private String motelSpace = "";
+    /** the apartments being designed on page 14 */
+    private char aptKind = 'A';
+    private int aptAcross = 3, aptRows = 2, aptFloors = 3;
     /** on page 10 with "As apartments" on: the building as it is without */
     private Building withoutFlats = null;
     private String flatsNote = "";
@@ -244,6 +248,10 @@ public class GuiBuildingConstructor extends GuiScreen
             else if (currentPage == 13)
             {
                 drawMotelPage();
+            }
+            else if (currentPage == 14)
+            {
+                drawApartmentPage();
             }
             else if (currentPage == 10)
             {
@@ -453,6 +461,7 @@ public class GuiBuildingConstructor extends GuiScreen
             buttonList.add(new GuiButton(10, (width / 2) - 100, 180, 100, 20, "By category"));
             buttonList.add(new GuiButton(11, (width / 2), 180, 100, 20, "Search all"));
             buttonList.add(new GuiButton(12, (width / 2) + 100, 180, 100, 20, "Motel..."));
+            buttonList.add(new GuiButton(13, (width / 2) + 100, 210, 100, 20, "Apartments..."));
         }
         else if (currentPage == 3)    //choose worker
         {
@@ -570,6 +579,19 @@ public class GuiBuildingConstructor extends GuiScreen
             buttonList.add(new GuiButton(1001, (width / 2) - 100, height - 25, 100, 20, "Go Back"));
             buttonList.add(new GuiButton(969, (width / 2), height - 25, 100, 20, "Requirements"));
             updateMotel();
+        }
+        else if (currentPage == 14)    // design apartments
+        {
+            int x = 20, y = 70;
+            buttonList.add(new GuiButton(30, x, y, 150, 20, "Kind: " + new ApartmentPlan(aptKind, 1, 1, 1, "-x").kindName()));
+            buttonList.add(new GuiButton(31, x, y + 22, 150, 20, aptRows == 2 ? "Flats both sides of the hall" : "Flats one side of the hall"));
+            buttonList.add(new GuiButton(32, x, y + 44, 20, 20, "-"));
+            buttonList.add(new GuiButton(33, x + 130, y + 44, 20, 20, "+"));
+            buttonList.add(new GuiButton(34, x, y + 66, 20, 20, "-"));
+            buttonList.add(new GuiButton(35, x + 130, y + 66, 20, 20, "+"));
+            buttonList.add(new GuiButton(1001, (width / 2) - 100, height - 25, 100, 20, "Go Back"));
+            buttonList.add(new GuiButton(969, (width / 2), height - 25, 100, 20, "Requirements"));
+            updateApartments();
         }
         else if (currentPage == 8)     ///building requirements
         {
@@ -713,6 +735,11 @@ public class GuiBuildingConstructor extends GuiScreen
                 currentPage = 13;
                 showPage();
             }
+            else if (guibutton.id == 13)
+            {
+                currentPage = 14;
+                showPage();
+            }
         }
         else if (isListPage()) //chosen building to build
         {
@@ -794,8 +821,54 @@ public class GuiBuildingConstructor extends GuiScreen
             }
             showPage();
         }
+        else if (currentPage == 14)    // the apartment designer
+        {
+            if (guibutton.id == 30)
+            {
+                aptKind = ApartmentPlan.nextKind(aptKind);
+                aptFloors = Math.min(aptFloors, ApartmentPlan.maxFloors(aptKind));
+            }
+            else if (guibutton.id == 31)
+            {
+                aptRows = aptRows == 2 ? 1 : 2;
+            }
+            else if (guibutton.id == 32 || guibutton.id == 33)
+            {
+                aptAcross = Math.max(1, Math.min(ApartmentPlan.MAX_ACROSS, aptAcross + (guibutton.id == 33 ? 1 : -1)));
+            }
+            else if (guibutton.id == 34 || guibutton.id == 35)
+            {
+                aptFloors = Math.max(1, Math.min(ApartmentPlan.maxFloors(aptKind), aptFloors + (guibutton.id == 35 ? 1 : -1)));
+            }
+            else if (guibutton.id == 969)
+            {
+                previousPage = 14;
+                currentPage = 8;
+            }
+            else if (guibutton.id == 1001)
+            {
+                goBack();
+                return;
+            }
+            showPage();
+        }
         else if (currentPage == 8)   // building requirements (what blocks are need)
         {
+            if (guibutton.displayString.contentEquals("Build it!") && ApartmentPlan.isGenerated(selectedBuilding.displayName))
+            {
+                ApartmentPlan plan = ApartmentPlan.parse(selectedBuilding.displayName);
+                NBTTagCompound data = new NBTTagCompound();
+                ActionHandlers.putV3(data, "box", constructorLoc);
+                data.setString("kind", String.valueOf(plan.kind));
+                data.setInteger("across", plan.across);
+                data.setInteger("rows", plan.rows);
+                data.setInteger("floors", plan.floors);
+                data.setString("dir", plan.dir);
+                ServerActions.send("buildApartments", data);
+                mc.displayGuiScreen(null);
+                mc.setIngameFocus();
+                return;
+            }
             if (guibutton.displayString.contentEquals("Build it!") && MotelPlan.isGenerated(selectedBuilding.displayName))
             {
                 MotelPlan plan = MotelPlan.parse(selectedBuilding.displayName);
@@ -892,7 +965,8 @@ public class GuiBuildingConstructor extends GuiScreen
         }
         else if (currentPage == 8)
         {
-            currentPage = MotelPlan.isGenerated(selectedBuilding == null ? null : selectedBuilding.displayName) ? 13 : 10;
+            String chosen = selectedBuilding == null ? null : selectedBuilding.displayName;
+            currentPage = MotelPlan.isGenerated(chosen) ? 13 : ApartmentPlan.isGenerated(chosen) ? 14 : 10;
         }
         else if (isListPage())
         {
@@ -902,7 +976,7 @@ public class GuiBuildingConstructor extends GuiScreen
             search = "";
             tfSearch = null;
         }
-        else if (currentPage == 11 || currentPage == 13)
+        else if (currentPage == 11 || currentPage == 13 || currentPage == 14)
         {
             currentPage = 1;
         }
@@ -1045,6 +1119,55 @@ public class GuiBuildingConstructor extends GuiScreen
         }
     }
 
+    /** the apartments as set on page 14: the blueprint and its preview */
+    private void updateApartments()
+    {
+        if (buildDirection == null || buildDirection.isEmpty())
+        {
+            selectedBuilding = null;
+            preview = null;
+            motelSpace = "\u00a7cStand in line with the constructor box, facing where the building should go, and open it again";
+            return;
+        }
+        ApartmentPlan plan = new ApartmentPlan(aptKind, aptAcross, aptRows, aptFloors, buildDirection);
+        selectedBuilding = Building.fromGenerated(plan.name(), "other");
+        preview = new BuildingPreview(selectedBuilding);
+        motelSpace = "\u00a77Its outline shows where it goes before the builders start, and what's in the way";
+    }
+
+    private void drawApartmentPage()
+    {
+        drawCenteredString(fontRendererObj, "Design apartments", width / 2, 55, 0xffffaa);
+        drawCenteredString(fontRendererObj, "Flats along the hall: " + aptAcross, 95, 70 + 44 + 6, 0xffffff);
+        drawCenteredString(fontRendererObj, "Floors: " + aptFloors + " (up to " + ApartmentPlan.maxFloors(aptKind) + ")", 95, 70 + 66 + 6, 0xffffff);
+        int y = 165, colW = width / 2 - 30;
+        if (selectedBuilding != null)
+        {
+            ApartmentPlan plan = ApartmentPlan.parse(selectedBuilding.displayName);
+            y = detail("Flats", plan.flats() + " (" + (plan.flatSize() >= 4 ? "families" : "couples") + "; Sims move in and pay rent)", y, colW);
+            y = detail("Size", selectedBuilding.ltrCount + " wide, " + selectedBuilding.ftbCount + " deep, " + selectedBuilding.layerCount + " high", y, colW);
+            y = detail("Cost", SimukraftReloaded.displayMoney((float)(selectedBuilding.blocksInBuilding * 0.02f)), y, colW);
+        }
+        for (Object line : fontRendererObj.listFormattedStringToWidth(motelSpace, colW))
+        {
+            drawString(fontRendererObj, (String) line, 20, y, 0xffffff);
+            y += 10;
+        }
+        int px = width / 2 + 10, py = 65, pw = width / 2 - 20, ph = height - 65 - 32;
+        drawRect(px, py, px + pw, py + ph, 0x40000000);
+        if (preview != null && !preview.isEmpty())
+        {
+            long now = System.currentTimeMillis();
+            if (!draggingPreview && lastFrame != 0)
+            {
+                preview.yaw += (now - lastFrame) * 0.02f;
+            }
+            lastFrame = now;
+            preview.draw(px + 6, py + 6, pw - 12, ph - 12);
+            drawCenteredString(fontRendererObj, "Drag to turn it", px + pw / 2, py + ph - 10, 0x808080);
+        }
+    }
+
     public void fireAllFolksForThisBuilding()
     {
         NBTTagCompound data = new NBTTagCompound();
@@ -1086,7 +1209,7 @@ public class GuiBuildingConstructor extends GuiScreen
             tfSearch.mouseClicked(i, j, k);
         }
 
-        draggingPreview = (currentPage == 10 || currentPage == 13) && k == 0 && i > width / 2 + 10 && j > 65 && j < height - 32;
+        draggingPreview = (currentPage == 10 || currentPage == 13 || currentPage == 14) && k == 0 && i > width / 2 + 10 && j > 65 && j < height - 32;
         lastDragX = i;
         super.mouseClicked(i, j, k);
     }

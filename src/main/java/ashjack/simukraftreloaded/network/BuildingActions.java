@@ -18,6 +18,7 @@ import ashjack.simukraftreloaded.common.jobs.JobBuilder;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.building.MotelPlan;
 import ashjack.simukraftreloaded.core.building.ApartmentConversion;
+import ashjack.simukraftreloaded.core.building.ApartmentPlan;
 import ashjack.simukraftreloaded.core.building.Basement;
 import ashjack.simukraftreloaded.core.building.Upgrades;
 import ashjack.simukraftreloaded.common.warehouse.WarehouseStock;
@@ -158,6 +159,22 @@ final class BuildingActions
                 MotelPlan plan = new MotelPlan(data.getString("shape").isEmpty() ? 'S' : data.getString("shape").charAt(0),
                         data.getInteger("floors"), data.getInteger("roomsA"), data.getInteger("roomsB"), data.getString("dir"));
                 startBuilding(player, box, Building.fromMotelPlan(plan), true);
+            }
+        });
+
+        // the apartment designer's "Build it!": apartments, condos or a tower made to order
+        ServerActions.register("buildApartments", new ServerActions.Action()
+        {
+            public void run(EntityPlayerMP player, NBTTagCompound data)
+            {
+                V3 box = ActionHandlers.getV3(data, "box");
+                if (box == null)
+                {
+                    return;
+                }
+                ApartmentPlan plan = new ApartmentPlan(data.getString("kind").isEmpty() ? 'A' : data.getString("kind").charAt(0),
+                        data.getInteger("across"), data.getInteger("rows"), data.getInteger("floors"), data.getString("dir"));
+                startBuilding(player, box, Building.fromGenerated(plan.name(), "other"), true);
             }
         });
 

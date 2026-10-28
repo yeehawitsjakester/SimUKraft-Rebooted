@@ -72,7 +72,8 @@ public final class ApartmentConversion
     /** whether a building could be turned into flats: decorative ones (homes already are, shops and farms are busy) */
     public static boolean eligible(Building b)
     {
-        return b != null && "other".equals(b.type) && !MotelPlan.isGenerated(b.displayName) && !isGenerated(b.displayName);
+        return b != null && "other".equals(b.type) && !MotelPlan.isGenerated(b.displayName) && !isGenerated(b.displayName)
+                && !ApartmentPlan.isGenerated(b.displayName); // already flats
     }
 
     /** how many flats a generated blueprint has */
