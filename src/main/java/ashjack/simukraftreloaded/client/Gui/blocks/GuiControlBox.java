@@ -149,7 +149,8 @@ public class GuiControlBox extends GuiScreen
         }
 
         boolean medical = Care.isMedical(theBuilding);
-        if (theBuilding.type.contentEquals("commercial") || theBuilding.type.contentEquals("industrial") || theBuilding.type.contentEquals("special") || medical)
+        if (theBuilding.type.contentEquals("commercial") || theBuilding.type.contentEquals("industrial") || theBuilding.type.contentEquals("special") || medical
+                || ashjack.simukraftreloaded.common.life.Leisure.venueOf(theBuilding) != null)
         {
             int down = 70;
             int idx = 2;    ///display list of employees and their fire buttons
@@ -249,6 +250,15 @@ public class GuiControlBox extends GuiScreen
                 buttonList.add(b = new GuiButton(1, 125, height - 30, 110, 20, "Hire Wall Builder"));
                 b.enabled = builders < 4;
             }
+        }
+
+        // a venue (a tavern, club, park, library...): its staff
+        ashjack.simukraftreloaded.common.life.Leisure.Venue venue = ashjack.simukraftreloaded.common.life.Leisure.venueOf(theBuilding);
+        if (venue != null && theBuilding.buildingComplete)
+        {
+            GuiButton b;
+            buttonList.add(b = new GuiButton(1, 10, height - 52, 150, 20, "Hire " + venue.staffTitle));
+            b.enabled = employeeCount < 3;
         }
 
         // a rail depot: rail builders, and planning a railway between two markers
@@ -672,7 +682,7 @@ public class GuiControlBox extends GuiScreen
                     }
                 }
                 else if (theBuilding.type.contentEquals("industrial") || theBuilding.type.contentEquals("commercial") || theBuilding.type.contentEquals("special")
-                         || Care.isMedical(theBuilding))
+                         || Care.isMedical(theBuilding) || ashjack.simukraftreloaded.common.life.Leisure.venueOf(theBuilding) != null)
                 {
                     if (Care.isMedical(theBuilding))
                     {
@@ -875,6 +885,12 @@ public class GuiControlBox extends GuiScreen
         {
             mc.currentScreen = null;
             mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.SOLDIER));
+        }
+        else if (guibutton.displayString.startsWith("Hire ") && ashjack.simukraftreloaded.common.life.Leisure.venueOf(theBuilding) != null
+                && guibutton.displayString.equals("Hire " + ashjack.simukraftreloaded.common.life.Leisure.venueOf(theBuilding).staffTitle))
+        {
+            mc.currentScreen = null;
+            mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.VENUESTAFF));
         }
         else if (guibutton.displayString.contentEquals("Hire Rail Builder"))
         {

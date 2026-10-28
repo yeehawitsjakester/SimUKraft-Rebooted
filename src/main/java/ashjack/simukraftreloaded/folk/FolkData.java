@@ -129,6 +129,12 @@ public class FolkData implements Serializable
     /** why each need is where it is, for the hover tooltips on the Sim's screen */
     public String lastMeal = "";
     public String funNote = "";
+    /** out at a venue (see Leisure): where, since and until when, and how it's going */
+    public transient V3 leisureAt;
+    public transient long leisureSince, leisureUntil, lastLeisureTick;
+    public transient boolean leisurePaid, leisureArrived;
+    /** the evening they last went out (world day), so it's once an evening */
+    private transient long wentOutOn = -1;
     public String socialNote = "";
     public String environmentNote = "";
     /** this folks building level, increases with experience which makes them build faster */
@@ -613,6 +619,7 @@ public class FolkData implements Serializable
         if (now - timeSinceLastMinute > 60000)
         {
         	minutes++;
+        	goingOut();
         	// fun wears off slowly: every other minute with nothing to do, every third at work (it was every minute,
         	// and a working Sim never got any back)
         	if(!this.statusText.contains("Hanging") && !this.statusText.startsWith("Shopping")&&!this.statusText.contains("Visiting") && !this.statusText.contains("Staying")&&!this.statusText.contains("Relaxing")&&this.levelFun > 1&&this.isWorking==false
@@ -712,7 +719,13 @@ public class FolkData implements Serializable
             //make them wander to shops and houses if they are wandering
             boolean gotWanderPoint = false;
 
-            if (action == FolkAction.WANDER && this.isSpawned() && (this.employedAt == null || dayOff()) && this.age >= 18 && !this.statusText.contains("baby"))
+            if (action == FolkAction.WANDER && this.isSpawned() && (this.employedAt == null || dayOff()) && this.age >= 18 && !this.statusText.contains("baby")
+                    && leisureAt == null && rand.nextInt(10) < 6 && ashjack.simukraftreloaded.common.life.Leisure.goOut(this, false))
+            {
+                gotWanderPoint = true; // off to a venue
+            }
+            else if (action == FolkAction.WANDER && this.isSpawned() && (this.employedAt == null || dayOff()) && this.age >= 18 && !this.statusText.contains("baby")
+                    && leisureAt == null)
             {
                 for (int i = 0; i < SimukraftReloaded.buildings().size(); i++)
                 {
@@ -893,6 +906,11 @@ public class FolkData implements Serializable
                 timeSinceLastStatusUpdate = now;
                 return;
             }
+            // out somewhere (see Leisure)
+            if (leisureAt != null)
+            {
+                ashjack.simukraftreloaded.common.life.Leisure.tick(this, now);
+            }
 
             //if they were wandering to a folk house when you hire them, they get stuck on stayput once arrived
             if (this.statusText.contentEquals("Going to my new job..."))
@@ -1023,7 +1041,8 @@ public class FolkData implements Serializable
                 }
             }
 
-            if (!SimukraftReloaded.isDayTime() && !isSoldier)
+            boolean eveningShift = vocation == Vocation.VENUESTAFF && ashjack.simukraftreloaded.common.life.Leisure.evening();
+            if (!SimukraftReloaded.isDayTime() && !isSoldier && leisureAt == null && !eveningShift)
             {
                 this.action = FolkAction.WANDER;
                 this.isWorking=false;
@@ -2254,6 +2273,38 @@ public class FolkData implements Serializable
 
     /** get the building/home that this folk lives in, null if homeless */
     /**
+     * going out (see Leisure): after work in the evening, once, if they're short of fun or company; and on a day off
+     * (or with no job) when nobody's near to see them wander, so they still have a life
+     */
+    private void goingOut()
+    {
+        if (leisureAt != null || age < 18 || isVisitor || Care.underCare(this))
+        {
+            return;
+        }
+        try
+        {
+            long day = MinecraftServer.getServer().worldServers[0].getTotalWorldTime() / 24000L;
+            boolean soldier = vocation == Vocation.SOLDIER || vocation == Vocation.MEDIC;
+            if (ashjack.simukraftreloaded.common.life.Leisure.evening() && wentOutOn != day && !soldier
+                    && (levelFun < 8 || levelSocial < 8))
+            {
+                wentOutOn = day;
+                ashjack.simukraftreloaded.common.life.Leisure.goOut(this, true);
+                return;
+            }
+            if (SimukraftReloaded.isDayTime() && !isSpawned() && (employedAt == null || dayOff()) && new Random().nextInt(3) == 0)
+            {
+                ashjack.simukraftreloaded.common.life.Leisure.goOut(this, false);
+            }
+        }
+        catch (Exception e)
+        {
+            // no world clock yet
+        }
+    }
+
+    /**
      * one day in five off work, each Sim on their own day (by name), so a fifth of the town's off at a time: a day to
      * go shopping, visit and see friends
      */
@@ -2736,6 +2787,10 @@ public class FolkData implements Serializable
         else if (this.vocation == Vocation.MEDIC)
         {
             this.theirJob = new JobMedic(this);
+        }
+        else if (this.vocation == Vocation.VENUESTAFF)
+        {
+            this.theirJob = new ashjack.simukraftreloaded.common.jobs.JobVenueStaff(this);
         }
         else if (this.vocation == Vocation.RAILBUILDER)
         {
