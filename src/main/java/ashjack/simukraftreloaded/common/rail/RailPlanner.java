@@ -119,7 +119,9 @@ public final class RailPlanner
                     {
                         continue;
                     }
-                    double step = cost(g, y, w, x, z);
+                    // (the end marker's someone's block too: the line ends on it)
+                    boolean goal = x == b[0] && z == b[2];
+                    double step = !goal && placedInTheWay(w, x, y, z) ? -1 : cost(g, y, w, x, z);
                     if (step < 0)
                     {
                         continue;
@@ -145,6 +147,19 @@ public final class RailPlanner
         }
         reason[0] = "there's no way through (buildings, unloaded land, or cliffs too high)";
         return null;
+    }
+
+    /** something someone built where the rail, its deck or its headroom would go: never cleared for a railway */
+    private static boolean placedInTheWay(World w, int x, int y, int z)
+    {
+        for (int yy = y - 1; yy <= y + 2; yy++)
+        {
+            if (ashjack.simukraftreloaded.common.PlacedBlocks.placed(w, x, yy, z))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static double h(int x, int y, int z, int[] b)

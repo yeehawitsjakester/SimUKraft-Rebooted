@@ -288,6 +288,10 @@ public final class TownWall
     /** what can be cleared for the wall: trees, plants, snow */
     static boolean clearable(World world, Block b, int x, int y, int z)
     {
+        if (ashjack.simukraftreloaded.common.PlacedBlocks.placed(world, x, y, z))
+        {
+            return false; // someone put it there
+        }
         Material m = b.getMaterial();
         return b.isLeaves(world, x, y, z) || b.isWood(world, x, y, z) || m == Material.plants || m == Material.vine
                 || m == Material.snow || m == Material.craftedSnow || m == Material.cactus || m == Material.gourd

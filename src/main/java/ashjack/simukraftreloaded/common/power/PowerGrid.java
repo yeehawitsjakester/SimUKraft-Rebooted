@@ -379,6 +379,14 @@ public final class PowerGrid
         {
             add(cells, seen, tx, yy, tz);
         }
+        // never through something someone built (it'd be swapped for a disguised conduit): a transceiver instead
+        for (int[] c : cells)
+        {
+            if (ashjack.simukraftreloaded.common.PlacedBlocks.placed(w, c[0], c[1], c[2]))
+            {
+                return null;
+            }
+        }
         return cells;
     }
 

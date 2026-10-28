@@ -184,6 +184,7 @@ public class ModSimukraft
         SimukraftReloadedEvents.loadEvents();
         cpw.mods.fml.common.FMLCommonHandler.instance().bus().register(new ashjack.simukraftreloaded.core.registry.ModSupport.LoginWarning());
         ashjack.simukraftreloaded.common.ChunkKeeper.register();
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new ashjack.simukraftreloaded.common.PlacedBlocks.Listener());
         
         //Recipes
         SimukraftReloadedRecipes.registerRecipes();

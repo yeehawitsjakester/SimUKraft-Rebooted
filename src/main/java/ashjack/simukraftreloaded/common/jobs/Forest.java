@@ -295,6 +295,14 @@ public class Forest
                 }
             }
         }
+        // someone put any of it there (a log, or the sapling the trunk grew from): theirs, not wild
+        for (int[] l : logs)
+        {
+            if (ashjack.simukraftreloaded.common.PlacedBlocks.placed(world, l[0], l[1], l[2]))
+            {
+                return null;
+            }
+        }
         if (floating)
         {
             // only if none of it stands on anything: a standing tree's branches are found from its trunk
