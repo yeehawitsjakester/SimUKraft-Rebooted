@@ -39,6 +39,8 @@ public class Forest
     public static class Tree
     {
         public int baseX, baseY, baseZ;
+        /** what was left of one in the air, not a standing tree */
+        public boolean floating;
         /** x, y, z of every log, lowest first */
         public List<int[]> logs;
         long key;
@@ -97,6 +99,13 @@ public class Forest
                     continue;
                 }
                 int y = trunkBase(world, x, z);
+                boolean floating = false;
+                if (y < 0)
+                {
+                    // what's left of a tree someone (or something) half felled: logs in the air with nothing under them
+                    y = floatingBase(world, x, z);
+                    floating = y >= 0;
+                }
                 if (y < 0)
                 {
                     continue;
@@ -106,7 +115,7 @@ public class Forest
                 {
                     continue;
                 }
-                Tree t = collect(world, x, y, z);
+                Tree t = collect(world, x, y, z, floating);
                 if (t == null || nearBuilding(t))
                 {
                     rejected.add(key);
@@ -182,6 +191,35 @@ public class Forest
         }
     }
 
+    /** a log in this column with nothing solid under it (part of something in the air), or -1 */
+    static int floatingBase(World world, int x, int z)
+    {
+        int top = world.getHeightValue(x, z);
+        for (int y = top; y > 1 && y > top - 64; y--)
+        {
+            Block b = world.getBlock(x, y, z);
+            if (b.isWood(world, x, y, z))
+            {
+                Block below = world.getBlock(x, y - 1, z);
+                if (below.isWood(world, x, y - 1, z))
+                {
+                    continue; // down the log to its foot
+                }
+                if (!below.getMaterial().isSolid() || below.isLeaves(world, x, y - 1, z))
+                {
+                    return y;
+                }
+                return -1; // stands on the ground: a trunk
+            }
+            Material m = b.getMaterial();
+            if (!(m == Material.air || m == Material.vine || m == Material.plants || b.isLeaves(world, x, y, z)))
+            {
+                return -1;
+            }
+        }
+        return -1;
+    }
+
     /**
      * the lowest log of a trunk in this column standing on the ground, or -1. Looking down from the top through
      * leaves, vines and air: a column under a branch has air beneath its log, so only trunks count.
@@ -210,8 +248,9 @@ public class Forest
     }
 
     /** every log joined to this trunk, if it's a wild tree; null if it isn't */
-    static Tree collect(World world, int bx, int by, int bz)
+    static Tree collect(World world, int bx, int by, int bz, boolean floating)
     {
+        int lowest = floating ? by - 8 : by;
         Set<Long> seen = new HashSet<Long>();
         ArrayDeque<int[]> queue = new ArrayDeque<int[]>();
         List<int[]> logs = new ArrayList<int[]>();
@@ -233,7 +272,7 @@ public class Forest
                     for (int dz = -1; dz <= 1; dz++)
                     {
                         int x = p[0] + dx, y = p[1] + dy, z = p[2] + dz;
-                        if ((dx == 0 && dy == 0 && dz == 0) || y < by || y > by + TALLEST || Math.abs(x - bx) > SPREAD
+                        if ((dx == 0 && dy == 0 && dz == 0) || y < lowest || y > by + TALLEST || Math.abs(x - bx) > SPREAD
                                 || Math.abs(z - bz) > SPREAD || !world.blockExists(x, y, z))
                         {
                             continue;
@@ -256,7 +295,24 @@ public class Forest
                 }
             }
         }
-        if (wildLeaves < MIN_LEAVES)
+        if (floating)
+        {
+            // only if none of it stands on anything: a standing tree's branches are found from its trunk
+            if (logs.size() > 300)
+            {
+                return null;
+            }
+            for (int[] l : logs)
+            {
+                Block below = world.getBlock(l[0], l[1] - 1, l[2]);
+                if (below.getMaterial().isSolid() && !below.isWood(world, l[0], l[1] - 1, l[2])
+                        && !below.isLeaves(world, l[0], l[1] - 1, l[2]))
+                {
+                    return null;
+                }
+            }
+        }
+        else if (wildLeaves < MIN_LEAVES)
         {
             return null;
         }
@@ -268,6 +324,7 @@ public class Forest
             }
         });
         Tree t = new Tree();
+        t.floating = floating;
         t.baseX = bx;
         t.baseY = by;
         t.baseZ = bz;

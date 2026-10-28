@@ -53,7 +53,7 @@ public class JobLumberjack extends Job implements Serializable
     private transient Forest.Search search;
     private transient Forest.Tree tree;
     private transient int logIndex;
-    private transient long nextChop, idleUntil, allowedMs;
+    private transient long nextChop, idleUntil, allowedMs, fellAt;
     private transient boolean saidNoTrees;
 
     /** columns of the area looked over each second, logs carried before taking them back, and the time a log takes */
@@ -265,6 +265,7 @@ public class JobLumberjack extends Job implements Serializable
         theFolk.stayPut = true;
         theFolk.destination = null;
         nextChop = 0;
+        fellAt = 0;
     }
 
     /** one log at a time, the trunk up and every branch, whatever wood it is */
@@ -276,18 +277,31 @@ public class JobLumberjack extends Job implements Serializable
             return;
         }
         long now = System.currentTimeMillis();
-        if (now < nextChop)
+        // chopping at the trunk a while (longer for a bigger tree); then the whole tree comes down at once - so if
+        // they're called away first (night, the area going quiet) nothing's been cut and nothing's left in the air
+        if (fellAt == 0)
         {
-            return;
+            fellAt = now + Math.min(20000, 2500 + 60L * tree.logs.size());
         }
         theFolk.isWorking = true;
-        while (logIndex < tree.logs.size())
+        if (now < fellAt)
         {
-            int[] l = tree.logs.get(logIndex++);
-            if (!jobWorld.getChunkProvider().chunkExists(l[0] >> 4, l[2] >> 4))
+            if (now >= nextChop)
             {
-                logIndex = tree.logs.size(); // that part of the world's gone quiet: leave the rest
-                break;
+                nextChop = now + CHOP_MS;
+                jobWorld.playSoundEffect(foundWoodAt.x + 0.5, foundWoodAt.y + 0.5, foundWoodAt.z + 0.5, "dig.wood", 1f, 1f);
+            }
+            theFolk.statusText = (tree.floating ? "Taking down what's left of a tree (" : "Chopping down a tree (")
+                    + tree.logs.size() + " logs)";
+            return;
+        }
+        fellAt = 0;
+        int got = 0;
+        for (int[] l : tree.logs)
+        {
+            if (!jobWorld.blockExists(l[0], l[1], l[2]))
+            {
+                continue;
             }
             Block b = jobWorld.getBlock(l[0], l[1], l[2]);
             if (!b.isWood(jobWorld, l[0], l[1], l[2]))
@@ -295,8 +309,9 @@ public class JobLumberjack extends Job implements Serializable
                 continue; // gone already
             }
             ArrayList<ItemStack> drops = b.getDrops(jobWorld, l[0], l[1], l[2], jobWorld.getBlockMetadata(l[0], l[1], l[2]), 0);
-            jobWorld.playSoundEffect(l[0] + 0.5, l[1] + 0.5, l[2] + 0.5, "dig.wood", 1f, 1f);
-            jobWorld.setBlock(l[0], l[1], l[2], Blocks.air, 0, 0x03);
+            // no block updates while it comes down (each would set off the leaves round it); the canopy goes next
+            jobWorld.setBlock(l[0], l[1], l[2], Blocks.air, 0, 2);
+            got++;
             if (drops != null)
             {
                 for (ItemStack d : drops)
@@ -304,10 +319,9 @@ public class JobLumberjack extends Job implements Serializable
                     addToInventory(d);
                 }
             }
-            theFolk.statusText = "Felling a tree (" + logIndex + " of " + tree.logs.size() + " logs)";
-            nextChop = now + CHOP_MS;
-            return;
         }
+        jobWorld.playSoundEffect(foundWoodAt.x + 0.5, foundWoodAt.y + 1.5, foundWoodAt.z + 0.5, "random.break", 1.2f, 0.6f);
+        theFolk.statusText = "Timber! " + got + " logs";
 
         // felled: the canopy comes down with it (left to decay, a jungle tree's took minutes, re-lighting and redrawing
         // as it went and scattering saplings nobody picked up)
@@ -549,6 +563,16 @@ public class JobLumberjack extends Job implements Serializable
                         }
                         net.minecraft.block.Block b = jobWorld.getBlock(x, y, z);
                         int meta = jobWorld.getBlockMetadata(x, y, z);
+                        // what hung on the trunk and branches goes with them
+                        if (b == Blocks.cocoa || b == Blocks.vine)
+                        {
+                            if (b == Blocks.cocoa && (meta >> 2) >= 2)
+                            {
+                                addToInventory(new ItemStack(Items.dye, 2 + rand.nextInt(2), 3)); // ripe pods' beans
+                            }
+                            jobWorld.setBlock(x, y, z, Blocks.air, 0, 2);
+                            continue;
+                        }
                         // leaves that grew there (placed ones carry the no-decay bit)
                         if (!b.isLeaves(jobWorld, x, y, z) || b instanceof net.minecraft.block.BlockLeaves && (meta & 4) != 0)
                         {
