@@ -203,6 +203,8 @@ public class FolkData implements Serializable
     private transient long timeSinceLastSave = 0l;
     private transient long timeSinceLastStatusUpdate = 0l;
     private transient long timeSinceLastMinute = 0l;
+    /** minutes counted, for the needs that change every few */
+    private transient int minutes;
     /** location they are beaming to or null if they are not beaming */
     public transient V3 beamingTo = null;
 
@@ -610,13 +612,17 @@ public class FolkData implements Serializable
         //////// ONCE A MINUTE TASKS
         if (now - timeSinceLastMinute > 60000)
         {
-        	if(!this.statusText.contains("Hanging") && !this.statusText.startsWith("Shopping")&&!this.statusText.contains("Visiting") && !this.statusText.contains("Staying")&&!this.statusText.contains("Relaxing")&&this.levelFun > 1&&this.isWorking==false)
+        	minutes++;
+        	// fun wears off slowly: every other minute with nothing to do, every third at work (it was every minute,
+        	// and a working Sim never got any back)
+        	if(!this.statusText.contains("Hanging") && !this.statusText.startsWith("Shopping")&&!this.statusText.contains("Visiting") && !this.statusText.contains("Staying")&&!this.statusText.contains("Relaxing")&&this.levelFun > 1&&this.isWorking==false
+        	        && minutes % 2 == 0)
         	{
         		levelFun -= 1;
         		funNote = "Bored, nothing fun to do";
         	}
         	
-        	if(this.isWorking == true&&this.levelFun > 1)
+        	if(this.isWorking == true&&this.levelFun > 1 && minutes % 3 == 0)
         	{
         		levelFun -= 1;
         		funNote = "Work is wearing them down";
@@ -627,10 +633,20 @@ public class FolkData implements Serializable
                 getHomeForHomeless();
             }
             
-            if(!statusText.contains("Hanging")&&this.levelSocial > 1)
+            if(!statusText.contains("Hanging")&&this.levelSocial > 1 && minutes % 2 == 0)
             {
             	levelSocial -= 1;
             	socialNote = "Hasn't hung out with anyone lately";
+            }
+            // company at work and at home counts for something too
+            if (minutes % 3 == 0 && levelSocial < 10)
+            {
+                String with = company();
+                if (with != null)
+                {
+                    levelSocial += 1;
+                    socialNote = with;
+                }
             }
 
             //if pregnant and day 9, give birth!
@@ -696,7 +712,7 @@ public class FolkData implements Serializable
             //make them wander to shops and houses if they are wandering
             boolean gotWanderPoint = false;
 
-            if (action == FolkAction.WANDER && this.isSpawned() && this.employedAt == null && this.age >= 18 && !this.statusText.contains("baby"))
+            if (action == FolkAction.WANDER && this.isSpawned() && (this.employedAt == null || dayOff()) && this.age >= 18 && !this.statusText.contains("baby"))
             {
                 for (int i = 0; i < SimukraftReloaded.buildings().size(); i++)
                 {
@@ -1196,7 +1212,15 @@ public class FolkData implements Serializable
         }
 
         ////////// FIRE OFF THE JOB'S ONUPDATE() all day and night
-        if (this.theirJob != null && !Care.underCare(this))
+        if (this.theirJob != null && dayOff() && (action == FolkAction.ONWAYTOWORK || action == FolkAction.ATWORK))
+        {
+            // the day off starts: out and about instead
+            action = FolkAction.WANDER;
+            isWorking = false;
+            stayPut = false;
+            statusText = "Day off";
+        }
+        if (this.theirJob != null && !Care.underCare(this) && !dayOff())
         {
             theirJob.onUpdate();
         }
@@ -2229,6 +2253,58 @@ public class FolkData implements Serializable
     }
 
     /** get the building/home that this folk lives in, null if homeless */
+    /**
+     * one day in five off work, each Sim on their own day (by name), so a fifth of the town's off at a time: a day to
+     * go shopping, visit and see friends
+     */
+    public boolean dayOff()
+    {
+        if (employedAt == null || isVisitor)
+        {
+            return false;
+        }
+        try
+        {
+            long day = MinecraftServer.getServer().worldServers[0].getTotalWorldTime() / 24000L;
+            return day % 5 == (name.hashCode() & 0x7fffffff) % 5;
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+    }
+
+    /** someone they're with now: a workmate at work, or family at home; null if they're on their own */
+    private String company()
+    {
+        if (action == FolkAction.ATWORK && employedAt != null)
+        {
+            for (FolkData f : SimukraftReloaded.folks())
+            {
+                if (f != this && f.action == FolkAction.ATWORK && employedAt.isSameCoordsAs(f.employedAt, true, true))
+                {
+                    return "Chatting with " + f.name + " at work";
+                }
+            }
+        }
+        if (action == FolkAction.ATHOME || action == FolkAction.STAYINGHOME)
+        {
+            Building home = getHome();
+            if (home != null && home.tennants.size() > 1)
+            {
+                for (String t : home.tennants)
+                {
+                    FolkData f = getFolkByName(t);
+                    if (f != null && f != this && (f.action == FolkAction.ATHOME || f.action == FolkAction.STAYINGHOME))
+                    {
+                        return "Time at home with " + f.name;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     public Building getHome()
     {
         for (int b = 0; b < SimukraftReloaded.buildings().size(); b++)
