@@ -102,6 +102,9 @@ public class Building implements Serializable
     public V3 lumbermillMarker = null; // Lumbermill only used as starting point
     /** how far it's been upgraded (see Upgrades); 1 as built */
     public int level = 1;
+    /** where the power grid's light (and transceiver) goes, by its control box; and "wire" or "radio" (see PowerGrid) */
+    public V3 powerPoint;
+    public String powerVia;
     // to search for trees, blank means use
     // primaryXYZ
     public int blocksInBuilding = 0; // calculated when loadBuilding called
@@ -1088,6 +1091,10 @@ public class Building implements Serializable
         strings.add("builddir|" + this.buildDirection);
         strings.add("lmarker|" + (this.lumbermillMarker == null ? "null" : this.lumbermillMarker.toString()));
         strings.add("level|" + this.level);
+        if (this.powerPoint != null)
+        {
+            strings.add("power|" + this.powerPoint.toString() + "|" + this.powerVia);
+        }
         strings.add("blocksinbuilding|" + this.blocksInBuilding);
         if (this.conBoxLocation != null)
         {
@@ -1536,6 +1543,10 @@ public class Building implements Serializable
 	        					build.buildDirection=value;
 	        				} else if (name.contentEquals("level")) {
 	        					build.level = Integer.parseInt(value.trim());
+	        				} else if (name.contentEquals("power")) {
+	        					String[] pv = value.split("\\|");
+	        					build.powerPoint = new V3(pv[0]);
+	        					build.powerVia = pv.length > 1 ? pv[1] : "radio";
 	        				} else if (name.contentEquals("lmarker")) {
 	        					if (!value.contentEquals("null")) {
 	        						build.lumbermillMarker=new V3(value);
@@ -1683,7 +1694,7 @@ public class Building implements Serializable
 
     /* loads in all buildings files into an ArrayList for quicker access (slowly in a thread) */
     /** blueprints this rewrite adds, shipped in the jar and copied into mods/Simukraft/buildings when missing */
-    private static final String[] BUNDLED_BLUEPRINTS = {"industrial/Warehouse.txt", "commercial/Sim-U-Hospital.txt", "industrial/Sim-U-Blacksmith.txt", "industrial/Sim-U-Masonry.txt", "industrial/Sim-U-Gatehouse.txt", "commercial/Sim-U-Archery Range.txt"};
+    private static final String[] BUNDLED_BLUEPRINTS = {"industrial/Warehouse.txt", "commercial/Sim-U-Hospital.txt", "industrial/Sim-U-Blacksmith.txt", "industrial/Sim-U-Masonry.txt", "industrial/Sim-U-Gatehouse.txt", "commercial/Sim-U-Archery Range.txt", "industrial/Sim-U-Power Station.txt"};
 
     private static void installBundledBlueprints()
     {

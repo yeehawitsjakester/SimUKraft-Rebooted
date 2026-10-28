@@ -230,6 +230,35 @@ public final class Upgrades
                 + "(when the warehouse has diamonds)";
     }
 
+    public static final float MASONRY_COST = 300f;
+
+    /** a masonry's electric furnace: needs the town's power grid; a lineman puts in an Alloy Smelter */
+    public static String upgradeMasonry(Building masonry)
+    {
+        if (!Workshop.isMasonry(masonry))
+        {
+            return "Only a masonry can have an electric furnace";
+        }
+        if (masonry.level >= 2)
+        {
+            return "It has its electric furnace" + (masonry.powerPoint == null ? " coming - a lineman will fit it" : "");
+        }
+        ashjack.simukraftreloaded.core.town.Town town = ashjack.simukraftreloaded.core.town.Towns.at(masonry.primaryXYZ);
+        if (!ashjack.simukraftreloaded.common.power.PowerGrid.hasGrid(town))
+        {
+            return "An electric furnace needs the town's power grid: build a Sim-U-Power Station (and EnderIO)";
+        }
+        if (Economy.balance(masonry.primaryXYZ) < MASONRY_COST)
+        {
+            return "An electric furnace costs " + SimukraftReloaded.displayMoney(MASONRY_COST) + " from the treasury";
+        }
+        Economy.spend(masonry.primaryXYZ, MASONRY_COST);
+        masonry.level = 2;
+        masonry.saveThisBuilding();
+        return "Ordered an electric furnace for the masonry: a lineman will fit an Alloy Smelter, and its stonemasons will "
+                + "smelt faster and without coal";
+    }
+
     /** for the GUI: a short line about where the building's at */
     public static String describe(Building b)
     {

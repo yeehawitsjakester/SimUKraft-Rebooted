@@ -351,6 +351,18 @@ final class BuildingActions
             }
         });
 
+        ServerActions.register("upgradeMasonry", new ServerActions.Action()
+        {
+            public void run(EntityPlayerMP player, NBTTagCompound data)
+            {
+                Building masonry = buildingAt(data);
+                if (masonry != null)
+                {
+                    ActionHandlers.tell(player, Upgrades.upgradeMasonry(masonry));
+                }
+            }
+        });
+
         ServerActions.register("upgradeSmithy", new ServerActions.Action()
         {
             public void run(EntityPlayerMP player, NBTTagCompound data)

@@ -156,6 +156,25 @@ public class JobCraftsman extends Job implements Serializable
             return;
         }
 
+        // an electric furnace (a masonry upgrade, on the grid): no coal, and two at a time
+        boolean electric = shop() == Workshop.Shop.MASON
+                && ashjack.simukraftreloaded.common.power.PowerGrid.electricFurnace(jobWorld, Building.getBuilding(theFolk.employedAt));
+        if (electric)
+        {
+            fuel[0] = Math.max(fuel[0], 8);
+        }
+        for (int pass = 0; pass < (electric ? 2 : 1); pass++)
+        {
+            if (!craftOne(chests))
+            {
+                return;
+            }
+        }
+    }
+
+    /** one craft for the first order something can be done for; false if nothing could be */
+    private boolean craftOne(ArrayList<IInventory> chests)
+    {
         // the first order something can be done for; what the others are stuck on is asked for meanwhile
         LinkedHashMap<Item, Integer> stuck = new LinkedHashMap<Item, Integer>();
         for (Map.Entry<Item, Integer> o : new ArrayList<Map.Entry<Item, Integer>>(orders.entrySet()))
@@ -186,7 +205,7 @@ public class JobCraftsman extends Job implements Serializable
                     }
                     Economy.pay(theFolk, 0.05f);
                 }
-                return;
+                return true;
             }
             if (s.missing != null)
             {
@@ -200,6 +219,7 @@ public class JobCraftsman extends Job implements Serializable
         theFolk.isWorking = false;
         theFolk.statusText = stuck.isEmpty() ? "Can't make what's wanted here"
                 : "Waiting for " + new ItemStack(stuck.keySet().iterator().next()).getDisplayName();
+        return false;
     }
 
     @Override

@@ -251,10 +251,23 @@ public class GuiControlBox extends GuiScreen
             }
         }
 
+        // a power station: linemen
+        if (ashjack.simukraftreloaded.common.power.PowerGrid.isStation(theBuilding) && theBuilding.buildingComplete)
+        {
+            GuiButton b;
+            buttonList.add(b = new GuiButton(1, 10, height - 30, 110, 20, "Hire Lineman"));
+            b.enabled = employeeCount < 3;
+        }
+
         // a masonry: stonemasons
         if (Workshop.isMasonry(theBuilding))
         {
             GuiButton b;
+            if (theBuilding.buildingComplete && theBuilding.level < 2)
+            {
+                buttonList.add(new GuiButton(1044, 125, height - 30, 170, 20, "Electric furnace ("
+                        + SimukraftReloaded.displayMoney(ashjack.simukraftreloaded.core.building.Upgrades.MASONRY_COST) + ")"));
+            }
             buttonList.add(b = new GuiButton(1, 10, height - 30, 110, 20, "Hire Stonemason"));
             b.enabled = employeeCount < 2;
         }
@@ -724,11 +737,12 @@ public class GuiControlBox extends GuiScreen
             mc.setIngameFocus();
             return;
         }
-        if (guibutton.id == 1041 || guibutton.id == 1042 || guibutton.id == 1043)
+        if (guibutton.id == 1041 || guibutton.id == 1042 || guibutton.id == 1043 || guibutton.id == 1044)
         {
             NBTTagCompound data = new NBTTagCompound();
             ActionHandlers.putV3(data, "box", location);
-            ServerActions.send(guibutton.id == 1041 ? "addBasement" : guibutton.id == 1042 ? "upgradeChests" : "upgradeSmithy", data);
+            ServerActions.send(guibutton.id == 1041 ? "addBasement" : guibutton.id == 1042 ? "upgradeChests"
+                    : guibutton.id == 1043 ? "upgradeSmithy" : "upgradeMasonry", data);
             mc.displayGuiScreen(null);
             mc.setIngameFocus();
             return;
@@ -851,6 +865,11 @@ public class GuiControlBox extends GuiScreen
         {
             mc.currentScreen = null;
             mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.SOLDIER));
+        }
+        else if (guibutton.displayString.contentEquals("Hire Lineman"))
+        {
+            mc.currentScreen = null;
+            mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.LINEMAN));
         }
         else if (guibutton.displayString.contentEquals("Hire Wall Builder"))
         {
