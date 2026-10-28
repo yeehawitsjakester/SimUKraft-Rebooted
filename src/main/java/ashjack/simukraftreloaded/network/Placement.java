@@ -240,6 +240,30 @@ public class Placement
                 check(b);
             }
         });
+        // a quarter turn round the constructor box (clockwise, from above)
+        ServerActions.register("rotatePlacement", new ServerActions.Action()
+        {
+            public void run(EntityPlayerMP player, NBTTagCompound data)
+            {
+                V3 box = ActionHandlers.getV3(data, "box");
+                Building b = waitingAt(box);
+                if (b == null || b.buildDirection == null)
+                {
+                    return;
+                }
+                Building turned = turned(b);
+                if (turned != b)
+                {
+                    SimukraftReloaded.serverBuildings.remove(b);
+                    results.remove(b);
+                    SimukraftReloaded.serverBuildings.add(turned);
+                }
+                check(turned);
+                ActionHandlers.tell(player, "Turned the " + turned.displayNameWithoutPK + " to face " + facing(turned.buildDirection)
+                        + ". " + turned.placementStatus);
+            }
+        });
+
         ServerActions.register("confirmPlacement", new ServerActions.Action()
         {
             public void run(EntityPlayerMP player, NBTTagCompound data)
@@ -260,6 +284,63 @@ public class Placement
                 }
             }
         });
+    }
+
+    private static final String[] TURNS = {"+x", "+z", "-x", "-z"};
+
+    /**
+     * a waiting building a quarter turn round: a made-to-order one generated again facing the new way (its doors,
+     * stairs and ladders with it); a blueprint's direction turned (its own stairs and doors keep the way they were drawn)
+     */
+    static Building turned(Building b)
+    {
+        int i = java.util.Arrays.asList(TURNS).indexOf(b.buildDirection);
+        String dir = TURNS[(i + 1) % TURNS.length];
+        String name = null;
+        ashjack.simukraftreloaded.core.building.MotelPlan motel = ashjack.simukraftreloaded.core.building.MotelPlan.parse(b.displayName);
+        ashjack.simukraftreloaded.core.building.ApartmentPlan apts = ashjack.simukraftreloaded.core.building.ApartmentPlan.parse(b.displayName);
+        ashjack.simukraftreloaded.core.building.TowerPlan tower = ashjack.simukraftreloaded.core.building.TowerPlan.parse(b.displayName);
+        if (motel != null)
+        {
+            name = new ashjack.simukraftreloaded.core.building.MotelPlan(motel.shape, motel.floors, motel.roomsA, motel.roomsB, dir).name();
+        }
+        else if (apts != null)
+        {
+            name = new ashjack.simukraftreloaded.core.building.ApartmentPlan(apts.kind, apts.across, apts.rows, apts.floors, dir).name();
+        }
+        else if (tower != null)
+        {
+            name = new ashjack.simukraftreloaded.core.building.TowerPlan(tower.height, dir).name();
+        }
+        if (name == null)
+        {
+            b.buildDirection = dir;
+            return b;
+        }
+        Building n = Building.fromGenerated(name, b.type);
+        n.awaitingAt = b.awaitingAt;
+        n.conBoxLocation = b.conBoxLocation;
+        n.offsetLtr = b.offsetLtr;
+        n.offsetFtb = b.offsetFtb;
+        n.offsetUp = b.offsetUp;
+        return n;
+    }
+
+    private static String facing(String dir)
+    {
+        return "+x".equals(dir) ? "east" : "+z".equals(dir) ? "south" : "-x".equals(dir) ? "west" : "north";
+    }
+
+    /** the constructor box is gone: whatever was waiting there to be placed (and its outline) goes too */
+    public static void boxGone(V3 box)
+    {
+        Building b = waitingAt(box);
+        if (b != null)
+        {
+            SimukraftReloaded.serverBuildings.remove(b);
+            results.remove(b);
+            MirrorSync.sendToAll();
+        }
     }
 
     private static int clamp(int v, int limit)

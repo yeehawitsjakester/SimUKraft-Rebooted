@@ -38,11 +38,14 @@ public class MirrorSyncPacket implements IMessage
         @Override
         public IMessage onMessage(final MirrorSyncPacket message, MessageContext ctx)
         {
+            // unpacked here, on the network thread; only the swap waits for the client thread, so a big town's data
+            // doesn't stall a frame every time it comes
+            final MirrorSync.Bundle bundle = MirrorSync.decode(message.payload);
             ModSimukraft.proxy.runOnClientThread(new Runnable()
             {
                 public void run()
                 {
-                    MirrorSync.apply(message.payload);
+                    MirrorSync.install(bundle);
                 }
             });
             return null;

@@ -132,7 +132,7 @@ public class FolkData implements Serializable
     /** out at a venue (see Leisure): where, since and until when, and how it's going */
     public transient V3 leisureAt;
     public transient long leisureSince, leisureUntil, lastLeisureTick;
-    public transient boolean leisurePaid, leisureArrived;
+    public transient boolean leisurePaid, leisureArrived, leisureExtended;
     /** the evening they last went out (world day), so it's once an evening */
     private transient long wentOutOn = -1;
     public String socialNote = "";
@@ -914,6 +914,13 @@ public class FolkData implements Serializable
             if (leisureAt != null)
             {
                 ashjack.simukraftreloaded.common.life.Leisure.tick(this, now);
+            }
+            else if (statusText.startsWith("Relaxing at the ") && statusText.contains(" - "))
+            {
+                // an outing from before a restart (the outing isn't saved, the status was): it's over
+                statusText = "Wandering";
+                stayPut = false;
+                action = FolkAction.WANDER;
             }
 
             //if they were wandering to a folk house when you hire them, they get stuck on stayput once arrived

@@ -86,6 +86,17 @@ public class BlockConstructorBox extends Block
         super.onBlockDestroyedByPlayer(par1World, par2, par3, par4, par5);
     }
 
+    /** however it goes (broken, blown up, replaced): a building waiting to be placed here goes with it */
+    @Override
+    public void breakBlock(World world, int x, int y, int z, net.minecraft.block.Block block, int meta)
+    {
+        if (!world.isRemote)
+        {
+            ashjack.simukraftreloaded.network.Placement.boxGone(new V3((double) x, (double) y, (double) z, world.provider.dimensionId));
+        }
+        super.breakBlock(world, x, y, z, block, meta);
+    }
+
     @Override
     public void onBlockAdded(World par1World, int par2, int par3, int par4)
     {

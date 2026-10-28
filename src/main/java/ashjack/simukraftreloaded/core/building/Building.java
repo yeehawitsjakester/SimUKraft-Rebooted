@@ -1610,6 +1610,16 @@ public class Building implements Serializable
 	            		}
 	            	}
 	            	
+	            	// a clinic or hospital that was being turned into flats stays a clinic or hospital: the conversion's undone
+	            	ApartmentConversion.Name conv = ApartmentConversion.parse(build.displayName);
+	            	if (conv != null && conv.convert && !build.buildingComplete) {
+	            		String orig = conv.original.toLowerCase();
+	            		if (orig.contains("clinic") || orig.contains("hospital")) {
+	            			SimukraftReloaded.log.info("Building: " + conv.original + " was being turned into flats - it's a hospital again");
+	            			build.displayName = conv.original;
+	            			build.buildingComplete = true;
+	            		}
+	            	}
 	            	if (build.roomMode == null) {
 	            		build.loadStructure();  //fills in several more fields about this building
 	            	} else {

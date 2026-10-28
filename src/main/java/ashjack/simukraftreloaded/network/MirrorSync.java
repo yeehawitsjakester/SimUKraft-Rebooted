@@ -142,9 +142,10 @@ public final class MirrorSync
 
     public static void sendToAll()
     {
-        if (MinecraftServer.getServer() == null || !ModSimukraft.proxy.ranStartup)
+        if (MinecraftServer.getServer() == null || !ModSimukraft.proxy.ranStartup
+                || MinecraftServer.getServer().getConfigurationManager().playerEntityList.isEmpty())
         {
-            return;
+            return; // nobody to send it to: don't build it
         }
         byte[] payload;
         try
@@ -162,6 +163,15 @@ public final class MirrorSync
     /** client thread: replace the mirror with what the server sent */
     public static void apply(byte[] payload)
     {
+        install(decode(payload));
+    }
+
+    /**
+     * the snapshot unpacked, ready to put in place: the slow part (unzipping and rebuilding every Sim, building and
+     * relationship), so it's done off the client thread as the packet arrives; null if it couldn't be read
+     */
+    public static Bundle decode(byte[] payload)
+    {
         try
         {
             ObjectInputStream in = new SafeObjectInputStream(new GZIPInputStream(new ByteArrayInputStream(payload)));
@@ -175,6 +185,24 @@ public final class MirrorSync
             {
                 unpackRequirements(f.theBuilding);
             }
+            return b;
+        }
+        catch (Exception e)
+        {
+            SimukraftReloaded.log.warning("MirrorSync: couldn't read the server's data: " + e);
+            return null;
+        }
+    }
+
+    /** client thread: the unpacked snapshot put in place (quick: it's swapping lists over) */
+    public static void install(Bundle b)
+    {
+        if (b == null)
+        {
+            return;
+        }
+        try
+        {
             ClientMirror.folks = b.folks;
             ClientMirror.buildings = b.buildings;
             if (b.towns != null)

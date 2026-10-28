@@ -309,7 +309,9 @@ public class JobLumberjack extends Job implements Serializable
             return;
         }
 
-        // felled
+        // felled: the canopy comes down with it (left to decay, a jungle tree's took minutes, re-lighting and redrawing
+        // as it went and scattering saplings nobody picked up)
+        clearCanopy(tree);
         V3 base = foundWoodAt;
         Forest.release(tree);
         tree = null;
@@ -520,6 +522,50 @@ public class JobLumberjack extends Job implements Serializable
             }
         }
         return false;
+    }
+
+    /**
+     * the leaves that grew round the logs just felled, cleared at once (no drops, no decaying for minutes), with a
+     * sapling now and then for the mill - about as many as decaying leaves would have dropped
+     */
+    private void clearCanopy(Forest.Tree felled)
+    {
+        java.util.HashSet<Long> done = new java.util.HashSet<Long>();
+        int cleared = 0;
+        java.util.Random rand = jobWorld.rand;
+        for (int[] l : felled.logs)
+        {
+            for (int dx = -3; dx <= 3 && cleared < 3000; dx++)
+            {
+                for (int dy = -2; dy <= 3; dy++)
+                {
+                    for (int dz = -3; dz <= 3; dz++)
+                    {
+                        int x = l[0] + dx, y = l[1] + dy, z = l[2] + dz;
+                        if (!done.add(((long) (x & 0x3FFFFFF) << 38) | ((long) (z & 0x3FFFFFF) << 12) | (y & 0xFFF))
+                                || !jobWorld.blockExists(x, y, z))
+                        {
+                            continue;
+                        }
+                        net.minecraft.block.Block b = jobWorld.getBlock(x, y, z);
+                        int meta = jobWorld.getBlockMetadata(x, y, z);
+                        // leaves that grew there (placed ones carry the no-decay bit)
+                        if (!b.isLeaves(jobWorld, x, y, z) || b instanceof net.minecraft.block.BlockLeaves && (meta & 4) != 0)
+                        {
+                            continue;
+                        }
+                        if (rand.nextInt(20) == 0)
+                        {
+                            Item sapling = Item.getItemFromBlock(Blocks.sapling);
+                            int kind = b == Blocks.leaves ? meta & 3 : b == Blocks.leaves2 ? 4 + (meta & 1) : 0;
+                            addToInventory(new ItemStack(sapling, 1, kind));
+                        }
+                        jobWorld.setBlock(x, y, z, Blocks.air, 0, 2);
+                        cleared++;
+                    }
+                }
+            }
+        }
     }
 
     /** logs of any kind carried */

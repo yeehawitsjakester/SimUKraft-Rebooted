@@ -162,7 +162,7 @@ public class CommonTickHandler
     		sendHud();
     		countMarkets();
     	}
-    	if (syncTicks % 100 == 0)
+    	if (syncTicks % 200 == 0) // every ten seconds (GUIs ask for it fresh as they open)
     	{
     		MirrorSync.sendToAll();
     	}

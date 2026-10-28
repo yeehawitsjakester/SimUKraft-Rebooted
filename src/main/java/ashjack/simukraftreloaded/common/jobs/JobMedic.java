@@ -31,6 +31,9 @@ public class JobMedic extends Job implements Serializable
     public Stage theStage;
     private transient long timeSinceLastRun, lastRound, lastPassing, calloutSince, lastRepath, treatingSince;
     private transient String callout;
+    /** where they're on duty (see Care.workSpot), and when they set off back there (0: they're there) */
+    private transient V3 post;
+    private transient long postFound, postSince;
 
     /** patient name -> the medic going to them */
     private static final Map<String, String> claims = new HashMap<String, String>();
@@ -109,17 +112,34 @@ public class JobMedic extends Job implements Serializable
 
         theStage = Stage.ONDUTY;
         theFolk.updateLocationFromEntity();
-        if (theFolk.isSpawned() && theFolk.location.getDistanceTo(theFolk.employedAt) > 6)
+        // on duty inside, by the beds - not out at the control box, which can be on a corner of the foundation
+        if (post == null || now - postFound > 60000)
+        {
+            postFound = now;
+            V3 spot = Care.workSpot(work, jobWorld);
+            post = spot != null ? spot : theFolk.employedAt.clone();
+        }
+        if (theFolk.isSpawned() && theFolk.location.getDistanceTo(post) > 3)
         {
             theFolk.isWorking = false;
             theFolk.stayPut = false;
             theFolk.statusText = "Back to the " + work.displayNameWithoutPK;
             if (theFolk.destination == null)
             {
-                theFolk.gotoXYZ(theFolk.employedAt, GotoMethod.WALK);
+                theFolk.gotoXYZ(post, GotoMethod.WALK);
+            }
+            if (postSince == 0)
+            {
+                postSince = now; // set off back
+            }
+            else if (now - postSince > 20000)
+            {
+                theFolk.theEntity.setPositionAndUpdate(post.x + 0.5, post.y, post.z + 0.5); // round whatever's in the way
+                theFolk.destination = null;
             }
             return;
         }
+        postSince = 0;
         rounds(work, now);
         passersBy(now);
     }

@@ -448,6 +448,7 @@ public class GuiBuildingConstructor extends GuiScreen
                 }
                 buttonList.add(new GuiButton(46, width / 2 - 101, 104, 100, 20, "Start building"));
                 buttonList.add(new GuiButton(47, width / 2 + 1, 104, 100, 20, "Cancel it"));
+                buttonList.add(new GuiButton(48, width / 2 + 103, 104, 80, 20, "Turn 90\u00b0"));
             }
 
         }
@@ -632,10 +633,15 @@ public class GuiBuildingConstructor extends GuiScreen
             return;
         }
 
-        if (currentPage == 0 && guibutton.id >= 40 && guibutton.id <= 47)
+        if (currentPage == 0 && guibutton.id >= 40 && guibutton.id <= 48)
         {
             NBTTagCompound data = new NBTTagCompound();
             ActionHandlers.putV3(data, "box", constructorLoc);
+            if (guibutton.id == 48)
+            {
+                ServerActions.send("rotatePlacement", data);
+                return;
+            }
             if (guibutton.id <= 45)
             {
                 int[][] step = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, -1}};

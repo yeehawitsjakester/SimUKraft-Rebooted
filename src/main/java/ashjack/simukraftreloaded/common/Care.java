@@ -173,6 +173,42 @@ public final class Care
     }
 
     /** where a patient lies: a bed of their own, if the building has enough, or by the control box */
+    /**
+     * where a medic works: inside, beside the first bed (a hospital's control box can be out on a corner of its
+     * foundation), or the middle of the building if it has none; null if it can't be worked out
+     */
+    public static V3 workSpot(Building b, net.minecraft.world.World w)
+    {
+        if (b == null || w == null)
+        {
+            return null;
+        }
+        List<V3> beds = bedsIn(b);
+        if (!beds.isEmpty())
+        {
+            V3 bed = beds.get(0);
+            int[][] around = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {-1, -1}, {1, -1}, {-1, 1}};
+            for (int[] d : around)
+            {
+                int x = bed.x.intValue() + d[0], z = bed.z.intValue() + d[1];
+                int y = WorldUtil.findStandableY(w, x, bed.y.intValue(), z, 2);
+                if (y >= 0)
+                {
+                    return new V3((double) x, (double) y, (double) z, bed.theDimension);
+                }
+            }
+        }
+        V3 con = ashjack.simukraftreloaded.common.warehouse.WarehouseStock.conBoxOf(b);
+        int[] f = con == null ? null : ashjack.simukraftreloaded.common.warehouse.WarehouseStock.footprint(b, b.layoutBox(con));
+        if (f == null)
+        {
+            return null;
+        }
+        int x = (f[0] + f[3]) / 2, z = (f[2] + f[5]) / 2;
+        int y = WorldUtil.findStandableY(w, x, f[1] + 1, z, 3);
+        return y < 0 ? null : new V3((double) x, (double) y, (double) z, b.primaryXYZ.theDimension);
+    }
+
     public static V3 bedFor(FolkData folk, Building b)
     {
         List<V3> beds = bedsIn(b);

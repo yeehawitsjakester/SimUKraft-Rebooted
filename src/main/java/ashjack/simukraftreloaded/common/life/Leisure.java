@@ -147,6 +147,7 @@ public final class Leisure
         f.leisureSince = System.currentTimeMillis();
         f.leisureUntil = f.leisureSince + 120000 + rand.nextInt(150000);
         f.leisurePaid = false;
+        f.leisureExtended = false;
         f.action = FolkAction.WANDER;
         f.isWorking = false;
         f.stayPut = false;
@@ -290,9 +291,11 @@ public final class Leisure
             {
                 f.funNote = "Went shopping and " + bought;
             }
-            // a busy place keeps them browsing a while longer
-            if (crowd(b) >= 3 && f.leisureUntil - now < 60000)
+            // a busy place keeps them browsing a while longer - once: every shopper staying on kept it busy, so nobody
+            // ever left
+            if (!f.leisureExtended && crowd(b) >= 3 && f.leisureUntil - now < 60000)
             {
+                f.leisureExtended = true;
                 f.leisureUntil += 45000;
             }
         }

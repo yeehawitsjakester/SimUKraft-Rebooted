@@ -73,7 +73,8 @@ public final class ApartmentConversion
     public static boolean eligible(Building b)
     {
         return b != null && "other".equals(b.type) && !MotelPlan.isGenerated(b.displayName) && !isGenerated(b.displayName)
-                && !ApartmentPlan.isGenerated(b.displayName) && !TowerPlan.isGenerated(b.displayName); // flats already, or a tower
+                && !ApartmentPlan.isGenerated(b.displayName) && !TowerPlan.isGenerated(b.displayName) // flats already, or a tower
+                && !ashjack.simukraftreloaded.common.Care.isMedical(b); // a clinic or hospital keeps its beds
     }
 
     /** how many flats a generated blueprint has */

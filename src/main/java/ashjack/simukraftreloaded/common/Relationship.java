@@ -560,7 +560,7 @@ public class Relationship implements Serializable
     public void levelIncrease(int byAmount)
     {
         String oldLevel = this.toFullString();
-        SimukraftReloaded.log.info("Relationship: + current level and sublevel:" + this.theLevel.toString() + " " + this.theSubLevel);
+        SimukraftReloaded.log.fine("Relationship: + current level and sublevel:" + this.theLevel.toString() + " " + this.theSubLevel);
         this.theSubLevel += byAmount;
 
         if (theSubLevel > 100)
