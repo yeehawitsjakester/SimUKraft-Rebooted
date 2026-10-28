@@ -88,7 +88,7 @@ public final class Commerce
             }
             return 1;
         }
-        return Math.max(2, Math.min(12, b.ltrCount * b.ftbCount / 40));
+        return Math.max(2, Math.min(12, b.ltrCount * b.ftbCount / 35));
     }
 
     /** the daily rent for a unit: more in a big mall, where the customers are */

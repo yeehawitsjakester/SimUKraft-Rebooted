@@ -151,6 +151,7 @@ public final class Leisure
         f.isWorking = false;
         f.stayPut = false;
         f.statusText = "Off to the " + best.displayNameWithoutPK;
+        Transport.trip(f, best.primaryXYZ);
         if (f.isSpawned())
         {
             f.gotoXYZ(best.primaryXYZ.clone(), GotoMethod.WALK);

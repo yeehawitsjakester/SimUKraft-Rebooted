@@ -195,6 +195,9 @@ public class FolkData implements Serializable
     public float money = 0f;
     /** their health, kept here so it isn't lost while they're out of the world; -1 for unknown (full) */
     public float health = -1f;
+    /** 0-10: walking keeps it up, sitting about wears it down; it sets their health (see Transport) */
+    public float fitness = 6f;
+    public transient double walkedToday, rodeToday;
     /** how they're being looked after when hurt (see Care), the clinic or hospital they're going to or in (V3 text),
      * and the world time their rest before going back to work ends */
     public Care.Stage care = Care.Stage.NONE;
@@ -562,6 +565,7 @@ public class FolkData implements Serializable
             this.theEntity.setLocationAndAngles(location.x, location.y, location.z, 0f, 0f);
             if (this.health > 0)
             {
+                ashjack.simukraftreloaded.common.life.Transport.applyFitness(this);
                 this.theEntity.setHealth(Math.min(this.health, this.theEntity.getMaxHealth()));
             }
 
@@ -1081,6 +1085,10 @@ public class FolkData implements Serializable
 	                    if (dist > 1 && this.destination == null)
 	                    {
 	                        this.stayPut = false;
+	                        if (action != FolkAction.GOINGHOME)
+	                        {
+	                            ashjack.simukraftreloaded.common.life.Transport.trip(this, liveAt); // walked, or the train
+	                        }
 	                        gotoXYZ(liveAt, null);
 	                        this.action = FolkAction.GOINGHOME;
 	                        this.statusText = "Going Home";
@@ -2080,6 +2088,9 @@ public class FolkData implements Serializable
 	        	    			else if (name.contentEquals("money")) {
 	        	    				folkd.money=Float.parseFloat(value);
 	        	    			}
+	        	    			else if (name.contentEquals("fitness")) {
+	        	    				folkd.fitness=Float.parseFloat(value);
+	        	    			}
 	        	    			else if (name.contentEquals("health")) {
 	        	    				folkd.health=Float.parseFloat(value);
 	        	    			}
@@ -2233,6 +2244,7 @@ public class FolkData implements Serializable
     			this.health = this.theEntity.getHealth();
     		}
     		strings.add("health|"+this.health);
+    		strings.add("fitness|"+this.fitness);
     		strings.add("care|"+(this.care == null ? Care.Stage.NONE : this.care)+";"+(this.careAt == null ? "" : this.careAt)+";"+this.careUntil);
     		strings.add("levelfun|"+this.levelFun);
     		strings.add("levelsocial|"+this.levelSocial);
@@ -3033,6 +3045,15 @@ public class FolkData implements Serializable
         {
             score += outdoorShare < 0.5f ? addReason(reasons, 8, "Stays indoors (" + Traits.traitHatesOutdoors.traitName + ")")
                                          : addReason(reasons, -8, "Out in the open (" + Traits.traitHatesOutdoors.traitName + ")");
+        }
+
+        if (fitness < 3 && adult && !hasTrait(Traits.traitLazy))
+        {
+            score += addReason(reasons, -5, "Out of shape");
+        }
+        if (fitness >= 7 && hasTrait(Traits.traitActive))
+        {
+            score += addReason(reasons, 5, "Fit and well (" + Traits.traitActive.traitName + ")");
         }
 
         happiness = Math.max(0, Math.min(100, score));

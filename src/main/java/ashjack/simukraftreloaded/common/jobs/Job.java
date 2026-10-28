@@ -126,6 +126,7 @@ public abstract class Job
         if (SimukraftReloaded.isDayTime() && theFolk.action != FolkAction.ONWAYTOWORK && theFolk.action != FolkAction.ATWORK)
         {
             theFolk.action = FolkAction.ONWAYTOWORK;
+            ashjack.simukraftreloaded.common.life.Transport.trip(theFolk, theFolk.employedAt); // the commute: walked, or the train
             theFolk.stayPut = false;
             theFolk.gotoXYZ(theFolk.employedAt, null);
         }

@@ -188,7 +188,7 @@ public final class Care
 
     public static float maxHealth(FolkData folk)
     {
-        return folk.isSpawned() ? folk.theEntity.getMaxHealth() : SimukraftReloadedConfig.configSimMaxHealth;
+        return folk.isSpawned() ? folk.theEntity.getMaxHealth() : ashjack.simukraftreloaded.common.life.Transport.maxHealth(folk);
     }
 
     public static float health(FolkData folk)
