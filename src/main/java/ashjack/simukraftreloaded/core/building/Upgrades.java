@@ -33,7 +33,7 @@ public final class Upgrades
 
     public static boolean hasIronChests()
     {
-        return Loader.isModLoaded("IronChest");
+        return ashjack.simukraftreloaded.core.registry.ModSupport.Feature.IRON_CHESTS.on();
     }
 
     public static boolean isWarehouse(Building b)

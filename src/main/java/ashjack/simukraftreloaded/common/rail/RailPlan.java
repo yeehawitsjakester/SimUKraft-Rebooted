@@ -93,6 +93,19 @@ public final class RailPlan
         {
             return "Both markers need to be in this world";
         }
+        // the land between them (and a little round) loaded, so the planner can see it all
+        int x0 = Math.min(a.x.intValue(), b.x.intValue()) - 32 >> 4, x1 = Math.max(a.x.intValue(), b.x.intValue()) + 32 >> 4;
+        int z0 = Math.min(a.z.intValue(), b.z.intValue()) - 32 >> 4, z1 = Math.max(a.z.intValue(), b.z.intValue()) + 32 >> 4;
+        if ((x1 - x0 + 1) * (z1 - z0 + 1) <= 900)
+        {
+            for (int cx = x0; cx <= x1; cx++)
+            {
+                for (int cz = z0; cz <= z1; cz++)
+                {
+                    w.getChunkProvider().loadChunk(cx, cz);
+                }
+            }
+        }
         String[] why = new String[1];
         List<int[]> route = RailPlanner.route(w, new int[] {a.x.intValue(), a.y.intValue(), a.z.intValue()},
                 new int[] {b.x.intValue(), b.y.intValue(), b.z.intValue()}, why);

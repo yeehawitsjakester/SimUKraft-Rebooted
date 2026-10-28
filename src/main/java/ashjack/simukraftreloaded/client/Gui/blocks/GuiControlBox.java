@@ -264,15 +264,16 @@ public class GuiControlBox extends GuiScreen
         if (ashjack.simukraftreloaded.common.power.PowerGrid.isStation(theBuilding) && theBuilding.buildingComplete)
         {
             GuiButton b;
-            buttonList.add(b = new GuiButton(1, 10, height - 30, 110, 20, "Hire Lineman"));
-            b.enabled = employeeCount < 3;
+            boolean power = ashjack.simukraftreloaded.core.registry.ModSupport.Feature.POWER.on();
+            buttonList.add(b = new GuiButton(1, 10, height - 30, 110, 20, power ? "Hire Lineman" : "Needs EnderIO"));
+            b.enabled = power && employeeCount < 3;
         }
 
         // a masonry: stonemasons
         if (Workshop.isMasonry(theBuilding))
         {
             GuiButton b;
-            if (theBuilding.buildingComplete && theBuilding.level < 2)
+            if (theBuilding.buildingComplete && theBuilding.level < 2 && ashjack.simukraftreloaded.core.registry.ModSupport.Feature.POWER.on())
             {
                 buttonList.add(new GuiButton(1044, 125, height - 30, 170, 20, "Electric furnace ("
                         + SimukraftReloaded.displayMoney(ashjack.simukraftreloaded.core.building.Upgrades.MASONRY_COST) + ")"));

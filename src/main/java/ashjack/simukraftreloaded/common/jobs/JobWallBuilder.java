@@ -118,6 +118,7 @@ public class JobWallBuilder extends Job implements Serializable
             task = TownWall.next(town, jobWorld, theFolk.name);
             if (task == null)
             {
+                ashjack.simukraftreloaded.common.ChunkKeeper.release("wall@" + theFolk.employedAt);
                 int[] p = TownWall.progress(town);
                 theFolk.statusText = "The wall's done (" + p[0] + " of " + p[1] + " lengths up; the rest are gates and gaps)";
                 theFolk.isWorking = false;
@@ -126,6 +127,9 @@ public class JobWallBuilder extends Job implements Serializable
             }
             taskSince = now;
             laid = 0;
+            java.util.Set<net.minecraft.world.ChunkCoordIntPair> here = new java.util.HashSet<net.minecraft.world.ChunkCoordIntPair>();
+            here.add(ashjack.simukraftreloaded.common.ChunkKeeper.chunkOf(task.x, task.z));
+            ashjack.simukraftreloaded.common.ChunkKeeper.keep("wall@" + theFolk.employedAt, jobWorld, here);
             if (!task.takeDown && !creative() && bricks() < TownWall.HEIGHT + 1)
             {
                 drop();

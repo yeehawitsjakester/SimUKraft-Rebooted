@@ -223,6 +223,8 @@ public class SimukraftReloaded
         Building.initialiseAllBuildings(); //load ALL buildings off disk and init them
         Building.loadAllBuildings();	   //load buildings in this world
         Towns.loadAll();                   // after the buildings: a world from before towns makes one of them
+        ashjack.simukraftreloaded.common.ChunkKeeper.releaseAll(); // another world's
+        ModSupport.report();
         ashjack.simukraftreloaded.core.town.Accounts.load();
         CourierTask.loadCourierTasksAndPoints();
         MiningBox.loadMiningBoxes();

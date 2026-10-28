@@ -99,11 +99,19 @@ public class JobRailBuilder extends Job implements Serializable
         {
             return;
         }
-        if (p.route.isEmpty())
+        if (p.route.isEmpty() || p.finished)
         {
-            theFolk.statusText = "No railway planned - place two markers and plan one at the depot";
-            theFolk.isWorking = false;
-            return;
+            ashjack.simukraftreloaded.common.ChunkKeeper.release("rail@" + theFolk.employedAt);
+            if (p.route.isEmpty())
+            {
+                theFolk.statusText = "No railway planned - place two markers and plan one at the depot";
+                theFolk.isWorking = false;
+                return;
+            }
+        }
+        else
+        {
+            keepAhead(p);
         }
         if (cell < 0)
         {
@@ -162,6 +170,32 @@ public class JobRailBuilder extends Job implements Serializable
             idleUntil = now + 30000;
         }
         drop();
+    }
+
+    /** the next stretch of the line kept loaded (the first unbuilt cells, for a few chunks), so it's built far from anyone */
+    private void keepAhead(RailPlan p)
+    {
+        java.util.LinkedHashSet<net.minecraft.world.ChunkCoordIntPair> chunks = new java.util.LinkedHashSet<net.minecraft.world.ChunkCoordIntPair>();
+        int start = -1;
+        for (int i = 0; i < p.route.size(); i++)
+        {
+            int[] c = p.route.get(i);
+            if (!jobWorld.getChunkProvider().chunkExists(c[0] >> 4, c[2] >> 4) || !p.done(jobWorld, i))
+            {
+                start = i;
+                break;
+            }
+        }
+        if (start < 0)
+        {
+            return;
+        }
+        for (int i = Math.max(0, start - 1); i < p.route.size() && chunks.size() < ashjack.simukraftreloaded.core.registry.SimukraftReloadedConfig.configKeepChunksPerJob; i++)
+        {
+            int[] c = p.route.get(i);
+            chunks.add(ashjack.simukraftreloaded.common.ChunkKeeper.chunkOf(c[0], c[2]));
+        }
+        ashjack.simukraftreloaded.common.ChunkKeeper.keep("rail@" + theFolk.employedAt, jobWorld, chunks);
     }
 
     /** where to stand for a cell: on top of where the rail will go, or the ground beside it if that's in a hill */

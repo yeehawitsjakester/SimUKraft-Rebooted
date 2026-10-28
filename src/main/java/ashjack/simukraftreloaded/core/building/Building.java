@@ -1700,6 +1700,10 @@ public class Building implements Serializable
     {
         for (String path : BUNDLED_BLUEPRINTS)
         {
+            if (path.contains("Power Station") && !ashjack.simukraftreloaded.core.registry.ModSupport.Feature.POWER.on())
+            {
+                continue; // it's EnderIO's
+            }
             File target = new File(SimukraftReloaded.getSimukraftFolder() + File.separator + "buildings" + File.separator
                     + path.replace('/', File.separatorChar));
             if (target.exists())

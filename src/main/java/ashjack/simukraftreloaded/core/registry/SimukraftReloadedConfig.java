@@ -23,6 +23,7 @@ public class SimukraftReloadedConfig
     public static int configHotelVisitorChance = 40;
     public static int configBarracksAreaPerSoldier = 6;
     public static int configSoldierPatrolRadius = 96;
+    public static int configKeepChunksPerJob = 6;
     public static int configBanditNightChance = 20;
     public static int configBanditGroupSize = 3;
     public static int configWantedMinutes = 3;
@@ -168,6 +169,18 @@ public class SimukraftReloadedConfig
             temp= p.getString();
             p.comment="These are the last names used by the random name generator, keep the format the same or bad things will happen.";
             configSurnames=temp.split(",");
+            p = config.get("Mods", "WarnMissingMods", true);
+            ModSupport.warn = p.getBoolean(true);
+            p.comment = "Say (in the log and in chat when a player joins) which features are off because the mod they need isn't installed";
+            for (ModSupport.Feature f : ModSupport.Feature.values())
+            {
+                p = config.get("Mods", f.configKey(), true);
+                ModSupport.warnEach.put(f, p.getBoolean(true));
+                p.comment = "Warn when " + f.modName + " isn't installed (" + f.what + " is off without it)";
+            }
+            p = config.get("Settings", "KeepChunksPerJob", 6);
+            configKeepChunksPerJob = Math.max(0, Math.min(25, p.getInt(6)));
+            p.comment = "How many chunks a rail builder or wall builder keeps loaded around their work when no player's near, so it carries on (0 to never load chunks)";
             
 
         }

@@ -182,6 +182,8 @@ public class ModSimukraft
         
         //Events
         SimukraftReloadedEvents.loadEvents();
+        cpw.mods.fml.common.FMLCommonHandler.instance().bus().register(new ashjack.simukraftreloaded.core.registry.ModSupport.LoginWarning());
+        ashjack.simukraftreloaded.common.ChunkKeeper.register();
         
         //Recipes
         SimukraftReloadedRecipes.registerRecipes();
