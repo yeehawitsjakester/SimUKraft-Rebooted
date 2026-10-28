@@ -684,6 +684,22 @@ public class GuiControlBox extends GuiScreen
                 else if (theBuilding.type.contentEquals("industrial") || theBuilding.type.contentEquals("commercial") || theBuilding.type.contentEquals("special")
                          || Care.isMedical(theBuilding) || ashjack.simukraftreloaded.common.life.Leisure.venueOf(theBuilding) != null)
                 {
+                    int units = ashjack.simukraftreloaded.common.life.Commerce.units(theBuilding);
+                    if (units > 0)
+                    {
+                        // the units let out to Sims' own shops
+                        int ly = 140;
+                        fontRendererObj.drawString("Shops : " + theBuilding.leases.size() + " of " + units + " units let ("
+                                + SimukraftReloaded.displayMoney(ashjack.simukraftreloaded.common.life.Commerce.rent(theBuilding)) + " a day each)",
+                                5, ly, 0xffff80);
+                        for (ashjack.simukraftreloaded.common.life.Lease l : theBuilding.leases)
+                        {
+                            ly += 11;
+                            fontRendererObj.drawString(l.owner + " - " + l.line + " (x" + String.format("%.1f", l.markup) + "), today "
+                                    + SimukraftReloaded.displayMoney(l.today) + ", yesterday " + SimukraftReloaded.displayMoney(l.yesterday)
+                                    + (l.strikes > 0 ? "  \u00a7cstruggling (" + l.strikes + "/3)" : ""), 10, ly, 0xffffa0);
+                        }
+                    }
                     if (Care.isMedical(theBuilding))
                     {
                         int patients = 0;

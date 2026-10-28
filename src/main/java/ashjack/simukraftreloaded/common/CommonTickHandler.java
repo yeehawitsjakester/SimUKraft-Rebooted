@@ -194,6 +194,7 @@ public class CommonTickHandler
             
             //handle day-night-day transitions
             SimukraftReloaded.dayTransitionHandler();
+            ashjack.simukraftreloaded.common.life.Commerce.tick(); // rents in the morning, shops opening and closing
 
             //if a farm needs upgrading, incrementally upgrade it
             if (SimukraftReloaded.farmToUpgrade != null)

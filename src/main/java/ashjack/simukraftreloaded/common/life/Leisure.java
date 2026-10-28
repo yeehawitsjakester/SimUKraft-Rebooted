@@ -43,7 +43,8 @@ public final class Leisure
         LIBRARY("reading", "Librarian", 0.1f, 1, 0, When.DAY, "library", "museum", "gallery"),
         FITNESS("working out", "Coach", 0.3f, 1, 1, When.ANY, "gym", "pool", "sports", "stadium", "arena", "whirlpool"),
         AMUSEMENT("having a laugh", "Attendant", 0.8f, 2, 1, When.ANY, "bowling", "arcade", "casino", "theatre", "theater", "cinema", "movie"),
-        CHURCH("at a service", "Priest", 0f, 1, 1, When.DAY, "church", "temple", "chapel", "cathedral", "shrine");
+        CHURCH("at a service", "Priest", 0f, 1, 1, When.DAY, "church", "temple", "chapel", "cathedral", "shrine"),
+        SHOPS("shopping", "Security guard", 0f, 1, 1, When.DAY, "mall", "market", "shopping", "shop", "store", "boutique", "emporium");
 
         public final String doing, staffTitle;
         public final float price;
@@ -281,6 +282,19 @@ public final class Leisure
         boolean staff = staffed(b);
         f.levelFun = Math.min(10, f.levelFun + v.fun + (staff ? 1 : 0));
         f.funNote = "Had a good time " + v.doing + " at the " + b.displayNameWithoutPK;
+        if (v == Venue.SHOPS)
+        {
+            String bought = Commerce.shop(f, b);
+            if (bought != null)
+            {
+                f.funNote = "Went shopping and " + bought;
+            }
+            // a busy place keeps them browsing a while longer
+            if (crowd(b) >= 3 && f.leisureUntil - now < 60000)
+            {
+                f.leisureUntil += 45000;
+            }
+        }
         FolkData other = someoneElseThere(f, b);
         if (other != null)
         {
