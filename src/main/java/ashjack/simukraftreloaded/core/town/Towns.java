@@ -203,6 +203,7 @@ public final class Towns
     public static void loadAll()
     {
         serverTowns.clear();
+        ashjack.simukraftreloaded.common.military.TownWall.clear(); // another world's walls
         File folder = new File(SimukraftReloaded.getSavesDataFolder() + "Towns");
         File[] files = folder.listFiles();
         if (files != null)
@@ -233,6 +234,7 @@ public final class Towns
         {
             t.save();
         }
+        ashjack.simukraftreloaded.common.military.TownWall.saveAll();
     }
 
     /** buildings put up before borders grew by themselves (or past them): their towns take them in now */

@@ -462,6 +462,7 @@ public class GuiBuildingConstructor extends GuiScreen
             buttonList.add(new GuiButton(11, (width / 2), 180, 100, 20, "Search all"));
             buttonList.add(new GuiButton(12, (width / 2) + 100, 180, 100, 20, "Motel..."));
             buttonList.add(new GuiButton(13, (width / 2) + 100, 210, 100, 20, "Apartments..."));
+            buttonList.add(new GuiButton(14, (width / 2), 210, 100, 20, "Watch tower"));
         }
         else if (currentPage == 3)    //choose worker
         {
@@ -739,6 +740,23 @@ public class GuiBuildingConstructor extends GuiScreen
             {
                 currentPage = 14;
                 showPage();
+            }
+            else if (guibutton.id == 14)
+            {
+                if (buildDirection == null || buildDirection.isEmpty())
+                {
+                    mc.thePlayer.addChatMessage(new net.minecraft.util.ChatComponentText(
+                            "Stand in line with the constructor box, facing where the tower should go, and open it again"));
+                    return;
+                }
+                NBTTagCompound data = new NBTTagCompound();
+                ActionHandlers.putV3(data, "box", constructorLoc);
+                data.setInteger("height", 12);
+                data.setString("dir", buildDirection);
+                ServerActions.send("buildTower", data);
+                mc.displayGuiScreen(null);
+                mc.setIngameFocus();
+                return;
             }
         }
         else if (isListPage()) //chosen building to build

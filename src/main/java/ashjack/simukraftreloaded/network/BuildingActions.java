@@ -19,6 +19,7 @@ import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.building.MotelPlan;
 import ashjack.simukraftreloaded.core.building.ApartmentConversion;
 import ashjack.simukraftreloaded.core.building.ApartmentPlan;
+import ashjack.simukraftreloaded.core.building.TowerPlan;
 import ashjack.simukraftreloaded.core.building.Basement;
 import ashjack.simukraftreloaded.core.building.Upgrades;
 import ashjack.simukraftreloaded.common.warehouse.WarehouseStock;
@@ -175,6 +176,20 @@ final class BuildingActions
                 ApartmentPlan plan = new ApartmentPlan(data.getString("kind").isEmpty() ? 'A' : data.getString("kind").charAt(0),
                         data.getInteger("across"), data.getInteger("rows"), data.getInteger("floors"), data.getString("dir"));
                 startBuilding(player, box, Building.fromGenerated(plan.name(), "other"), true);
+            }
+        });
+
+        // the constructor box's "Watch tower": a lookout tower, generated facing the right way
+        ServerActions.register("buildTower", new ServerActions.Action()
+        {
+            public void run(EntityPlayerMP player, NBTTagCompound data)
+            {
+                V3 box = ActionHandlers.getV3(data, "box");
+                if (box != null)
+                {
+                    TowerPlan plan = new TowerPlan(data.getInteger("height"), data.getString("dir"));
+                    startBuilding(player, box, Building.fromGenerated(plan.name(), "industrial"), true);
+                }
             }
         });
 

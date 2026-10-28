@@ -130,10 +130,11 @@ public final class ActionHandlers
                 if (vocation == Vocation.SOLDIER)
                 {
                     Building barracks = Building.getBuilding(box);
-                    room = (barracks == null ? 10 : barracks.soldierCapacity()) - FolkData.getFolksByEmployedAt(box).size();
+                    room = (barracks == null ? 10 : ashjack.simukraftreloaded.common.military.Posts.capacity(barracks))
+                            - FolkData.getFolksByEmployedAt(box).size();
                     if (room <= 0)
                     {
-                        tell(player, "This barracks has no room for more soldiers - build a bigger one, or another");
+                        tell(player, "There's no room for more soldiers here - build a bigger one, or another");
                         return;
                     }
                 }

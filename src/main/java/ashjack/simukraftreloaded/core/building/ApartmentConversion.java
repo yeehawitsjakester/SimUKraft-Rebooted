@@ -73,7 +73,7 @@ public final class ApartmentConversion
     public static boolean eligible(Building b)
     {
         return b != null && "other".equals(b.type) && !MotelPlan.isGenerated(b.displayName) && !isGenerated(b.displayName)
-                && !ApartmentPlan.isGenerated(b.displayName); // already flats
+                && !ApartmentPlan.isGenerated(b.displayName) && !TowerPlan.isGenerated(b.displayName); // flats already, or a tower
     }
 
     /** how many flats a generated blueprint has */

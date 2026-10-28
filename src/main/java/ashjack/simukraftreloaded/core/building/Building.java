@@ -278,6 +278,7 @@ public class Building implements Serializable
             BufferedReader br;
             MotelPlan motel = MotelPlan.parse(displayName);
             ApartmentPlan apts = ApartmentPlan.parse(displayName);
+            TowerPlan tower = TowerPlan.parse(displayName);
             if (motel != null)
             {
                 // made to order, not from a file: generated again from its name
@@ -286,6 +287,10 @@ public class Building implements Serializable
             else if (apts != null)
             {
                 br = new BufferedReader(new StringReader(apts.blueprint()));
+            }
+            else if (tower != null)
+            {
+                br = new BufferedReader(new StringReader(tower.blueprint()));
             }
             else
             {
@@ -607,6 +612,11 @@ public class Building implements Serializable
             if (apts != null)
             {
                 displayNameWithoutPK = apts.title();
+                author = "Sim-U-Kraft";
+            }
+            if (tower != null)
+            {
+                displayNameWithoutPK = tower.title();
                 author = "Sim-U-Kraft";
             }
             this.rent = blocksInBuilding * 0.01f;
@@ -1673,7 +1683,7 @@ public class Building implements Serializable
 
     /* loads in all buildings files into an ArrayList for quicker access (slowly in a thread) */
     /** blueprints this rewrite adds, shipped in the jar and copied into mods/Simukraft/buildings when missing */
-    private static final String[] BUNDLED_BLUEPRINTS = {"industrial/Warehouse.txt", "commercial/Sim-U-Hospital.txt", "industrial/Sim-U-Blacksmith.txt", "industrial/Sim-U-Masonry.txt"};
+    private static final String[] BUNDLED_BLUEPRINTS = {"industrial/Warehouse.txt", "commercial/Sim-U-Hospital.txt", "industrial/Sim-U-Blacksmith.txt", "industrial/Sim-U-Masonry.txt", "industrial/Sim-U-Gatehouse.txt", "commercial/Sim-U-Archery Range.txt"};
 
     private static void installBundledBlueprints()
     {
@@ -1834,8 +1844,9 @@ public class Building implements Serializable
         ApartmentConversion.Name flats = ApartmentConversion.parse(name);
         Basement.Name basements = Basement.parse(name);
         ApartmentPlan apts = ApartmentPlan.parse(name);
+        TowerPlan tower = TowerPlan.parse(name);
         b.buildDirection = motel != null ? motel.dir : flats != null ? flats.dir : basements != null ? basements.dir
-                : apts != null ? apts.dir : null;
+                : apts != null ? apts.dir : tower != null ? tower.dir : null;
         b.loadStructure();
         return b;
     }
@@ -1843,7 +1854,7 @@ public class Building implements Serializable
     public static boolean isGenerated(String name)
     {
         return MotelPlan.isGenerated(name) || ApartmentConversion.isGenerated(name) || Basement.isGenerated(name)
-                || ApartmentPlan.isGenerated(name);
+                || ApartmentPlan.isGenerated(name) || TowerPlan.isGenerated(name);
     }
 
     /** how many soldiers a barracks can train: one per so much floor (config BarracksAreaPerSoldier) */

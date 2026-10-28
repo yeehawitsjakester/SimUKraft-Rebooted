@@ -219,6 +219,38 @@ public class GuiControlBox extends GuiScreen
             b.enabled = fletchers < 1;
         }
 
+        // defence: a gatehouse's wall builders and border guards, a watch tower's lookouts, an archery range's trainees
+        ashjack.simukraftreloaded.common.military.Posts post = ashjack.simukraftreloaded.common.military.Posts.of(theBuilding);
+        if (post != ashjack.simukraftreloaded.common.military.Posts.BARRACKS && theBuilding.buildingComplete)
+        {
+            int soldiers = 0, builders = 0;
+            for (FolkData folk : SimukraftReloaded.folks())
+            {
+                if (theBuilding.primaryXYZ.isSameCoordsAs(folk.employedAt, true, true))
+                {
+                    if (folk.vocation == Vocation.WALLBUILDER)
+                    {
+                        builders++;
+                    }
+                    else if (folk.vocation == Vocation.SOLDIER)
+                    {
+                        soldiers++;
+                    }
+                }
+            }
+            int room = ashjack.simukraftreloaded.common.military.Posts.capacity(theBuilding);
+            GuiButton b;
+            String hire = post == ashjack.simukraftreloaded.common.military.Posts.GATEHOUSE ? "Hire Border Guard"
+                    : post == ashjack.simukraftreloaded.common.military.Posts.WATCHTOWER ? "Post a Lookout" : "Train a Soldier";
+            buttonList.add(b = new GuiButton(1, 10, height - 30, 110, 20, hire));
+            b.enabled = soldiers < room;
+            if (post == ashjack.simukraftreloaded.common.military.Posts.GATEHOUSE)
+            {
+                buttonList.add(b = new GuiButton(1, 125, height - 30, 110, 20, "Hire Wall Builder"));
+                b.enabled = builders < 4;
+            }
+        }
+
         // a masonry: stonemasons
         if (Workshop.isMasonry(theBuilding))
         {
@@ -813,6 +845,17 @@ public class GuiControlBox extends GuiScreen
         {
             mc.currentScreen = null;
             mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.BLACKSMITH));
+        }
+        else if (guibutton.displayString.contentEquals("Hire Border Guard") || guibutton.displayString.contentEquals("Post a Lookout")
+                || guibutton.displayString.contentEquals("Train a Soldier"))
+        {
+            mc.currentScreen = null;
+            mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.SOLDIER));
+        }
+        else if (guibutton.displayString.contentEquals("Hire Wall Builder"))
+        {
+            mc.currentScreen = null;
+            mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.WALLBUILDER));
         }
         else if (guibutton.displayString.contentEquals("Hire Stonemason"))
         {

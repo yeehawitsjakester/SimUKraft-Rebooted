@@ -38,6 +38,9 @@ import ashjack.simukraftreloaded.common.WorldUtil;
 import ashjack.simukraftreloaded.common.military.Armory;
 import ashjack.simukraftreloaded.common.military.Armory.Rank;
 import ashjack.simukraftreloaded.common.military.Crime;
+import ashjack.simukraftreloaded.common.military.Posts;
+import ashjack.simukraftreloaded.common.military.TownWall;
+import ashjack.simukraftreloaded.core.building.TowerPlan;
 import ashjack.simukraftreloaded.core.building.Building;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloaded;
 import ashjack.simukraftreloaded.core.registry.SimukraftReloadedConfig;
@@ -79,7 +82,8 @@ public class JobSoldier extends Job implements Serializable
     private transient int waypoint = -1;
     private transient boolean needEquip = true;
     private transient List<V3> route;
-    private transient long routeBuilt;
+    private transient long routeBuilt, headingSince, lastPractice;
+    private transient int headingTo = -1;
 
     /** how many soldiers are after each entity (by entity id), so they don't all chase one mob */
     private static final Map<Integer, Integer> claims = new HashMap<Integer, Integer>();
@@ -245,9 +249,33 @@ public class JobSoldier extends Job implements Serializable
             waypoint = startingStop(stops.size());
         }
         V3 stop = stops.get(waypoint);
+        Posts post = Posts.of(Building.getBuilding(theFolk.employedAt));
         theFolk.updateLocationFromEntity();
+        if (headingTo != waypoint)
+        {
+            headingTo = waypoint;
+            headingSince = now;
+        }
+        // a lookout can't path up (or down) the tower's ladder: after a while they're there
+        if (post == Posts.WATCHTOWER && theFolk.location.getDistanceTo(stop) > 3 && now - headingSince > 15000)
+        {
+            theFolk.theEntity.setPositionAndUpdate(stop.x + 0.5, stop.y, stop.z + 0.5);
+            theFolk.destination = null;
+            theFolk.updateLocationFromEntity();
+        }
         if (theFolk.location.getDistanceTo(stop) <= 3)
         {
+            if (post == Posts.WATCHTOWER && waypoint == 1)
+            {
+                theFolk.stayPut = true;
+                theFolk.statusText = rank().title + " keeping watch from the tower";
+                return; // they stay up there (back down for arrows or better gear, above)
+            }
+            if (post == Posts.ARCHERY && waypoint == 0 && !needEquip)
+            {
+                practise(now);
+                return;
+            }
             if (lingerUntil == 0)
             {
                 lingerUntil = now + 8000; // a look around at each stop
@@ -277,7 +305,28 @@ public class JobSoldier extends Job implements Serializable
         }
     }
 
-    /** the town's buildings near the barracks, in a loop around it, starting with the barracks */
+    /** at the archery range: shooting at the targets, getting better at it, up to an archer's skill */
+    private void practise(long now)
+    {
+        theFolk.stayPut = true;
+        if (theFolk.levelSoldier >= Posts.TRAINED_TO)
+        {
+            theFolk.isWorking = false;
+            theFolk.statusText = "Trained as an archer - post them to a barracks, gatehouse or tower";
+            return;
+        }
+        theFolk.isWorking = true;
+        theFolk.heldItem = new ItemStack(Items.bow);
+        theFolk.statusText = "Practising archery (level " + String.format("%.1f", theFolk.levelSoldier) + ")";
+        if (now - lastPractice > 30000)
+        {
+            lastPractice = now;
+            jobWorld.playSoundAtEntity(theFolk.theEntity, "random.bow", 0.6F, 1.0F);
+            gainLevel(0.05f);
+        }
+    }
+
+    /** where this soldier walks: their post first, then the town's buildings, the wall, or their tower's platform */
     private List<V3> route(long now)
     {
         if (route != null && now - routeBuilt < 60000)
@@ -286,6 +335,39 @@ public class JobSoldier extends Job implements Serializable
         }
         routeBuilt = now;
         final V3 base = theFolk.employedAt;
+        Building post = Building.getBuilding(base);
+        switch (Posts.of(post))
+        {
+            case WATCHTOWER:
+            {
+                List<V3> stops = new ArrayList<V3>();
+                stops.add(base.clone());
+                TowerPlan tower = TowerPlan.parse(post.displayName);
+                V3 con = ashjack.simukraftreloaded.common.warehouse.WarehouseStock.conBoxOf(post);
+                if (tower != null && con != null)
+                {
+                    stops.add(tower.lookout(post, con));
+                }
+                route = stops;
+                return route;
+            }
+            case ARCHERY:
+            {
+                List<V3> stops = new ArrayList<V3>();
+                stops.add(base.clone());
+                route = stops;
+                return route;
+            }
+            case GATEHOUSE:
+            {
+                List<V3> stops = TownWall.patrol(ashjack.simukraftreloaded.core.town.Towns.at(base), jobWorld);
+                stops.add(0, base.clone());
+                route = stops;
+                return route;
+            }
+            default:
+                break;
+        }
         List<V3> stops = new ArrayList<V3>();
         for (Building b : new ArrayList<Building>(SimukraftReloaded.serverBuildings))
         {
