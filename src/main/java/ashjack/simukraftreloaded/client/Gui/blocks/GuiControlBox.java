@@ -251,6 +251,15 @@ public class GuiControlBox extends GuiScreen
             }
         }
 
+        // a rail depot: rail builders, and planning a railway between two markers
+        if (ashjack.simukraftreloaded.common.rail.RailPlan.isDepot(theBuilding) && theBuilding.buildingComplete)
+        {
+            GuiButton b;
+            buttonList.add(b = new GuiButton(1, 10, height - 30, 110, 20, "Hire Rail Builder"));
+            b.enabled = employeeCount < 4;
+            buttonList.add(new GuiButton(1045, 125, height - 30, 170, 20, "Plan railway (2 markers)"));
+        }
+
         // a power station: linemen
         if (ashjack.simukraftreloaded.common.power.PowerGrid.isStation(theBuilding) && theBuilding.buildingComplete)
         {
@@ -737,12 +746,12 @@ public class GuiControlBox extends GuiScreen
             mc.setIngameFocus();
             return;
         }
-        if (guibutton.id == 1041 || guibutton.id == 1042 || guibutton.id == 1043 || guibutton.id == 1044)
+        if (guibutton.id >= 1041 && guibutton.id <= 1045)
         {
             NBTTagCompound data = new NBTTagCompound();
             ActionHandlers.putV3(data, "box", location);
             ServerActions.send(guibutton.id == 1041 ? "addBasement" : guibutton.id == 1042 ? "upgradeChests"
-                    : guibutton.id == 1043 ? "upgradeSmithy" : "upgradeMasonry", data);
+                    : guibutton.id == 1043 ? "upgradeSmithy" : guibutton.id == 1044 ? "upgradeMasonry" : "planRailway", data);
             mc.displayGuiScreen(null);
             mc.setIngameFocus();
             return;
@@ -865,6 +874,11 @@ public class GuiControlBox extends GuiScreen
         {
             mc.currentScreen = null;
             mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.SOLDIER));
+        }
+        else if (guibutton.displayString.contentEquals("Hire Rail Builder"))
+        {
+            mc.currentScreen = null;
+            mc.displayGuiScreen(new GuiEmployFolk(this.location, "", Vocation.RAILBUILDER));
         }
         else if (guibutton.displayString.contentEquals("Hire Lineman"))
         {

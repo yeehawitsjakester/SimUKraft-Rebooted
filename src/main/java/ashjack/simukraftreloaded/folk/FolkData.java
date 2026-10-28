@@ -2661,6 +2661,10 @@ public class FolkData implements Serializable
         {
             this.theirJob = new JobMedic(this);
         }
+        else if (this.vocation == Vocation.RAILBUILDER)
+        {
+            this.theirJob = new ashjack.simukraftreloaded.common.jobs.JobRailBuilder(this);
+        }
         else if (this.vocation == Vocation.LINEMAN)
         {
             this.theirJob = new ashjack.simukraftreloaded.common.jobs.JobLineman(this);

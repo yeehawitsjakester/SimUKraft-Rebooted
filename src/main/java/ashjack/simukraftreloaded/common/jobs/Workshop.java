@@ -68,7 +68,7 @@ public final class Workshop
             switch (this)
             {
                 case SMITHY:
-                    return item == Items.iron_ingot || item == Items.gold_ingot || item == Items.diamond
+                    return item == Items.iron_ingot || item == Items.gold_ingot || item == Items.diamond || item == Items.redstone
                             || item == Item.getItemFromBlock(Blocks.cobblestone);
                 case FLETCHER:
                     return item == Items.string || item == Items.feather || item == Items.flint;
@@ -85,7 +85,9 @@ public final class Workshop
                 case SAWMILL:
                     return item != Items.bow && item != Items.arrow && !(item instanceof ItemSword);
                 case SMITHY:
-                    return item instanceof ItemSword && item != Items.wooden_sword;
+                    // swords for the soldiers, and rails for the rail builders
+                    return item instanceof ItemSword && item != Items.wooden_sword || item == Item.getItemFromBlock(Blocks.rail)
+                            || item == Item.getItemFromBlock(Blocks.golden_rail);
                 case FLETCHER:
                     return item == Items.bow || item == Items.arrow;
                 case MASON:

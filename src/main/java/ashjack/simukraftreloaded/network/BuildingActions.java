@@ -351,6 +351,19 @@ final class BuildingActions
             }
         });
 
+        // a rail depot's "Plan railway": a route between the first two markers, for its rail builders
+        ServerActions.register("planRailway", new ServerActions.Action()
+        {
+            public void run(EntityPlayerMP player, NBTTagCompound data)
+            {
+                Building depot = buildingAt(data);
+                if (ashjack.simukraftreloaded.common.rail.RailPlan.isDepot(depot))
+                {
+                    ActionHandlers.tell(player, ashjack.simukraftreloaded.common.rail.RailPlan.planFromMarkers(depot, player.worldObj));
+                }
+            }
+        });
+
         ServerActions.register("upgradeMasonry", new ServerActions.Action()
         {
             public void run(EntityPlayerMP player, NBTTagCompound data)

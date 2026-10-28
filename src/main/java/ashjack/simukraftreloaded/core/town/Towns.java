@@ -204,6 +204,7 @@ public final class Towns
     {
         serverTowns.clear();
         ashjack.simukraftreloaded.common.military.TownWall.clear(); // another world's walls
+        ashjack.simukraftreloaded.common.rail.RailPlan.clear(); // and railways
         File folder = new File(SimukraftReloaded.getSavesDataFolder() + "Towns");
         File[] files = folder.listFiles();
         if (files != null)
